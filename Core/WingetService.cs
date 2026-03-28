@@ -620,6 +620,7 @@ public static class WingetService
 
     // Reads stdout char by char, firing the callback on both \n and \r line endings
     // so that winget's carriage-return progress updates are captured in real time.
+    // \r-terminated progress lines are throttled to ~8 fps to avoid flooding the UI queue.
     private static async Task ReadStreamWithProgressAsync(
         Stream stream,
         StringBuilder output,
@@ -630,10 +631,13 @@ public static class WingetService
         var byteBuffer = new byte[4096];
         var charBuffer = new char[Encoding.UTF8.GetMaxCharCount(4096)];
         var lineBuilder = new StringBuilder();
+        long lastProgressTick = 0L;
+        // Allow at most ~8 progress updates per second (125 ms interval)
+        long progressIntervalTicks = Stopwatch.Frequency / 8;
 
         while (true)
         {
-            int bytesRead = await stream.ReadAsync(byteBuffer);
+            int bytesRead = await stream.ReadAsync(byteBuffer).ConfigureAwait(false);
             if (bytesRead == 0) break;
 
             int charsDecoded = decoder.GetChars(byteBuffer, 0, bytesRead, charBuffer, 0);
@@ -652,7 +656,12 @@ public static class WingetService
                     case '\r':
                         if (lineBuilder.Length > 0)
                         {
-                            onLine?.Invoke(lineBuilder.ToString());
+                            long now = Stopwatch.GetTimestamp();
+                            if (now - lastProgressTick >= progressIntervalTicks)
+                            {
+                                lastProgressTick = now;
+                                onLine?.Invoke(lineBuilder.ToString());
+                            }
                             lineBuilder.Clear();
                         }
                         break;

@@ -23,6 +23,9 @@ namespace WingetUSoft
         private bool _cancelStopsCurrentProcess = true;
         private bool _fileLoggingAvailable = true;
         private readonly object _logLock = new();
+        private bool _progressLineActive;
+        private int _progressLineStart;
+        private UiPalette _currentPalette = UiTheme.GetPalette(false);
 
         public FormApp()
         {
@@ -32,7 +35,6 @@ namespace WingetUSoft
 
             lblEstado.Font = new Font(lblEstado.Font.FontFamily, 9.5f, FontStyle.Bold);
             lblDetalleEstado.Font = new Font(lblDetalleEstado.Font.FontFamily, 9.25f, FontStyle.Regular);
-            lblDescarga.Font = new Font(lblDescarga.Font.FontFamily, 9f, FontStyle.Regular);
             UpdateSelectionDetails();
 
             _silentMode = _settings.SilentMode;
@@ -45,7 +47,13 @@ namespace WingetUSoft
             ApplyTheme(_settings.DarkMode);
             modoOscuroToolStripMenuItem.Checked = _settings.DarkMode;
             UpdateAutoCheckTimer();
-            Shown += (_, _) => ShowSettingsLoadWarningIfNeeded();
+            Shown += (_, _) =>
+            {
+                // Set splitter so log panel gets ~30% of the split area, min 120px
+                int logHeight = Math.Max(splitMain.Panel2MinSize, splitMain.Height * 30 / 100);
+                splitMain.SplitterDistance = Math.Max(splitMain.Panel1MinSize, splitMain.Height - logHeight - splitMain.SplitterWidth);
+                ShowSettingsLoadWarningIfNeeded();
+            };
 
             Load += async (_, _) =>
             {
@@ -172,20 +180,10 @@ namespace WingetUSoft
             btnCancelar.Enabled = busy;
             dgvListaProgramas.Enabled = !busy;
 
-            if (busy)
+            if (!busy)
             {
-                progressBar1.Style = ProgressBarStyle.Marquee;
-            }
-            else
-            {
-                progressBar1.Style = ProgressBarStyle.Continuous;
-                progressBar1.Value = 0;
-                pbDescarga.Style = ProgressBarStyle.Continuous;
-                pbDescarga.Value = 0;
-                pbDescarga.Visible = false;
-                lblDescarga.Text = "";
-                lblDescarga.Visible = false;
                 _cancelStopsCurrentProcess = true;
+                EndLogProgressLine();
             }
 
             RefreshButtonStyles();
@@ -333,10 +331,6 @@ namespace WingetUSoft
             _cts = new CancellationTokenSource();
             _cancelStopsCurrentProcess = !runAsAdministrator;
             SetUIBusy(true);
-            progressBar1.Style = ProgressBarStyle.Continuous;
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = packagesToUpdate.Count;
-            progressBar1.Value = 0;
 
             int success = 0;
             int failed = 0;
@@ -359,24 +353,11 @@ namespace WingetUSoft
                     {
                         var pkg = packagesToUpdate[i];
                         lblEstado.Text = $"Actualizando ({i + 1}/{packagesToUpdate.Count}): {pkg.Name}...";
-                        pbDescarga.Style = ProgressBarStyle.Continuous;
-                        pbDescarga.Value = 0;
-                        lblDescarga.Text = "Iniciando descarga...";
-                        pbDescarga.Visible = true;
-                        lblDescarga.Visible = true;
 
                         IProgress<WingetProgressInfo>? progressReporter = new Progress<WingetProgressInfo>(info =>
                         {
-                            if (info.TotalBytes <= 0) return;
-
-                            pbDescarga.Value = (int)Math.Clamp(info.DownloadedBytes * 100L / info.TotalBytes, 0, 100);
-
-                            string dl = FormatBytes(info.DownloadedBytes);
-                            string total = FormatBytes(info.TotalBytes);
-                            string speed = info.SpeedBytesPerSecond > 0
-                                ? $"  —  {FormatBytes((long)info.SpeedBytesPerSecond)}/s"
-                                : "";
-                            lblDescarga.Text = $"{dl} / {total}{speed}";
+                            if (info.TotalBytes > 0)
+                                UpdateLogDownloadLine(info);
                         });
 
                         try
@@ -386,6 +367,8 @@ namespace WingetUSoft
                             var result = await WingetService.UpgradePackageAsync(
                                 pkg.Id, _silentMode, false, progressReporter, _cts.Token,
                                 new Progress<string>(AppendLog));
+
+                            EndLogProgressLine();
 
                             if (result.Success)
                             {
@@ -401,11 +384,10 @@ namespace WingetUSoft
                         }
                         catch (OperationCanceledException)
                         {
+                            EndLogProgressLine();
                             cancelled = true;
                             break;
                         }
-
-                        progressBar1.Value = i + 1;
 
                         if (_cts.Token.IsCancellationRequested)
                         {
@@ -458,11 +440,6 @@ namespace WingetUSoft
         {
             var packagesById = packagesToUpdate.ToDictionary(pkg => pkg.Id, StringComparer.OrdinalIgnoreCase);
 
-            progressBar1.Style = ProgressBarStyle.Marquee;
-            pbDescarga.Style = ProgressBarStyle.Marquee;
-            pbDescarga.Visible = true;
-            lblDescarga.Visible = true;
-            lblDescarga.Text = "Esperando confirmación de UAC...";
             lblEstado.Text = packagesToUpdate.Count == 1
                 ? $"Actualizando en modo administrador: {packagesToUpdate[0].Name}..."
                 : $"Actualizando {packagesToUpdate.Count} programas en modo administrador...";
@@ -478,30 +455,20 @@ namespace WingetUSoft
                 new Progress<string>(AppendLog),
                 new Progress<UpgradeBatchStatusInfo>(status => ReportElevatedBatchStatus(status, packagesById)));
 
-            progressBar1.Style = ProgressBarStyle.Continuous;
-            progressBar1.Minimum = 0;
-            progressBar1.Maximum = packagesToUpdate.Count;
-            progressBar1.Value = 0;
-            pbDescarga.Style = ProgressBarStyle.Continuous;
-            pbDescarga.Value = 0;
-
             if (batchResult.UserCancelled)
             {
-                lblDescarga.Text = "Cancelado por el usuario.";
                 AppendLog($"  ✖ {batchResult.ErrorOutput}");
                 return (0, 0, true);
             }
 
             if (batchResult.CancelledAfterCurrentPackage && batchResult.Items.Count == 0)
             {
-                lblDescarga.Text = "Cancelado.";
                 AppendLog("La operación se canceló antes de iniciar el lote elevado.");
                 return (0, 0, true);
             }
 
             if (batchResult.Items.Count == 0 && !string.IsNullOrWhiteSpace(batchResult.ErrorOutput))
             {
-                lblDescarga.Text = "Error.";
                 AppendLog($"  ✖ {batchResult.ErrorOutput}");
                 MessageBox.Show(
                     batchResult.ErrorOutput,
@@ -525,7 +492,6 @@ namespace WingetUSoft
                     if (batchResult.CancelledAfterCurrentPackage)
                     {
                         cancelled = true;
-                        lblDescarga.Text = "Cancelado.";
                         AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Cancelado antes de iniciar: {pkg.Name} ({pkg.Id})");
                         break;
                     }
@@ -533,7 +499,6 @@ namespace WingetUSoft
                     failed++;
                     AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Resultado no disponible: {pkg.Name} ({pkg.Id})");
                     HandleFailedUpgrade(pkg, "No se recibió un resultado de la actualización elevada.");
-                    progressBar1.Value = i + 1;
                     continue;
                 }
 
@@ -550,12 +515,7 @@ namespace WingetUSoft
                     failed++;
                     HandleFailedUpgrade(pkg, item.Result.GetFailureReason());
                 }
-
-                progressBar1.Value = i + 1;
             }
-
-            if (!cancelled)
-                lblDescarga.Text = "Completado.";
 
             return (success, failed, cancelled);
         }
@@ -567,26 +527,23 @@ namespace WingetUSoft
             switch (status.Phase)
             {
                 case "starting":
-                    lblDescarga.Text = "Preparando lote elevado...";
+                    AppendLog("Preparando lote elevado...");
                     break;
                 case "running" when packagesById.TryGetValue(status.PackageId, out var pkg):
                     lblEstado.Text = $"Actualizando ({status.CurrentIndex}/{status.TotalCount}) en modo administrador: {pkg.Name}...";
-                    lblDescarga.Text = $"En ejecución: {pkg.Name}";
                     AppendLog($"[{status.CurrentIndex}/{status.TotalCount}] En ejecución: {pkg.Name} ({pkg.Id})");
                     break;
                 case "cancelled":
-                    lblDescarga.Text = "Cancelando después del paquete actual...";
+                    AppendLog("Cancelando después del paquete actual...");
                     break;
                 case "completed":
-                    lblDescarga.Text = "Lote elevado finalizado. Procesando resultados...";
+                    AppendLog("Lote elevado finalizado. Procesando resultados...");
                     break;
             }
         }
 
         private void RecordSuccessfulUpgrade(WingetPackage pkg)
         {
-            pbDescarga.Value = 100;
-            lblDescarga.Text = "Completado.";
             AppendLog($"  \u2714 {pkg.Name}: actualizado correctamente.");
             _settings.AddHistory(new HistoryEntry
             {
@@ -694,14 +651,88 @@ namespace WingetUSoft
         private void AppendLog(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return;
+
+            EndLogProgressLine();
+
             if (rtbLog.Lines.Length > LogMaxLines)
             {
                 rtbLog.Select(0, rtbLog.GetFirstCharIndexFromLine(LogTrimToLine));
                 rtbLog.SelectedText = "";
             }
+
+            Color lineColor = GetLogLineColor(text);
+            rtbLog.SelectionStart = rtbLog.TextLength;
+            rtbLog.SelectionLength = 0;
+            rtbLog.SelectionColor = lineColor;
             rtbLog.AppendText(text + Environment.NewLine);
+            rtbLog.SelectionColor = rtbLog.ForeColor;
             rtbLog.ScrollToCaret();
             AppendLogFile(text);
+        }
+
+        private Color GetLogLineColor(string text)
+        {
+            if (text.StartsWith("  \u2714", StringComparison.Ordinal))  return _currentPalette.Success;
+            if (text.StartsWith("  \u2716", StringComparison.Ordinal) ||
+                text.StartsWith("  \u2718", StringComparison.Ordinal))   return _currentPalette.Danger;
+            if (text.Length > 0 && text[0] == '[')                  return _currentPalette.Accent;
+            return _currentPalette.LogText;
+        }
+
+        private void UpdateLogDownloadLine(WingetProgressInfo info)
+        {
+            int percent = (int)Math.Clamp(info.DownloadedBytes * 100L / info.TotalBytes, 0, 100);
+            string dl    = FormatBytes(info.DownloadedBytes);
+            string total = FormatBytes(info.TotalBytes);
+            string speed = info.SpeedBytesPerSecond > 0
+                ? $"  {FormatBytes((long)info.SpeedBytesPerSecond)}/s"
+                : "";
+            string bar  = BuildProgressBar(percent);
+            string line = $"  \u2193  {dl} / {total}  {bar}{speed}";
+
+            Color color = _currentPalette.Warning;
+
+            if (_progressLineActive)
+            {
+                int lineLen = rtbLog.TextLength - _progressLineStart;
+                if (lineLen > 0)
+                {
+                    rtbLog.Select(_progressLineStart, lineLen);
+                    rtbLog.SelectionColor = color;
+                    rtbLog.SelectedText = line;
+                }
+            }
+            else
+            {
+                if (rtbLog.Lines.Length > LogMaxLines)
+                {
+                    rtbLog.Select(0, rtbLog.GetFirstCharIndexFromLine(LogTrimToLine));
+                    rtbLog.SelectedText = "";
+                }
+                _progressLineStart = rtbLog.TextLength;
+                rtbLog.SelectionStart = _progressLineStart;
+                rtbLog.SelectionLength = 0;
+                rtbLog.SelectionColor = color;
+                rtbLog.AppendText(line);
+                rtbLog.SelectionColor = rtbLog.ForeColor;
+                _progressLineActive = true;
+            }
+
+            rtbLog.ScrollToCaret();
+            rtbLog.Update();
+        }
+
+        private void EndLogProgressLine()
+        {
+            if (!_progressLineActive) return;
+            rtbLog.AppendText(Environment.NewLine);
+            _progressLineActive = false;
+        }
+
+        private static string BuildProgressBar(int percent, int width = 20)
+        {
+            int filled = Math.Clamp((int)Math.Round(percent / 100.0 * width), 0, width);
+            return $"[{new string('\u2588', filled)}{new string('\u2591', width - filled)}] {percent,3}%";
         }
 
         private void AppendLogFile(string text)
@@ -976,6 +1007,7 @@ namespace WingetUSoft
         private void ApplyTheme(bool dark)
         {
             UiPalette palette = UiTheme.GetPalette(dark);
+            _currentPalette = palette;
 
             UiTheme.ApplyForm(this, palette);
             layoutRoot.BackColor = palette.WindowBackground;
@@ -993,7 +1025,6 @@ namespace WingetUSoft
             UiTheme.StyleLabel(lblDetalleEstado, palette, muted: true);
             UiTheme.StyleLabel(lblAtajos, palette, muted: true);
             UiTheme.StyleLabel(lblEstado, palette);
-            UiTheme.StyleLabel(lblDescarga, palette, muted: true);
             lblTitulo.ForeColor = palette.Text;
 
             UiTheme.StyleToolStrip(menuStrip1, palette);

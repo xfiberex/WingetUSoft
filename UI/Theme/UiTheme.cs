@@ -118,8 +118,6 @@ internal static class UiTheme
         button.FlatStyle = FlatStyle.Flat;
         button.UseVisualStyleBackColor = false;
         button.FlatAppearance.BorderSize = 1;
-        button.FlatAppearance.MouseDownBackColor = palette.SurfaceInset;
-        button.FlatAppearance.MouseOverBackColor = palette.SurfaceRaised;
 
         switch (kind)
         {
@@ -127,18 +125,24 @@ internal static class UiTheme
                 button.BackColor = button.Enabled ? palette.Accent : palette.DisabledBackground;
                 button.ForeColor = button.Enabled ? palette.AccentText : palette.DisabledText;
                 button.FlatAppearance.BorderColor = button.Enabled ? palette.Accent : palette.DisabledBackground;
+                button.FlatAppearance.MouseOverBackColor = button.Enabled ? palette.Selection : palette.DisabledBackground;
+                button.FlatAppearance.MouseDownBackColor = palette.SurfaceInset;
                 break;
 
             case AppButtonKind.Danger:
                 button.BackColor = button.Enabled ? palette.Danger : palette.DisabledBackground;
-                button.ForeColor = button.Enabled ? Color.White : palette.DisabledText;
+                button.ForeColor = button.Enabled ? (palette.IsDark ? Color.White : palette.Text) : palette.DisabledText;
                 button.FlatAppearance.BorderColor = button.Enabled ? palette.Danger : palette.DisabledBackground;
+                button.FlatAppearance.MouseOverBackColor = button.Enabled ? palette.Danger : palette.DisabledBackground;
+                button.FlatAppearance.MouseDownBackColor = palette.SurfaceInset;
                 break;
 
             default:
                 button.BackColor = button.Enabled ? palette.SurfaceRaised : palette.DisabledBackground;
                 button.ForeColor = button.Enabled ? palette.Text : palette.DisabledText;
                 button.FlatAppearance.BorderColor = button.Enabled ? palette.Border : palette.DisabledBackground;
+                button.FlatAppearance.MouseOverBackColor = palette.SurfaceInset;
+                button.FlatAppearance.MouseDownBackColor = palette.SurfaceInset;
                 break;
         }
     }
