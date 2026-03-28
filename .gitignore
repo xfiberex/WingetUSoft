@@ -1,0 +1,53 @@
+## Build outputs
+bin/
+obj/
+out/
+
+## NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/packages/
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+## Rider
+.idea/
+
+## Logs & test results
+TestResults/
+[Tt]est[Rr]esult*/
+*.trx
+*.log
+coverage/
+*.coveragexml
+*.coverage
+
+## App data (generated at runtime)
+*.bak
+settings.invalid.*.json
+
+## OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## Temporary files
+*.tmp
+*.temp
+~$*
