@@ -1,19 +1,31 @@
-namespace WingetUSoft
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+
+namespace WingetUSoft;
+
+internal static class Program
 {
-    internal static class Program
+    [STAThread]
+    static int Main(string[] args)
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static int Main(string[] args)
+        try
         {
             if (WingetService.IsElevatedWorkerInvocation(args))
                 return WingetService.RunElevatedBatchWorkerAsync(args).GetAwaiter().GetResult();
 
-            ApplicationConfiguration.Initialize();
-            Application.Run(new FormApp());
+            WinRT.ComWrappersSupport.InitializeComWrappers();
+            Application.Start(p =>
+            {
+                var context = new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread());
+                SynchronizationContext.SetSynchronizationContext(context);
+                _ = new App();
+            });
             return 0;
+        }
+        catch (Exception ex)
+        {
+            File.WriteAllText("crash.log", ex.ToString());
+            return 1;
         }
     }
 }

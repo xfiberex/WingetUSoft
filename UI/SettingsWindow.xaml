@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WingetUSoft.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Configuración">
+
+    <Grid Padding="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header Card -->
+        <Border Grid.Row="0"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="20,16"
+                Margin="0,0,0,16">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Configuración"
+                           Style="{StaticResource TitleTextBlockStyle}" />
+                <TextBlock Text="Ajusta las opciones generales de la aplicación."
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Settings Content -->
+        <ScrollViewer Grid.Row="1" Margin="0,0,0,16">
+            <StackPanel Spacing="16">
+
+                <!-- Auto-check interval -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Consulta automática"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <ComboBox x:Name="cmbIntervalo" Width="280"
+                                  Header="Intervalo de consulta automática">
+                            <ComboBoxItem Content="Desactivada" />
+                            <ComboBoxItem Content="Cada 30 minutos" />
+                            <ComboBoxItem Content="Cada 60 minutos" />
+                            <ComboBoxItem Content="Cada 120 minutos" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- Options -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Opciones"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <CheckBox x:Name="chkLogArchivo" Content="Guardar registro de actividad en archivo" />
+                        <CheckBox x:Name="chkAdministrador" Content="Ejecutar actualizaciones como administrador" />
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Directorio de registros:"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBox x:Name="txtLogPath" IsReadOnly="True" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Excluded packages -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Paquetes excluidos"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="Estos paquetes no se incluirán en las actualizaciones."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <ListView x:Name="lstExcluidos"
+                                  MaxHeight="200"
+                                  SelectionMode="Single" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="btnQuitar" Content="Quitar seleccionado"
+                                    Click="BtnQuitar_Click" MinWidth="160" />
+                            <Button x:Name="btnLimpiar" Content="Limpiar lista"
+                                    Click="BtnLimpiar_Click" MinWidth="120" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button x:Name="btnGuardar"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Content="Guardar"
+                    Click="BtnGuardar_Click"
+                    MinWidth="120" Height="36" />
+            <Button x:Name="btnCancelar"
+                    Content="Cancelar"
+                    Click="BtnCancelar_Click"
+                    MinWidth="120" Height="36" />
+        </StackPanel>
+    </Grid>
+</Window>

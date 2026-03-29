@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WingetUSoft.TestWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Test Window">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Height="32" Background="Transparent">
+            <TextBlock Text="Title" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
+        <Grid Grid.Row="1" Padding="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="20,16" Margin="0,0,0,12">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Header" Style="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock Text="Subtitle" Style="{StaticResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <Border Grid.Row="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Acciones rápidas"
+                               Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,10" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Style="{StaticResource AccentButtonStyle}" Content="Consultar" MinWidth="180" Height="36" />
+                        <Button Content="Desconocidas" MinWidth="180" Height="36" />
+                        <Button Content="Actualizar sel." MinWidth="180" Height="36" />
+                        <Button Content="Todo" MinWidth="140" Height="36" />
+                        <Button Content="Cancelar" IsEnabled="False" MinWidth="120" Height="36">
+                            <Button.Resources>
+                                <ResourceDictionary>
+                                    <ResourceDictionary.ThemeDictionaries>
+                                        <ResourceDictionary x:Key="Light">
+                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFBA4636" />
+                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                        </ResourceDictionary>
+                                        <ResourceDictionary x:Key="Dark">
+                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFD55C4C" />
+                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                        </ResourceDictionary>
+                                    </ResourceDictionary.ThemeDictionaries>
+                                </ResourceDictionary>
+                            </Button.Resources>
+                        </Button>
+                        <DropDownButton Content="Opciones" Height="36" MinWidth="100">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutSubItem Text="Modo de actualización">
+                                        <ToggleMenuFlyoutItem Text="Silenciosa" IsChecked="True" />
+                                        <ToggleMenuFlyoutItem Text="Interactiva" />
+                                    </MenuFlyoutSubItem>
+                                    <ToggleMenuFlyoutItem Text="Modo oscuro" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Exportar lista...">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xEDE1;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Configuración...">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE713;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Ver historial">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE81C;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Filter -->
+            <Border Grid.Row="2"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,8" Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock Text="Fuente:" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ComboBox Width="240">
+                        <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
+                    </ComboBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Grid + Log -->
+            <Grid Grid.Row="3" Margin="0,0,0,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" MinHeight="120" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Actualizaciones disponibles"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,0,0,8" />
+                        <Grid Grid.Row="1" Height="38"
+                              Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                              CornerRadius="4,4,0,0" Padding="8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="54" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="3" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="4" Text="Disponible" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="5" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                        </Grid>
+                        <ListView Grid.Row="2" SelectionMode="Single" />
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Height="6" Background="Transparent" />
+
+                <Border Grid.Row="2"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Text="Actividad y resultados"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" Margin="4,0,0,8" />
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <RichTextBlock FontFamily="Consolas" FontSize="12" IsTextSelectionEnabled="True" TextWrapping="NoWrap" />
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Status -->
+            <Border Grid.Row="4"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Listo."
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <ProgressRing Grid.Column="1" IsActive="False" Width="20" Height="20" Margin="12,0,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

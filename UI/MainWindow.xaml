@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WingetUSoft.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="WingetUSoft - Actualiza tus programas">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom Title Bar -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
+            <TextBlock x:Name="TitleTextBlock"
+                       Text="WingetUSoft - Actualiza tus programas"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Padding="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header Card -->
+            <Border Grid.Row="0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    Margin="0,0,0,12">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Actualiza tus programas con winget"
+                               Style="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock x:Name="txtSubtitulo"
+                               Text="Consulta, filtra y actualiza paquetes desde una sola vista."
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="txtDetalleEstado"
+                               Text="Selecciona un programa para ver sus detalles antes de actualizar."
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Actions Bar -->
+            <Border Grid.Row="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,12"
+                    Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="Acciones rápidas"
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               Margin="0,0,0,10" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
+                                Content="Consultar actualizaciones"
+                                Click="BtnConsultar_Click"
+                                MinWidth="180" Height="36" />
+                        <Button x:Name="btnConsultarDesconocidas"
+                                Content="Consultar con desconocidas"
+                                Click="BtnConsultarDesconocidas_Click"
+                                MinWidth="180" Height="36" />
+                        <Button x:Name="btnActualizarSeleccionados"
+                                Content="Actualizar seleccionados"
+                                Click="BtnActualizarSeleccionados_Click"
+                                MinWidth="180" Height="36" />
+                        <Button x:Name="btnActualizarTodo"
+                                Content="Actualizar todo"
+                                Click="BtnActualizarTodo_Click"
+                                MinWidth="140" Height="36" />
+                        <Button x:Name="btnCancelar"
+                                Content="Cancelar"
+                                Click="BtnCancelar_Click"
+                                IsEnabled="False"
+                                MinWidth="120" Height="36">
+                            <Button.Resources>
+                                <ResourceDictionary>
+                                    <ResourceDictionary.ThemeDictionaries>
+                                        <ResourceDictionary x:Key="Light">
+                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFBA4636" />
+                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFD05040" />
+                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
+                                        </ResourceDictionary>
+                                        <ResourceDictionary x:Key="Dark">
+                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFD55C4C" />
+                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFE06858" />
+                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
+                                        </ResourceDictionary>
+                                    </ResourceDictionary.ThemeDictionaries>
+                                </ResourceDictionary>
+                            </Button.Resources>
+                        </Button>
+
+                        <!-- Menu options -->
+                        <DropDownButton Content="Opciones" Height="36" MinWidth="100">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutSubItem Text="Modo de actualización">
+                                        <ToggleMenuFlyoutItem x:Name="menuSilenciosa" Text="Silenciosa"
+                                                              IsChecked="True" Click="MenuSilenciosa_Click" />
+                                        <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
+                                                              Click="MenuInteractiva_Click" />
+                                    </MenuFlyoutSubItem>
+                                    <ToggleMenuFlyoutItem x:Name="menuModoOscuro" Text="Modo oscuro"
+                                                          Click="MenuModoOscuro_Click" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Exportar lista..." Click="MenuExportar_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xEDE1;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Configuración..." Click="MenuConfiguracion_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE713;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem Text="Ver historial" Click="MenuHistorial_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE81C;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Source Filter -->
+            <Border Grid.Row="2"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,8"
+                    Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <TextBlock Text="Fuente:" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ComboBox x:Name="cmbFuente" Width="240"
+                              SelectionChanged="CmbFuente_SelectionChanged">
+                        <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
+                    </ComboBox>
+                </StackPanel>
+            </Border>
+
+            <!-- Main Split: DataGrid + Log -->
+            <Grid Grid.Row="3" Margin="0,0,0,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" MinHeight="120" />
+                </Grid.RowDefinitions>
+
+                <!-- Updates DataGrid Card -->
+                <Border Grid.Row="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock x:Name="txtUpdatesHeader"
+                                   Grid.Row="0"
+                                   Text="Actualizaciones disponibles"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   Margin="4,0,0,8" />
+
+                        <!-- Column Headers -->
+                        <Grid Grid.Row="1" Height="38"
+                              Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                              CornerRadius="4,4,0,0"
+                              Padding="8,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="54" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="80" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="3" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="4" Text="Disponible" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="5" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                        </Grid>
+
+                        <ListView x:Name="lvPackages"
+                                  Grid.Row="2"
+                                  SelectionMode="Single"
+                                  SelectionChanged="LvPackages_SelectionChanged"
+                                  RightTapped="LvPackages_RightTapped">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Height="36" Padding="8,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="54" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="200" />
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="80" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  VerticalAlignment="Center" MinWidth="0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                        <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                        <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Border>
+
+                <!-- Splitter -->
+                <Border Grid.Row="1" Height="6" Background="Transparent" />
+
+                <!-- Log Card -->
+                <Border Grid.Row="2"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0"
+                                   Text="Actividad y resultados"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   Margin="4,0,0,8" />
+                        <ScrollViewer Grid.Row="1"
+                                      x:Name="scrollLog"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto">
+                            <RichTextBlock x:Name="rtbLog"
+                                           FontFamily="Consolas"
+                                           FontSize="12"
+                                           IsTextSelectionEnabled="True"
+                                           TextWrapping="NoWrap" />
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Status Bar -->
+            <Border Grid.Row="4"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtEstado"
+                               Grid.Column="0"
+                               Text="Listo."
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <ProgressRing x:Name="progressRing"
+                                  Grid.Column="1"
+                                  IsActive="False"
+                                  Width="20" Height="20"
+                                  Margin="12,0,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
