@@ -111,6 +111,7 @@ public sealed partial class MainWindow : Window
         var hWnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
         _appWindow.Resize(new Windows.Graphics.SizeInt32(1180, 820));
 
         // Set title bar

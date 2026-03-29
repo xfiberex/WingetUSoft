@@ -21,6 +21,7 @@ public sealed partial class SettingsWindow : Window
         var hWnd = WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
         var appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
         appWindow.Resize(new Windows.Graphics.SizeInt32(760, 560));
 
         if (Content is FrameworkElement root)
