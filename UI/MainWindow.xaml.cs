@@ -19,6 +19,7 @@ namespace WingetUSoft;
 public sealed class PackageViewModel : INotifyPropertyChanged
 {
     private bool _isSelected;
+    private string _installerSize = "";
 
     public WingetPackage Package { get; }
     public string Name => Package.Name;
@@ -31,6 +32,12 @@ public sealed class PackageViewModel : INotifyPropertyChanged
     {
         get => _isSelected;
         set { if (_isSelected != value) { _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); } }
+    }
+
+    public string InstallerSize
+    {
+        get => _installerSize;
+        set { if (_installerSize != value) { _installerSize = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerSize))); } }
     }
 
     public bool IsExcluded { get; set; }
@@ -60,6 +67,11 @@ public sealed partial class MainWindow : Window
     private int _logLineCount;
     private bool _initialized;
     private int _excludedFilter = 0;
+    private string _searchFilter = "";
+    private int _sortColumn = 0;   // 0=none 1=Name 2=Id 3=Version 4=Available 5=Size 6=Source
+    private bool _sortDescending = false;
+    private CancellationTokenSource? _packageInfoCts;
+    private CancellationTokenSource? _sizeLoadCts;
 
     private AppWindow _appWindow = null!;
 
@@ -81,7 +93,7 @@ public sealed partial class MainWindow : Window
         ctxCopiarNombre.Click += CtxCopiarNombre_Click;
         ctxCopiarId = new MenuFlyoutItem { Text = "Copiar Id" };
         ctxCopiarId.Click += CtxCopiarId_Click;
-        ctxBuscarWeb = new MenuFlyoutItem { Text = "Abrir búsqueda web" };
+        ctxBuscarWeb = new MenuFlyoutItem { Text = "Ver en winget.run" };
         ctxBuscarWeb.Click += CtxBuscarWeb_Click;
         ctxExcluir = new MenuFlyoutItem { Text = "Excluir de actualizaciones" };
         ctxExcluir.Click += CtxExcluir_Click;
@@ -198,7 +210,7 @@ public sealed partial class MainWindow : Window
         del.Invoked += (_, _) =>
         {
             if (GetSelectedPackage() is not null)
-                CtxExcluir_Click(null, null!);
+                CtxExcluir_Click(null, null);
         };
         Content.KeyboardAccelerators.Add(del);
     }
@@ -227,17 +239,67 @@ public sealed partial class MainWindow : Window
     private void LoadPackagesToGrid()
     {
         _packageViewModels.Clear();
-        foreach (var pkg in _packages)
-        {
-            bool isExcluded = _settings.ExcludedIds.Contains(pkg.Id);
-            if (_excludedFilter == 1 && isExcluded) continue;
-            if (_excludedFilter == 2 && !isExcluded) continue;
-            _packageViewModels.Add(new PackageViewModel(pkg)
-            {
-                IsExcluded = isExcluded
-            });
-        }
+        string search = _searchFilter.Trim();
+        IEnumerable<WingetPackage> filtered = _packages;
+
+        if (!string.IsNullOrEmpty(search))
+            filtered = filtered.Where(p =>
+                p.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                p.Id.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+        IEnumerable<PackageViewModel> viewModels = filtered.Select(pkg =>
+            new PackageViewModel(pkg) { IsExcluded = _settings.ExcludedIds.Contains(pkg.Id) });
+
+        if (_excludedFilter == 1) viewModels = viewModels.Where(v => !v.IsExcluded);
+        else if (_excludedFilter == 2) viewModels = viewModels.Where(v => v.IsExcluded);
+
+        viewModels = ApplySort(viewModels);
+
+        foreach (var vm in viewModels)
+            _packageViewModels.Add(vm);
+
         UpdateSelectionDetails();
+        _ = StartBackgroundSizeLoadingAsync([.. _packageViewModels]);
+    }
+
+    private IEnumerable<PackageViewModel> ApplySort(IEnumerable<PackageViewModel> items)
+    {
+        return _sortColumn switch
+        {
+            1 => _sortDescending ? items.OrderByDescending(v => v.Name) : items.OrderBy(v => v.Name),
+            2 => _sortDescending ? items.OrderByDescending(v => v.Id) : items.OrderBy(v => v.Id),
+            3 => _sortDescending ? items.OrderByDescending(v => v.Version) : items.OrderBy(v => v.Version),
+            4 => _sortDescending ? items.OrderByDescending(v => v.Available) : items.OrderBy(v => v.Available),
+            5 => _sortDescending ? items.OrderByDescending(v => v.InstallerSize) : items.OrderBy(v => v.InstallerSize),
+            6 => _sortDescending ? items.OrderByDescending(v => v.Source) : items.OrderBy(v => v.Source),
+            _ => items
+        };
+    }
+
+    private async Task StartBackgroundSizeLoadingAsync(List<PackageViewModel> viewModels)
+    {
+        _sizeLoadCts?.Cancel();
+        _sizeLoadCts = new CancellationTokenSource();
+        var token = _sizeLoadCts.Token;
+
+        using var semaphore = new SemaphoreSlim(2, 2);
+
+        var tasks = viewModels.Select(async vm =>
+        {
+            await semaphore.WaitAsync(token);
+            try
+            {
+                var info = await WingetService.GetPackageInfoAsync(vm.Id, token);
+                if (!token.IsCancellationRequested)
+                    vm.InstallerSize = string.IsNullOrEmpty(info.InstallerSize) ? "—" : info.InstallerSize;
+            }
+            catch (OperationCanceledException) { }
+            catch { vm.InstallerSize = "—"; }
+            finally { semaphore.Release(); }
+        });
+
+        try { await Task.WhenAll(tasks); }
+        catch (OperationCanceledException) { }
     }
 
     private async Task LoadPackagesAsync(bool includeUnknown)
@@ -436,12 +498,19 @@ public sealed partial class MainWindow : Window
             ? "Ejecutando la actualización en una única sesión de administrador."
             : $"Ejecutando {packagesToUpdate.Count} actualizaciones en una única sesión de administrador.");
 
+        IProgress<WingetProgressInfo> adminDownloadProgress = new Progress<WingetProgressInfo>(info =>
+        {
+            if (info.TotalBytes > 0)
+                UpdateLogDownloadLine(info);
+        });
+
         var batchResult = await WingetService.UpgradePackagesAsAdministratorAsync(
             packagesToUpdate.Select(p => p.Id),
             _silentMode,
             _cts!.Token,
             new Progress<string>(s => AppendLog(s)),
-            new Progress<UpgradeBatchStatusInfo>(status => ReportElevatedBatchStatus(status, packagesById)));
+            new Progress<UpgradeBatchStatusInfo>(status => ReportElevatedBatchStatus(status, packagesById)),
+            adminDownloadProgress);
 
         if (batchResult.UserCancelled)
         {
@@ -684,10 +753,130 @@ public sealed partial class MainWindow : Window
         await tcs.Task;
     }
 
+    private async void MenuDesinstalar_Click(object sender, RoutedEventArgs e)
+    {
+        var uninstallWindow = new UninstallWindow(_settings);
+        uninstallWindow.Activate();
+
+        var tcs = new TaskCompletionSource();
+        uninstallWindow.Closed += (_, _) => tcs.TrySetResult();
+        await tcs.Task;
+    }
+
+    // --- Sort / Search ---
+
+    private void SortHeader_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement el || el.Tag is not string tagStr) return;
+        if (!int.TryParse(tagStr, out int col)) return;
+
+        if (_sortColumn == col)
+            _sortDescending = !_sortDescending;
+        else
+        {
+            _sortColumn = col;
+            _sortDescending = false;
+        }
+
+        UpdateSortIndicators();
+        LoadPackagesToGrid();
+    }
+
+    private void UpdateSortIndicators()
+    {
+        sortNombre.Text    = SortIndicator(1);
+        sortId.Text        = SortIndicator(2);
+        sortVersion.Text   = SortIndicator(3);
+        sortAvailable.Text = SortIndicator(4);
+        sortSize.Text      = SortIndicator(5);
+        sortSource.Text    = SortIndicator(6);
+    }
+
+    private string SortIndicator(int col)
+        => _sortColumn == col ? (_sortDescending ? " ▼" : " ▲") : "";
+
+    private void TxtBuscar_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_initialized) return;
+        _searchFilter = txtBuscar.Text;
+        LoadPackagesToGrid();
+    }
+
+    // --- Package Info Panel ---
+
+    private async Task LoadPackageInfoPanelAsync(WingetPackage pkg)
+    {
+        _packageInfoCts?.Cancel();
+        _packageInfoCts = new CancellationTokenSource();
+        var token = _packageInfoCts.Token;
+
+        panelPackageInfo.Visibility = Visibility.Visible;
+        txtInfoDescripcion.Text = "Cargando...";
+        txtInfoTamano.Text = "";
+        lnkHomepage.Visibility = Visibility.Collapsed;
+        lnkNotasVersion.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            await Task.Delay(280, token);
+            var info = await WingetService.GetPackageInfoAsync(pkg.Id, token);
+            if (token.IsCancellationRequested) return;
+
+            txtInfoDescripcion.Text = string.IsNullOrEmpty(info.Description)
+                ? pkg.Name
+                : (info.Description.Length > 160 ? info.Description[..160] + "…" : info.Description);
+
+            txtInfoTamano.Text = string.IsNullOrEmpty(info.InstallerSize)
+                ? ""
+                : $"Tamaño: {info.InstallerSize}";
+
+            if (!string.IsNullOrEmpty(info.Homepage)
+                && Uri.TryCreate(info.Homepage, UriKind.Absolute, out var homeUri)
+                && (homeUri.Scheme == Uri.UriSchemeHttps || homeUri.Scheme == Uri.UriSchemeHttp))
+            {
+                lnkHomepage.NavigateUri = homeUri;
+                lnkHomepage.Visibility = Visibility.Visible;
+            }
+
+            if (!string.IsNullOrEmpty(info.ReleaseNotesUrl)
+                && Uri.TryCreate(info.ReleaseNotesUrl, UriKind.Absolute, out var notesUri)
+                && (notesUri.Scheme == Uri.UriSchemeHttps || notesUri.Scheme == Uri.UriSchemeHttp))
+            {
+                lnkNotasVersion.NavigateUri = notesUri;
+                lnkNotasVersion.Visibility = Visibility.Visible;
+            }
+
+            // Update the size column for this package in the list
+            if (!string.IsNullOrEmpty(info.InstallerSize))
+            {
+                var vm = _packageViewModels.FirstOrDefault(v => v.Id == pkg.Id);
+                if (vm is not null) vm.InstallerSize = info.InstallerSize;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            if (!token.IsCancellationRequested)
+                txtInfoDescripcion.Text = pkg.Name;
+        }
+    }
+
+    private void HidePackageInfoPanel()
+    {
+        _packageInfoCts?.Cancel();
+        panelPackageInfo.Visibility = Visibility.Collapsed;
+    }
+
     // --- DataGrid Events ---
 
-    private void LvPackages_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+    private void LvPackages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
         UpdateSelectionDetails();
+        if (GetSelectedPackage() is { } pkg)
+            _ = LoadPackageInfoPanelAsync(pkg);
+        else
+            HidePackageInfoPanel();
+    }
 
     private void LvPackages_RightTapped(object sender, RightTappedRoutedEventArgs e)
     {
@@ -734,15 +923,32 @@ public sealed partial class MainWindow : Window
     private async void CtxBuscarWeb_Click(object sender, RoutedEventArgs e)
     {
         if (GetSelectedPackage() is not { } pkg) return;
-        var dp = new DataPackage();
-        dp.SetText(pkg.Id);
-        Clipboard.SetContent(dp);
-        await ShowDialogAsync("Id copiado",
-            $"Se copió el Id del paquete al portapapeles:\n\n{pkg.Id}\n\n" +
-            "Revise manualmente el paquete y confirme que la descarga proviene del sitio oficial del proveedor.");
+
+        string url = BuildWingetRunUrl(pkg.Id);
+
+        bool confirmed = await ShowConfirmDialogAsync(
+            "Abrir en winget.run",
+            $"Se abrirá la página del paquete en su navegador:\n\n{url}\n\nVerifique que el paquete es legítimo antes de instalar nada. ¿Desea continuar?");
+
+        if (!confirmed) return;
+
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            await Windows.System.Launcher.LaunchUriAsync(uri);
     }
 
-    private void CtxExcluir_Click(object sender, RoutedEventArgs e)
+    private static string BuildWingetRunUrl(string packageId)
+    {
+        int dotIdx = packageId.IndexOf('.');
+        if (dotIdx > 0 && dotIdx < packageId.Length - 1)
+        {
+            string publisher = Uri.EscapeDataString(packageId[..dotIdx]);
+            string name = Uri.EscapeDataString(packageId[(dotIdx + 1)..]);
+            return $"https://winget.run/pkg/{publisher}/{name}";
+        }
+        return $"https://winget.run/search?q={Uri.EscapeDataString(packageId)}";
+    }
+
+    private void CtxExcluir_Click(object? sender, RoutedEventArgs? e)
     {
         if (GetSelectedPackage() is not { } pkg) return;
         if (_settings.ExcludedIds.Contains(pkg.Id))

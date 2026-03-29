@@ -7,4 +7,5 @@ public sealed class WingetPackage
     public string Version { get; set; } = "";
     public string Available { get; set; } = "";
     public string Source { get; set; } = "";
+    public string InstallerSize { get; set; } = "";
 }

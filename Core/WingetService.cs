@@ -97,12 +97,145 @@ public static class WingetService
         return await RunWingetInteractiveAsync(packageId, silent, progress, cancellationToken, logProgress);
     }
 
+    public static async Task<List<WingetPackage>> GetInstalledPackagesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await RunWingetAsync(["list", "--accept-source-agreements"], cancellationToken);
+        if (result.ExitCode != 0 && string.IsNullOrWhiteSpace(result.Output))
+            throw new InvalidOperationException(BuildWingetCommandErrorMessage(
+                "listar programas instalados", result.ExitCode, result.Output, result.Error));
+        return ParseUpgradeOutput(result.Output);
+    }
+
+    public static async Task<UpgradeResult> UninstallPackageAsync(
+        string packageId,
+        bool silent,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = new List<string>
+        {
+            "uninstall",
+            "--id",
+            packageId,
+            "--accept-source-agreements"
+        };
+        if (silent) arguments.Add("--silent");
+
+        var result = await RunWingetAsync(arguments, cancellationToken);
+        return new UpgradeResult
+        {
+            Success = result.ExitCode == 0,
+            ExitCode = result.ExitCode,
+            Output = result.Output,
+            ErrorOutput = result.Error
+        };
+    }
+
+    public static async Task<WingetPackageInfo> GetPackageInfoAsync(
+        string packageId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var result = await RunWingetAsync(
+                ["show", "--id", packageId, "--accept-source-agreements"],
+                cancellationToken);
+            return ParsePackageInfo(result.Output);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return new WingetPackageInfo();
+        }
+    }
+
+    internal static WingetPackageInfo ParsePackageInfo(string output)
+    {
+        var info = new WingetPackageInfo();
+        if (string.IsNullOrWhiteSpace(output))
+            return info;
+
+        string[] lines = output.Replace("\r", "").Split('\n');
+        var descBuilder = new StringBuilder();
+        bool inDescription = false;
+        bool inInstaller = false;
+
+        foreach (string line in lines)
+        {
+            string trimmed = line.Trim();
+
+            if (inDescription)
+            {
+                bool isNewSection = !string.IsNullOrWhiteSpace(trimmed)
+                    && !line.StartsWith(" ") && !line.StartsWith("\t")
+                    && trimmed.Length > 0 && char.IsLetter(trimmed[0]);
+
+                if (string.IsNullOrWhiteSpace(trimmed) || isNewSection)
+                {
+                    inDescription = false;
+                    info.Description = descBuilder.ToString().Trim();
+                }
+                else
+                {
+                    if (descBuilder.Length > 0) descBuilder.Append(' ');
+                    descBuilder.Append(trimmed);
+                    continue;
+                }
+            }
+
+            if (trimmed == "Installer:")
+            {
+                inInstaller = true;
+                continue;
+            }
+
+            if (inInstaller && !line.StartsWith(" ") && !line.StartsWith("\t") && !string.IsNullOrWhiteSpace(trimmed))
+                inInstaller = false;
+
+            if (trimmed.StartsWith("Homepage:"))
+            {
+                string val = trimmed["Homepage:".Length..].Trim();
+                if (val.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                    || val.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    info.Homepage = val;
+            }
+            else if (trimmed.StartsWith("Release Notes Url:"))
+            {
+                string val = trimmed["Release Notes Url:".Length..].Trim();
+                if (val.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                    || val.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                    info.ReleaseNotesUrl = val;
+            }
+            else if (trimmed.StartsWith("Description:"))
+            {
+                string inline = trimmed["Description:".Length..].Trim();
+                if (!string.IsNullOrEmpty(inline))
+                    info.Description = inline;
+                else
+                    inDescription = true;
+            }
+            else if (inInstaller && trimmed.StartsWith("Installer Size:"))
+            {
+                info.InstallerSize = trimmed["Installer Size:".Length..].Trim();
+            }
+        }
+
+        if (inDescription && descBuilder.Length > 0)
+            info.Description = descBuilder.ToString().Trim();
+
+        return info;
+    }
+
     public static async Task<UpgradeBatchResult> UpgradePackagesAsAdministratorAsync(
         IEnumerable<string> packageIds,
         bool silent,
         CancellationToken cancellationToken = default,
         IProgress<string>? logProgress = null,
-        IProgress<UpgradeBatchStatusInfo>? statusProgress = null)
+        IProgress<UpgradeBatchStatusInfo>? statusProgress = null,
+        IProgress<WingetProgressInfo>? downloadProgress = null)
     {
         List<string> normalizedPackageIds = [..
             packageIds
@@ -132,6 +265,7 @@ public static class WingetService
             pipeServer,
             authToken,
             statusProgress,
+            downloadProgress,
             messageReaderCts.Token);
 
         try
@@ -153,7 +287,7 @@ public static class WingetService
 
             process.Start();
             logProgress?.Report(normalizedPackageIds.Count == 1
-                ? "Actualización elevada en curso. El progreso detallado no está disponible en este modo."
+                ? "Actualización elevada en curso..."
                 : "Lote elevado en curso. Se usará una sola elevación para todas las actualizaciones seleccionadas.");
             await process.WaitForExitAsync();
 
@@ -253,6 +387,20 @@ public static class WingetService
             int completedItems = 0;
             bool batchCancelled = false;
 
+            var progressChannel = System.Threading.Channels.Channel.CreateBounded<ElevatedWorkerMessage>(
+                new System.Threading.Channels.BoundedChannelOptions(16)
+                {
+                    FullMode = System.Threading.Channels.BoundedChannelFullMode.DropOldest,
+                    SingleReader = true,
+                    SingleWriter = false
+                });
+
+            var channelDrainTask = Task.Run(async () =>
+            {
+                await foreach (var msg in progressChannel.Reader.ReadAllAsync())
+                    await SendWorkerMessageAsync(writer, msg);
+            });
+
             foreach (string packageId in options.PackageIds)
             {
                 if (cancelEvent.WaitOne(0))
@@ -265,10 +413,29 @@ public static class WingetService
                 completedItems++;
                 await SendWorkerStatusAsync(writer, "running", completedItems, packageId, options.PackageIds.Count);
 
+                long lastProgressTick = 0L;
+                long progressIntervalTicks = Stopwatch.Frequency / 4; // max 4 updates/sec
+                string currentPackageId = packageId;
+
+                var progressHandler = new Progress<WingetProgressInfo>(info =>
+                {
+                    long now = Stopwatch.GetTimestamp();
+                    if (now - lastProgressTick < progressIntervalTicks) return;
+                    lastProgressTick = now;
+                    progressChannel.Writer.TryWrite(new ElevatedWorkerMessage
+                    {
+                        Type = "progress",
+                        PackageId = currentPackageId,
+                        DownloadedBytes = info.DownloadedBytes,
+                        TotalBytes = info.TotalBytes,
+                        SpeedBytesPerSecond = info.SpeedBytesPerSecond
+                    });
+                });
+
                 UpgradeResult result = await RunWingetInteractiveAsync(
                     packageId,
                     options.Silent,
-                    progress: null,
+                    progress: progressHandler,
                     cancellationToken: CancellationToken.None,
                     logProgress: null);
 
@@ -283,6 +450,9 @@ public static class WingetService
                     ErrorOutput = result.ErrorOutput
                 });
             }
+
+            progressChannel.Writer.Complete();
+            await channelDrainTask;
 
             await SendWorkerStatusAsync(writer, "completed", completedItems, string.Empty, options.PackageIds.Count);
             await SendWorkerMessageAsync(writer, new ElevatedWorkerMessage
@@ -434,6 +604,7 @@ public static class WingetService
         NamedPipeServerStream pipeServer,
         string authToken,
         IProgress<UpgradeBatchStatusInfo>? statusProgress,
+        IProgress<WingetProgressInfo>? downloadProgress,
         CancellationToken cancellationToken)
     {
         await pipeServer.WaitForConnectionAsync(cancellationToken);
@@ -484,6 +655,12 @@ public static class WingetService
                         CurrentIndex = message.CurrentIndex,
                         TotalCount = message.TotalCount
                     });
+                    break;
+
+                case "progress":
+                    if (message.TotalBytes > 0)
+                        downloadProgress?.Report(new WingetProgressInfo(
+                            message.DownloadedBytes, message.TotalBytes, message.SpeedBytesPerSecond));
                     break;
 
                 case "result":
@@ -1137,5 +1314,9 @@ public static class WingetService
         public bool BatchCancelled { get; set; }
         public string Output { get; set; } = string.Empty;
         public string ErrorOutput { get; set; } = string.Empty;
+        // Download progress fields
+        public long DownloadedBytes { get; set; }
+        public long TotalBytes { get; set; }
+        public double SpeedBytesPerSecond { get; set; }
     }
 }

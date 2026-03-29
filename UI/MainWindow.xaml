@@ -150,6 +150,11 @@
                                             <FontIcon Glyph="&#xE81C;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE74D;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
@@ -157,7 +162,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Source Filter -->
+            <!-- Source Filter + Search + Package Info -->
             <Border Grid.Row="2"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -165,27 +170,72 @@
                     CornerRadius="8"
                     Padding="16,8"
                     Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <TextBlock Text="Fuente:" VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <ComboBox x:Name="cmbFuente" Width="240"
-                              SelectionChanged="CmbFuente_SelectionChanged">
-                        <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
-                    </ComboBox>
-                    <TextBlock Text="Excluidos:" VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="140">
-                        <DropDownButton.Flyout>
-                            <MenuFlyout>
-                                <RadioMenuFlyoutItem x:Name="menuFiltroTodos" Text="Todos" IsChecked="True"
-                                                     GroupName="FiltroExcluidos" Click="MenuFiltroTodos_Click" />
-                                <RadioMenuFlyoutItem x:Name="menuFiltroNoExcluidos" Text="No excluidos"
-                                                     GroupName="FiltroExcluidos" Click="MenuFiltroNoExcluidos_Click" />
-                                <RadioMenuFlyoutItem x:Name="menuFiltroSoloExcluidos" Text="Solo excluidos"
-                                                     GroupName="FiltroExcluidos" Click="MenuFiltroSoloExcluidos_Click" />
-                            </MenuFlyout>
-                        </DropDownButton.Flyout>
-                    </DropDownButton>
+                <StackPanel Spacing="6">
+                    <!-- Filters row -->
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="Fuente:" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <ComboBox x:Name="cmbFuente" Width="200"
+                                  SelectionChanged="CmbFuente_SelectionChanged">
+                            <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
+                        </ComboBox>
+                        <TextBlock Text="Excluidos:" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
+                                    <RadioMenuFlyoutItem x:Name="menuFiltroTodos" Text="Todos" IsChecked="True"
+                                                         GroupName="FiltroExcluidos" Click="MenuFiltroTodos_Click" />
+                                    <RadioMenuFlyoutItem x:Name="menuFiltroNoExcluidos" Text="No excluidos"
+                                                         GroupName="FiltroExcluidos" Click="MenuFiltroNoExcluidos_Click" />
+                                    <RadioMenuFlyoutItem x:Name="menuFiltroSoloExcluidos" Text="Solo excluidos"
+                                                         GroupName="FiltroExcluidos" Click="MenuFiltroSoloExcluidos_Click" />
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                        <TextBlock Text="Buscar:" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBox x:Name="txtBuscar"
+                                 PlaceholderText="Nombre o Id..."
+                                 Width="200" Height="32"
+                                 VerticalAlignment="Center"
+                                 TextChanged="TxtBuscar_TextChanged" />
+                    </StackPanel>
+                    <!-- Package info panel (shown when a package is selected) -->
+                    <Border x:Name="panelPackageInfo"
+                            Visibility="Collapsed"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="4"
+                            Padding="10,6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="txtInfoDescripcion"
+                                       Grid.Column="0"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap"
+                                       VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock x:Name="txtInfoTamano"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Center" />
+                                <HyperlinkButton x:Name="lnkHomepage"
+                                                 Content="Página web"
+                                                 Padding="4,0"
+                                                 FontSize="12"
+                                                 Visibility="Collapsed" />
+                                <HyperlinkButton x:Name="lnkNotasVersion"
+                                                 Content="Notas de versión"
+                                                 Padding="4,0"
+                                                 FontSize="12"
+                                                 Visibility="Collapsed" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 
@@ -224,19 +274,52 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="54" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="110" />
-                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="190" />
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="60" />
+                                <ColumnDefinition Width="75" />
+                                <ColumnDefinition Width="55" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="3" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="4" Text="Disponible" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="5" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="6" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <!-- Sortable header cells -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
+                                <TextBlock Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
+                                <TextBlock Text="Id" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
+                                <TextBlock Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
+                                <TextBlock Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
+                                <TextBlock Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                        Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
+                                <TextBlock Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                         </Grid>
 
                         <ListView x:Name="lvPackages"
@@ -251,11 +334,12 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="54" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="200" />
-                                            <ColumnDefinition Width="110" />
-                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="190" />
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="100" />
                                             <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="60" />
+                                            <ColumnDefinition Width="75" />
+                                            <ColumnDefinition Width="55" />
                                         </Grid.ColumnDefinitions>
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                   VerticalAlignment="Center" MinWidth="0" />
@@ -267,9 +351,12 @@
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                         <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <FontIcon Grid.Column="6"
+                                        <FontIcon Grid.Column="7"
                                                   Glyph="&#xE8D8;"
                                                   FontSize="14"
                                                   VerticalAlignment="Center"
