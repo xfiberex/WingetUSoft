@@ -23,7 +23,17 @@ public sealed class AppSettings
     public List<string> ExcludedIds { get; set; } = [];
     public List<HistoryEntry> History { get; set; } = [];
     public int AutoCheckIntervalMinutes { get; set; } = 0;
-    public bool DarkMode { get; set; } = false;
+
+    /// <summary>0 = System, 1 = Light, 2 = Dark. Stored as int for JSON simplicity.</summary>
+    public int ThemeMode { get; set; } = 0;
+
+    /// <summary>Legacy field — kept for JSON back-compat. Migrated to ThemeMode on load.</summary>
+    public bool DarkMode
+    {
+        get => ThemeMode == 2;
+        set { if (value && ThemeMode == 0) ThemeMode = 2; }
+    }
+
     public bool LogToFile { get; set; } = true;
 
     [JsonIgnore]

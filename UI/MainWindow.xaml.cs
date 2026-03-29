@@ -59,6 +59,9 @@ public sealed partial class MainWindow : Window
     private readonly object _logLock = new();
     private int _logLineCount;
     private bool _initialized;
+    private int _excludedFilter = 0;
+
+    private AppWindow _appWindow = null!;
 
     private MenuFlyout ctxMenuRow = null!;
     private MenuFlyoutItem ctxActualizar = null!;
@@ -95,22 +98,31 @@ public sealed partial class MainWindow : Window
         // Set up window
         var hWnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new Windows.Graphics.SizeInt32(1180, 820));
+        _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.Resize(new Windows.Graphics.SizeInt32(1180, 820));
 
         // Set title bar
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+
+        // Keep caption button colors in sync with the actual (resolved) theme
+        if (Content is FrameworkElement contentRoot)
+            contentRoot.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors();
 
         lvPackages.ItemsSource = _packageViewModels;
 
         _silentMode = _settings.SilentMode;
         menuSilenciosa.IsChecked = _silentMode;
         menuInteractiva.IsChecked = !_silentMode;
-        menuModoOscuro.IsChecked = _settings.DarkMode;
 
-        if (_settings.DarkMode)
-            ApplyTheme(true);
+        // Set initial theme radio check
+        switch (_settings.ThemeMode)
+        {
+            case 1: menuTemaClaro.IsChecked = true; break;
+            case 2: menuTemaOscuro.IsChecked = true; break;
+            default: menuTemaSistema.IsChecked = true; break;
+        }
+        ApplyTheme(_settings.ThemeMode);
 
         UpdateAutoCheckTimer();
         UpdateSelectionDetails();
@@ -121,6 +133,7 @@ public sealed partial class MainWindow : Window
         {
             root.Loaded += async (_, _) =>
             {
+                UpdateTitleBarButtonColors();
                 ShowSettingsLoadWarningIfNeeded();
 
                 string? version = await WingetService.CheckWingetAvailableAsync();
@@ -216,9 +229,12 @@ public sealed partial class MainWindow : Window
         _packageViewModels.Clear();
         foreach (var pkg in _packages)
         {
+            bool isExcluded = _settings.ExcludedIds.Contains(pkg.Id);
+            if (_excludedFilter == 1 && isExcluded) continue;
+            if (_excludedFilter == 2 && !isExcluded) continue;
             _packageViewModels.Add(new PackageViewModel(pkg)
             {
-                IsExcluded = _settings.ExcludedIds.Contains(pkg.Id)
+                IsExcluded = isExcluded
             });
         }
         UpdateSelectionDetails();
@@ -586,11 +602,25 @@ public sealed partial class MainWindow : Window
         TrySaveSettings("No se pudo guardar el modo de actualización.");
     }
 
-    private void MenuModoOscuro_Click(object sender, RoutedEventArgs e)
+    private void MenuTemaSistema_Click(object sender, RoutedEventArgs e)
     {
-        _settings.DarkMode = menuModoOscuro.IsChecked;
+        _settings.ThemeMode = 0;
         TrySaveSettings("No se pudo guardar la configuración visual.");
-        ApplyTheme(_settings.DarkMode);
+        ApplyTheme(0);
+    }
+
+    private void MenuTemaClaro_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ThemeMode = 1;
+        TrySaveSettings("No se pudo guardar la configuración visual.");
+        ApplyTheme(1);
+    }
+
+    private void MenuTemaOscuro_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ThemeMode = 2;
+        TrySaveSettings("No se pudo guardar la configuración visual.");
+        ApplyTheme(2);
     }
 
     private async void MenuExportar_Click(object sender, RoutedEventArgs e)
@@ -640,13 +670,13 @@ public sealed partial class MainWindow : Window
             menuInteractiva.IsChecked = !_silentMode;
             UpdateAutoCheckTimer();
             LoadPackagesToGrid();
-            ApplyTheme(_settings.DarkMode);
+            ApplyTheme(_settings.ThemeMode);
         }
     }
 
     private async void MenuHistorial_Click(object sender, RoutedEventArgs e)
     {
-        var historyWindow = new HistoryWindow(_settings.History, _settings.DarkMode);
+        var historyWindow = new HistoryWindow(_settings.History, _settings.ThemeMode);
         historyWindow.Activate();
 
         var tcs = new TaskCompletionSource();
@@ -724,6 +754,27 @@ public sealed partial class MainWindow : Window
     }
 
     // --- Source Filter ---
+
+    private void MenuFiltroTodos_Click(object sender, RoutedEventArgs e)
+    {
+        _excludedFilter = 0;
+        btnFiltroExcluidos.Content = "Todos";
+        LoadPackagesToGrid();
+    }
+
+    private void MenuFiltroNoExcluidos_Click(object sender, RoutedEventArgs e)
+    {
+        _excludedFilter = 1;
+        btnFiltroExcluidos.Content = "No excluidos";
+        LoadPackagesToGrid();
+    }
+
+    private void MenuFiltroSoloExcluidos_Click(object sender, RoutedEventArgs e)
+    {
+        _excludedFilter = 2;
+        btnFiltroExcluidos.Content = "Solo excluidos";
+        LoadPackagesToGrid();
+    }
 
     private void UpdateSourceFilter()
     {
@@ -922,11 +973,50 @@ public sealed partial class MainWindow : Window
         txtDetalleEstado.Text = $"{pkg.Name} | {pkg.Id} | {pkg.Version} -> {pkg.Available} | {pkg.Source} | {state}";
     }
 
-    private void ApplyTheme(bool dark)
+    private void ApplyTheme(int themeMode)
     {
         if (Content is FrameworkElement rootElement)
         {
-            rootElement.RequestedTheme = dark ? ElementTheme.Dark : ElementTheme.Light;
+            rootElement.RequestedTheme = themeMode switch
+            {
+                1 => ElementTheme.Light,
+                2 => ElementTheme.Dark,
+                _ => ElementTheme.Default   // 0 = follow system
+            };
+        }
+        UpdateTitleBarButtonColors();
+    }
+
+    private void UpdateTitleBarButtonColors()
+    {
+        if (_appWindow?.TitleBar is not { } titleBar) return;
+
+        // Resolve whether the current effective theme is dark.
+        // ActualTheme is always Dark or Light (never Default).
+        bool isDark = Content is FrameworkElement fe
+            ? fe.ActualTheme == ElementTheme.Dark
+            : _settings.ThemeMode == 2;
+
+        titleBar.ButtonBackgroundColor         = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
+
+        if (isDark)
+        {
+            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.White;
+            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.White;
+            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 255, 255, 255);
+            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.White;
+            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 255, 255, 255);
+            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 255, 255, 255);
+        }
+        else
+        {
+            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.Black;
+            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.Black;
+            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 0, 0, 0);
+            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.Black;
+            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 0, 0, 0);
+            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 0, 0, 0);
         }
     }
 

@@ -5,21 +5,30 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Configuración">
 
-    <Grid Padding="20">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- Custom Title Bar -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
+            <TextBlock Text="Configuración"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
         <!-- Header Card -->
-        <Border Grid.Row="0"
+        <Border Grid.Row="1"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="20,16"
-                Margin="0,0,0,16">
+                Margin="20,4,20,12">
             <StackPanel Spacing="4">
                 <TextBlock Text="Configuración"
                            Style="{StaticResource TitleTextBlockStyle}" />
@@ -30,7 +39,7 @@
         </Border>
 
         <!-- Settings Content -->
-        <ScrollViewer Grid.Row="1" Margin="0,0,0,16">
+        <ScrollViewer Grid.Row="2" Margin="20,0,20,16">
             <StackPanel Spacing="16">
 
                 <!-- Auto-check interval -->
@@ -99,7 +108,7 @@
         </ScrollViewer>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="20,0,20,20">
             <Button x:Name="btnGuardar"
                     Style="{StaticResource AccentButtonStyle}"
                     Content="Guardar"

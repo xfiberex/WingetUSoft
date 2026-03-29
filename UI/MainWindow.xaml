@@ -3,9 +3,14 @@
     x:Class="WingetUSoft.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WingetUSoft"
     Title="WingetUSoft - Actualiza tus programas">
 
-    <Grid>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.Resources>
+            <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <local:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -120,8 +125,14 @@
                                         <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
                                                               Click="MenuInteractiva_Click" />
                                     </MenuFlyoutSubItem>
-                                    <ToggleMenuFlyoutItem x:Name="menuModoOscuro" Text="Modo oscuro"
-                                                          Click="MenuModoOscuro_Click" />
+                                    <MenuFlyoutSubItem Text="Tema">
+                                        <RadioMenuFlyoutItem x:Name="menuTemaSistema" Text="Sistema (automático)"
+                                                             GroupName="Tema" IsChecked="True" Click="MenuTemaSistema_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuTemaClaro" Text="Claro"
+                                                             GroupName="Tema" Click="MenuTemaClaro_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuTemaOscuro" Text="Oscuro"
+                                                             GroupName="Tema" Click="MenuTemaOscuro_Click" />
+                                    </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem Text="Exportar lista..." Click="MenuExportar_Click">
                                         <MenuFlyoutItem.Icon>
@@ -161,6 +172,20 @@
                               SelectionChanged="CmbFuente_SelectionChanged">
                         <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
                     </ComboBox>
+                    <TextBlock Text="Excluidos:" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="140">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout>
+                                <RadioMenuFlyoutItem x:Name="menuFiltroTodos" Text="Todos" IsChecked="True"
+                                                     GroupName="FiltroExcluidos" Click="MenuFiltroTodos_Click" />
+                                <RadioMenuFlyoutItem x:Name="menuFiltroNoExcluidos" Text="No excluidos"
+                                                     GroupName="FiltroExcluidos" Click="MenuFiltroNoExcluidos_Click" />
+                                <RadioMenuFlyoutItem x:Name="menuFiltroSoloExcluidos" Text="Solo excluidos"
+                                                     GroupName="FiltroExcluidos" Click="MenuFiltroSoloExcluidos_Click" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
                 </StackPanel>
             </Border>
 
@@ -203,6 +228,7 @@
                                 <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="60" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
                             <TextBlock Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
@@ -210,6 +236,7 @@
                             <TextBlock Grid.Column="3" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                             <TextBlock Grid.Column="4" Text="Disponible" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                             <TextBlock Grid.Column="5" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock Grid.Column="6" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                         </Grid>
 
                         <ListView x:Name="lvPackages"
@@ -219,7 +246,8 @@
                                   RightTapped="LvPackages_RightTapped">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Height="36" Padding="8,0">
+                                    <Grid Height="36" Padding="8,0"
+                                          Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="54" />
                                             <ColumnDefinition Width="*" />
@@ -227,6 +255,7 @@
                                             <ColumnDefinition Width="110" />
                                             <ColumnDefinition Width="110" />
                                             <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="60" />
                                         </Grid.ColumnDefinitions>
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                   VerticalAlignment="Center" MinWidth="0" />
@@ -240,6 +269,13 @@
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                         <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                        <FontIcon Grid.Column="6"
+                                                  Glyph="&#xE8D8;"
+                                                  FontSize="14"
+                                                  VerticalAlignment="Center"
+                                                  Margin="8,0,0,0"
+                                                  Foreground="#FFBA4636"
+                                                  Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>

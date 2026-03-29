@@ -6,21 +6,30 @@
     xmlns:local="using:WingetUSoft"
     Title="Historial de actualizaciones">
 
-    <Grid Padding="16">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- Custom Title Bar -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
+            <TextBlock Text="Historial de actualizaciones"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       Style="{StaticResource CaptionTextBlockStyle}" />
+        </Grid>
+
         <!-- Header Card -->
-        <Border Grid.Row="0"
+        <Border Grid.Row="1"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="20,16"
-                Margin="0,0,0,12">
+                Margin="16,4,16,12">
             <StackPanel Spacing="4">
                 <TextBlock Text="Historial reciente"
                            Style="{StaticResource TitleTextBlockStyle}" />
@@ -32,13 +41,13 @@
         </Border>
 
         <!-- History List -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="12"
-                Margin="0,0,0,12">
+                Margin="16,0,16,12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -101,7 +110,7 @@
         </Border>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="16,0,16,16">
             <Button x:Name="btnCerrar" Content="Cerrar" MinWidth="120" Height="36"
                     Click="BtnCerrar_Click" />
         </StackPanel>
