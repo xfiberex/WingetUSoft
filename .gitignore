@@ -22,6 +22,7 @@ artifacts/
 *.userosscache
 *.sln.docstates
 *.rsuser
+installer/Output/
 
 ## Rider
 .idea/
