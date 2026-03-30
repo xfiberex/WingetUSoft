@@ -40,4 +40,18 @@
     <None Include="WingetUSoft.Tests\WingetUSoft.Tests.csproj" />
   </ItemGroup>
 
+  <!-- Copia .xbf y .pri del proyecto al output de publish (workaround WinUI 3 unpackaged) -->
+  <Target Name="CopyXamlResourcesToPublish" AfterTargets="Publish">
+    <PropertyGroup>
+      <_BuildOutput>$(OutputPath)</_BuildOutput>
+    </PropertyGroup>
+    <ItemGroup>
+      <_XbfFiles Include="$(_BuildOutput)**\*.xbf" />
+      <_AppPri Include="$(_BuildOutput)WingetUSoft.pri" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AppPri)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_XbfFiles)" DestinationFiles="@(_XbfFiles->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Copied XBF and PRI resources to publish output." />
+  </Target>
+
 </Project>

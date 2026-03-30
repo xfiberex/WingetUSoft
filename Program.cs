@@ -24,7 +24,9 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            File.WriteAllText("crash.log", ex.ToString());
+            File.WriteAllText(
+                Path.Combine(AppContext.BaseDirectory, "crash.log"),
+                ex.ToString());
             return 1;
         }
     }
