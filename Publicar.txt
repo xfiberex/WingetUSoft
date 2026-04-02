@@ -1,14 +1,9 @@
-Publicar
-
--
+# 1. Desde la raíz del proyecto: publicar y copiar icono
 
 dotnet publish WingetUSoft.csproj -c Release -r win-x64 --self-contained -o ./publish
+New-Item -ItemType Directory -Force publish\Assets | Out-Null
+Copy-Item Assets\app.ico publish\Assets\
 
-_____________________________________________________________________
-
-Copiar carpeta Assets para el icono
-
--
-
-New-Item -ItemType Directory -Force publish\Assets
->> Copy-Item Assets\app.ico publish\Assets\
+# 2. Compilar el instalador con Inno Setup (desde la raíz o desde installer/)
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\installer.iss
+# El .exe queda en installer\Output\WingetUSoft-Setup-1.0.0.exe

@@ -1,22 +1,31 @@
 #define MyAppName "WingetUSoft"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "WingetUSoft"
+#define MyAppPublisher "xfiberex"
 #define MyAppExeName "WingetUSoft.exe"
-#define SourceDir "publish"
+#define MyAppURL "https://github.com/xfiberex/WingetUSoft"
+#define MyAppUpdatesURL "https://github.com/xfiberex/WingetUSoft/releases"
+; SourceDir es relativo al .iss --> ../publish (raiz del proyecto)
+#define SourceDir "..\publish"
 #define VCRedistUrl "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 #define WinAppRuntimeUrl "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe"
 
 [Setup]
+; AppId fijo: NO cambiar entre versiones o se tratara como app distinta
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}
+AppUpdatesURL={#MyAppUpdatesURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=Output
 OutputBaseFilename=WingetUSoft-Setup-{#MyAppVersion}
-SetupIconFile=Assets\app.ico
+; Rutas relativas al .iss (en installer/)
+SetupIconFile=..\Assets\app.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 WizardStyle=modern
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -24,6 +33,13 @@ PrivilegesRequired=admin
 MinVersion=10.0.19041
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
+; Permite instalar encima sin desinstalar primero
+CloseApplications=yes
+CloseApplicationsFilter=*{#MyAppExeName}*
+RestartApplications=no
+; Reutiliza el directorio y configuracion de la version anterior
+UsePreviousAppDir=yes
+UsePreviousGroup=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
