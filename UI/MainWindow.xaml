@@ -58,6 +58,16 @@
                     <TextBlock Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <InfoBar x:Name="infoBarUpdate"
+                             IsOpen="False"
+                             Severity="Informational"
+                             IsClosable="True"
+                             Margin="0,4,0,0">
+                        <InfoBar.ActionButton>
+                            <HyperlinkButton Content="Descargar ahora"
+                                             Click="LnkDescargarUpdate_Click" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                 </StackPanel>
             </Border>
 
@@ -153,6 +163,14 @@
                                     <MenuFlyoutItem Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE74D;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="menuBuscarActualizacion"
+                                                    Text="Buscar actualización de WingetUSoft..."
+                                                    Click="MenuBuscarActualizacion_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE777;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>

@@ -72,6 +72,7 @@ public sealed partial class MainWindow : Window
     private bool _sortDescending = false;
     private CancellationTokenSource? _packageInfoCts;
     private CancellationTokenSource? _sizeLoadCts;
+    private string? _appUpdateUrl;
 
     private AppWindow _appWindow = null!;
 
@@ -163,6 +164,7 @@ public sealed partial class MainWindow : Window
                 TitleTextBlock.Text = Title;
                 txtEstado.Text = "Listo. Pulsa 'Consultar actualizaciones' para comenzar.";
                 UpdateSelectionDetails();
+                _ = CheckForAppUpdateAsync();
             };
         }
 
@@ -1248,6 +1250,58 @@ public sealed partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(_settings.LastLoadError))
             return;
         _ = ShowDialogAsync("Configuración restablecida", _settings.LastLoadError);
+    }
+
+    private async Task CheckForAppUpdateAsync()
+    {
+        GitHubReleaseInfo? info = await GitHubUpdateService.CheckForUpdateAsync();
+        if (info is null) return;
+
+        _appUpdateUrl = info.HtmlUrl;
+        infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
+        infoBarUpdate.Message = "Pulsa 'Descargar ahora' para ir a la página de descarga en GitHub.";
+        infoBarUpdate.IsOpen = true;
+        menuBuscarActualizacion.Text = $"⬆ Descargar WingetUSoft {info.Version}...";
+    }
+
+    private void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_appUpdateUrl))
+            Process.Start(new ProcessStartInfo(_appUpdateUrl) { UseShellExecute = true });
+    }
+
+    private async void MenuBuscarActualizacion_Click(object sender, RoutedEventArgs e)
+    {
+        menuBuscarActualizacion.IsEnabled = false;
+        string originalText = menuBuscarActualizacion.Text;
+        menuBuscarActualizacion.Text = "Comprobando...";
+        try
+        {
+            GitHubReleaseInfo? info = await GitHubUpdateService.CheckForUpdateAsync();
+            if (info is null)
+            {
+                menuBuscarActualizacion.Text = originalText;
+                await ShowDialogAsync("Sin actualizaciones",
+                    "WingetUSoft está actualizado. No hay versiones nuevas disponibles.");
+            }
+            else
+            {
+                _appUpdateUrl = info.HtmlUrl;
+                menuBuscarActualizacion.Text = $"⬆ Descargar WingetUSoft {info.Version}...";
+                infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
+                infoBarUpdate.Message = "Pulsa 'Descargar ahora' para ir a la página de descarga en GitHub.";
+                infoBarUpdate.IsOpen = true;
+                if (await ShowConfirmDialogAsync("Actualización disponible",
+                    $"Hay una nueva versión disponible: {info.Version}\n\n¿Abrir la página de descarga?"))
+                {
+                    Process.Start(new ProcessStartInfo(info.HtmlUrl) { UseShellExecute = true });
+                }
+            }
+        }
+        finally
+        {
+            menuBuscarActualizacion.IsEnabled = true;
+        }
     }
 
     private async Task ShowDialogAsync(string title, string message)
