@@ -1266,17 +1266,50 @@ public sealed partial class MainWindow : Window
         GitHubReleaseInfo? info = await GitHubUpdateService.CheckForUpdateAsync();
         if (info is null) return;
 
-        _appUpdateUrl = info.HtmlUrl;
+        _appUpdateUrl = info.DownloadUrl;
         infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
-        infoBarUpdate.Message = "Pulsa 'Descargar ahora' para ir a la página de descarga en GitHub.";
+        infoBarUpdate.Message = "Pulsa 'Instalar ahora' para descargar e instalar automáticamente.";
         infoBarUpdate.IsOpen = true;
-        menuBuscarActualizacion.Text = $"⬆ Descargar WingetUSoft {info.Version}...";
+        menuBuscarActualizacion.Text = $"⬆ Instalar WingetUSoft {info.Version}...";
     }
 
-    private void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e)
+    private async void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(_appUpdateUrl))
-            Process.Start(new ProcessStartInfo(_appUpdateUrl) { UseShellExecute = true });
+        if (string.IsNullOrEmpty(_appUpdateUrl)) return;
+
+        btnInstalarUpdate.IsEnabled = false;
+        btnInstalarUpdate.Content = "Descargando...";
+        pbUpdate.Visibility = Visibility.Visible;
+        infoBarUpdate.IsClosable = false;
+
+        var progress = new Progress<double>(p =>
+        {
+            pbUpdate.Value = p;
+            infoBarUpdate.Message = $"Descargando... {p:P0}";
+        });
+
+        try
+        {
+            string installerPath = await GitHubUpdateService.DownloadInstallerAsync(_appUpdateUrl, progress);
+            infoBarUpdate.Message = "Instalando... La aplicaci\u00f3n se reiniciar\u00e1 autom\u00e1ticamente.";
+
+            Process.Start(new ProcessStartInfo(installerPath)
+            {
+                Arguments = "/VERYSILENT /NORESTART /autoinstall=1",
+                UseShellExecute = true
+            });
+            await Task.Delay(1500);
+            Application.Current.Exit();
+        }
+        catch (Exception ex)
+        {
+            pbUpdate.Visibility = Visibility.Collapsed;
+            btnInstalarUpdate.IsEnabled = true;
+            btnInstalarUpdate.Content = "Instalar ahora";
+            infoBarUpdate.IsClosable = true;
+            infoBarUpdate.Severity = InfoBarSeverity.Error;
+            infoBarUpdate.Message = $"Error: {ex.Message}";
+        }
     }
 
     private async void MenuBuscarActualizacion_Click(object sender, RoutedEventArgs e)
@@ -1295,15 +1328,15 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                _appUpdateUrl = info.HtmlUrl;
-                menuBuscarActualizacion.Text = $"⬆ Descargar WingetUSoft {info.Version}...";
+                _appUpdateUrl = info.DownloadUrl;
+                menuBuscarActualizacion.Text = $"⬆ Instalar WingetUSoft {info.Version}...";
                 infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
-                infoBarUpdate.Message = "Pulsa 'Descargar ahora' para ir a la página de descarga en GitHub.";
+                infoBarUpdate.Message = "Pulsa 'Instalar ahora' para descargar e instalar automáticamente.";
                 infoBarUpdate.IsOpen = true;
                 if (await ShowConfirmDialogAsync("Actualización disponible",
-                    $"Hay una nueva versión disponible: {info.Version}\n\n¿Abrir la página de descarga?"))
+                    $"Hay una nueva versión disponible: {info.Version}\n\n¿Descargar e instalar automáticamente?"))
                 {
-                    Process.Start(new ProcessStartInfo(info.HtmlUrl) { UseShellExecute = true });
+                    LnkDescargarUpdate_Click(sender, e);
                 }
             }
         }

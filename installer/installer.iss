@@ -57,6 +57,7 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\Assets\app.ico"; Tasks: desktopicon
 
 [Run]
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait shellexec; Check: IsAutoUpdate
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -64,6 +65,11 @@ var
   VCRedistNeedsInstall: Boolean;
   WinAppRuntimeNeedsInstall: Boolean;
   ResultCode: Integer;
+
+function IsAutoUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:autoinstall|0}') = '1';
+end;
 
 function VCRedistInstalled(): Boolean;
 var
