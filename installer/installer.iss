@@ -8,6 +8,7 @@
 #define SourceDir "..\publish"
 #define VCRedistUrl "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 #define WinAppRuntimeUrl "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe"
+#define DotNet10Url "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
 
 [Setup]
 ; AppId fijo: NO cambiar entre versiones o se tratara como app distinta
@@ -64,6 +65,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 var
   VCRedistNeedsInstall: Boolean;
   WinAppRuntimeNeedsInstall: Boolean;
+  DotNet10NeedsInstall: Boolean;
   ResultCode: Integer;
 
 function IsAutoUpdate: Boolean;
@@ -87,10 +89,31 @@ begin
             RegKeyExists(HKLM, 'SOFTWARE\Microsoft\WindowsAppSDK\1.8');
 end;
 
+function DotNet10Installed(): Boolean;
+var
+  Names: TArrayOfString;
+  I: Integer;
+begin
+  Result := False;
+  // Comprueba si alguna versión 10.x del Desktop Runtime está instalada
+  if RegGetSubkeyNames(HKLM,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
+    Names) then
+  begin
+    for I := 0 to GetArrayLength(Names) - 1 do
+      if Copy(Names[I], 1, 3) = '10.' then
+      begin
+        Result := True;
+        Exit;
+      end;
+  end;
+end;
+
 procedure InitializeWizard();
 begin
   VCRedistNeedsInstall := not VCRedistInstalled();
   WinAppRuntimeNeedsInstall := not WinAppRuntimeInstalled();
+  DotNet10NeedsInstall := not DotNet10Installed();
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -99,7 +122,7 @@ var
 begin
   if CurStep = ssInstall then
   begin
-    if VCRedistNeedsInstall or WinAppRuntimeNeedsInstall then
+    if VCRedistNeedsInstall or WinAppRuntimeNeedsInstall or DotNet10NeedsInstall then
     begin
       DownloadPage := CreateDownloadPage(
         'Descargando dependencias',
@@ -111,6 +134,8 @@ begin
         DownloadPage.Add('{#VCRedistUrl}', 'vc_redist.x64.exe', '');
       if WinAppRuntimeNeedsInstall then
         DownloadPage.Add('{#WinAppRuntimeUrl}', 'windowsappruntimeinstall-x64.exe', '');
+      if DotNet10NeedsInstall then
+        DownloadPage.Add('{#DotNet10Url}', 'windowsdesktop-runtime-win-x64.exe', '');
 
       DownloadPage.Show;
       try
@@ -126,6 +151,10 @@ begin
       if WinAppRuntimeNeedsInstall then
         Exec(ExpandConstant('{tmp}\windowsappruntimeinstall-x64.exe'),
           '--quiet', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+
+      if DotNet10NeedsInstall then
+        Exec(ExpandConstant('{tmp}\windowsdesktop-runtime-win-x64.exe'),
+          '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
     end;
   end;
 end;
