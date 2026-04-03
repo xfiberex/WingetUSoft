@@ -73,6 +73,7 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _packageInfoCts;
     private CancellationTokenSource? _sizeLoadCts;
     private string? _appUpdateUrl;
+    private H.NotifyIcon.TaskbarIcon? _trayIcon;
 
     private AppWindow _appWindow = null!;
 
@@ -118,6 +119,12 @@ public sealed partial class MainWindow : Window
         // Set title bar
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+
+        // Mica backdrop
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+
+        // Window closing handler for minimize-to-tray
+        _appWindow.Closing += OnAppWindowClosing;
 
         // Keep caption button colors in sync with the actual (resolved) theme
         if (Content is FrameworkElement contentRoot)
@@ -484,6 +491,8 @@ public sealed partial class MainWindow : Window
             _cts = null;
             SetUIBusy(false);
         }
+
+        ShowUpdateNotification(success, failed);
 
         if (shouldReload)
             await LoadPackagesAsync(_lastIncludeUnknown);
@@ -1329,4 +1338,94 @@ public sealed partial class MainWindow : Window
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
+
+    #region Tray Icon & Notifications
+
+    private void InitializeTrayIcon()
+    {
+        if (_trayIcon is not null) return;
+
+        _trayIcon = new H.NotifyIcon.TaskbarIcon
+        {
+            ToolTipText = "WingetUSoft"
+        };
+
+        try
+        {
+            var exePath = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(exePath))
+                _trayIcon.Icon = new System.Drawing.Icon(
+                    System.Drawing.Icon.ExtractAssociatedIcon(exePath)!,
+                    new System.Drawing.Size(32, 32));
+        }
+        catch
+        {
+            _trayIcon.Icon = System.Drawing.SystemIcons.Application;
+        }
+
+        var cmd = new Microsoft.UI.Xaml.Input.XamlUICommand();
+        cmd.ExecuteRequested += (_, _) => DispatcherQueue.TryEnqueue(RestoreFromTray);
+        _trayIcon.DoubleClickCommand = cmd;
+    }
+
+    private void RestoreFromTray()
+    {
+        _appWindow.Show();
+        if (_trayIcon is not null)
+            _trayIcon.Visibility = Visibility.Collapsed;
+    }
+
+    private void MinimizeToTray()
+    {
+        InitializeTrayIcon();
+        if (_trayIcon is not null)
+        {
+            _trayIcon.Visibility = Visibility.Visible;
+            _appWindow.Hide();
+        }
+    }
+
+    private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (_settings.MinimizeToTray)
+        {
+            args.Cancel = true;
+            MinimizeToTray();
+            return;
+        }
+
+        // Cleanup tray icon
+        if (_trayIcon is not null)
+        {
+            _trayIcon.Visibility = Visibility.Collapsed;
+            _trayIcon.Dispose();
+            _trayIcon = null;
+        }
+
+        _autoCheckTimer?.Stop();
+        _cts?.Cancel();
+    }
+
+    private void ShowUpdateNotification(int success, int failed)
+    {
+        if (!_settings.ShowNotifications) return;
+
+        DispatcherQueue.TryEnqueue(async () =>
+        {
+            string message = failed == 0
+                ? $"Se actualizaron {success} programa(s) correctamente."
+                : $"Actualizados: {success}, Fallidos: {failed}.";
+
+            var dialog = new ContentDialog
+            {
+                Title = "Actualización completada",
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = Content.XamlRoot
+            };
+            await dialog.ShowAsync();
+        });
+    }
+
+    #endregion
 }

@@ -35,6 +35,7 @@ public sealed partial class UninstallWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
 
         if (Content is FrameworkElement contentRoot)
         {

@@ -47,6 +47,7 @@ public sealed partial class HistoryWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
         UpdateTitleBarButtonColors(appWindow);
 
         LoadHistory(history);

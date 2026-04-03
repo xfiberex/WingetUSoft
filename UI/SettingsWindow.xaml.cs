@@ -32,6 +32,7 @@ public sealed partial class SettingsWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
         UpdateTitleBarButtonColors(appWindow);
 
         LoadFromSettings();
@@ -79,6 +80,8 @@ public sealed partial class SettingsWindow : Window
         };
         chkLogArchivo.IsChecked = _settings.LogToFile;
         chkAdministrador.IsChecked = _settings.RunUpdatesAsAdministrator;
+        tsShowNotifications.IsOn = _settings.ShowNotifications;
+        tsMinimizeToTray.IsOn = _settings.MinimizeToTray;
         txtLogPath.Text = AppSettings.LogDirectory;
 
         _excludedIds.Clear();
@@ -108,6 +111,8 @@ public sealed partial class SettingsWindow : Window
         };
         _settings.LogToFile = chkLogArchivo.IsChecked == true;
         _settings.RunUpdatesAsAdministrator = chkAdministrador.IsChecked == true;
+        _settings.ShowNotifications = tsShowNotifications.IsOn;
+        _settings.MinimizeToTray = tsMinimizeToTray.IsOn;
         _settings.ExcludedIds = [.. _excludedIds];
         _settings.Save();
         SavedChanges = true;

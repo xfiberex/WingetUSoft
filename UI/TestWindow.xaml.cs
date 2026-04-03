@@ -8,5 +8,6 @@ public sealed partial class TestWindow : Window
     public TestWindow()
     {
         InitializeComponent();
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
     }
 }

@@ -33,6 +33,7 @@ public sealed partial class CleanupWindow : Window
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
+        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
 
         if (Content is FrameworkElement contentRoot)
         {

@@ -36,6 +36,9 @@ public sealed class AppSettings
 
     public bool LogToFile { get; set; } = true;
 
+    public bool MinimizeToTray { get; set; } = false;
+    public bool ShowNotifications { get; set; } = true;
+
     [JsonIgnore]
     public string? LastLoadError { get; private set; }
 

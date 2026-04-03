@@ -81,6 +81,36 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Notifications & Tray -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Notificaciones y bandeja"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Mostrar notificaciones al completar actualizaciones"
+                                       VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="tsShowNotifications" Grid.Column="1" VerticalAlignment="Center"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Minimizar a la bandeja del sistema al cerrar"
+                                       VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="tsMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- Excluded packages -->
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
