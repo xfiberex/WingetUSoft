@@ -1,5 +1,5 @@
 #define MyAppName "WingetUSoft"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "xfiberex"
 #define MyAppExeName "WingetUSoft.exe"
 #define MyAppURL "https://github.com/xfiberex/WingetUSoft"
