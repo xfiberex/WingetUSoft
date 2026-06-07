@@ -123,17 +123,6 @@ public class WingetServiceTests
     }
 
     [TestMethod]
-    public void BuildUpgradeArguments_SilentMode_ContainsExpectedFlags()
-    {
-        string arguments = WingetService.BuildUpgradeArguments("VideoLAN.VLC", silent: true);
-
-        StringAssert.Contains(arguments, "upgrade --id \"VideoLAN.VLC\"");
-        StringAssert.Contains(arguments, "--accept-source-agreements");
-        StringAssert.Contains(arguments, "--accept-package-agreements");
-        StringAssert.Contains(arguments, "--silent");
-    }
-
-    [TestMethod]
     public void BuildWingetCommandErrorMessage_UsesLastMeaningfulLine()
     {
         string message = WingetService.BuildWingetCommandErrorMessage(
@@ -163,43 +152,43 @@ public class WingetServiceTests
     }
 
     [TestMethod]
-    public void ParseElevatedBatchResult_ValidJson_ReturnsItemsAndCancelledFlag()
+    public void GetFailureReason_HashMismatch_ReturnsFriendlyMessage()
     {
-        string json =
-            "{" +
-            "\"BatchCancelled\":true," +
-            "\"Results\":[" +
-            "{\"PackageId\":\"App.One\",\"Success\":true,\"ExitCode\":0,\"UserCancelled\":false,\"Output\":\"ok\",\"ErrorOutput\":\"\"}," +
-            "{\"PackageId\":\"App.Two\",\"Success\":false,\"ExitCode\":5,\"UserCancelled\":false,\"Output\":\"\",\"ErrorOutput\":\"fail\"}" +
-            "]}";
+        var result = new UpgradeResult
+        {
+            Success = false,
+            ExitCode = 1,
+            ErrorOutput = "Hash mismatch detected for installer"
+        };
 
-        var result = WingetService.ParseElevatedBatchResult(json);
-
-        Assert.IsTrue(result.CancelledAfterCurrentPackage);
-        Assert.AreEqual(2, result.Items.Count);
-        Assert.AreEqual("App.One", result.Items[0].PackageId);
-        Assert.IsTrue(result.Items[0].Result.Success);
-        Assert.AreEqual("fail", result.Items[1].Result.ErrorOutput);
+        StringAssert.Contains(result.GetFailureReason(), "hash");
     }
 
     [TestMethod]
-    public void ParseElevatedBatchStatus_RunningJson_ReturnsCurrentPackageInfo()
+    public void GetFailureReason_NetworkError_ReturnsFriendlyMessage()
     {
-        string json =
-            "{" +
-            "\"Phase\":\"running\"," +
-            "\"CurrentIndex\":2," +
-            "\"PackageId\":\"App.Two\"," +
-            "\"TotalCount\":5" +
-            "}";
+        var result = new UpgradeResult
+        {
+            Success = false,
+            ExitCode = 1,
+            ErrorOutput = "network connection failed"
+        };
 
-        var status = WingetService.ParseElevatedBatchStatus(json);
+        StringAssert.Contains(result.GetFailureReason(), "red");
+    }
 
-        Assert.IsNotNull(status);
-        Assert.AreEqual("running", status.Phase);
-        Assert.AreEqual(2, status.CurrentIndex);
-        Assert.AreEqual(5, status.TotalCount);
-        Assert.AreEqual("App.Two", status.PackageId);
+    [TestMethod]
+    public void GetFailureReason_Success_ReturnsEmpty()
+    {
+        var result = new UpgradeResult { Success = true, ExitCode = 0 };
+        Assert.AreEqual("", result.GetFailureReason());
+    }
+
+    [TestMethod]
+    public void GetFailureReason_UnknownError_IncludesExitCode()
+    {
+        var result = new UpgradeResult { Success = false, ExitCode = 42, Output = "", ErrorOutput = "" };
+        StringAssert.Contains(result.GetFailureReason(), "42");
     }
 
     // ── ParseProgressLine ───────────────────────────────────────────────────

@@ -58,11 +58,14 @@ WingetUSoft/
 │
 ├── Core/                        # Lógica de negocio (sin dependencias de UI)
 │   ├── WingetService.cs         # Ejecución de winget, parsing, elevación
+│   ├── GitHubUpdateService.cs   # Auto-actualización desde GitHub Releases
+│   ├── CleanupScanner.cs        # Detección de residuos post-desinstalación
 │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
 │   └── Models/
-│       ├── WingetPackage.cs       # Paquete con versión disponible
-│       ├── WingetPackageInfo.cs   # Metadatos enriquecidos (winget show)
-│       ├── WingetProgressInfo.cs  # Progreso de descarga/instalación
+│       ├── WingetPackage.cs         # Paquete con versión disponible/instalada
+│       ├── WingetPackageInfo.cs     # Metadatos enriquecidos (winget show)
+│       ├── WingetProgressInfo.cs    # Progreso de descarga/instalación
+│       ├── CleanupItemViewModel.cs  # ViewModel para la ventana de limpieza
 │       ├── UpgradeResult.cs
 │       └── UpgradeBatchResult.cs
 │
@@ -71,13 +74,18 @@ WingetUSoft/
 │   └── HistoryEntry.cs          # DTO de entrada de historial
 │
 ├── UI/                          # Capa de presentación (WinUI 3)
-│   ├── MainWindow.xaml/.cs      # Ventana principal
+│   ├── MainWindow.xaml/.cs      # Ventana principal (actualizaciones)
 │   ├── SettingsWindow.xaml/.cs  # Diálogo de configuración
 │   ├── HistoryWindow.xaml/.cs   # Vista de historial
-│   └── UninstallWindow.xaml/.cs # Ventana de desinstalación
+│   ├── UninstallWindow.xaml/.cs # Ventana de desinstalación
+│   ├── CleanupWindow.xaml/.cs   # Ventana de limpieza de residuos
+│   ├── Converters.cs            # Convertidores de valor para XAML
+│   ├── TitleBarHelper.cs        # Helper compartido para colores del title bar
+│   └── WindowDialogHelper.cs    # Helper compartido para diálogos modales
 │
 └── WingetUSoft.Tests/           # Tests unitarios (MSTest)
     ├── AppSettingsTests.cs
+    ├── CleanupScannerTests.cs
     └── WingetServiceTests.cs
 ```
 

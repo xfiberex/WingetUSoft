@@ -347,12 +347,6 @@ public static class WingetService
         }
     }
 
-    internal static string BuildUpgradeArguments(string packageId, bool silent)
-    {
-        string mode = silent ? "--silent" : "--interactive";
-        return $"upgrade --id \"{packageId}\" --accept-source-agreements --accept-package-agreements {mode}";
-    }
-
     internal static bool IsElevatedWorkerInvocation(string[] args) =>
         args.Length > 0 && string.Equals(args[0], ElevatedWorkerSwitch, StringComparison.OrdinalIgnoreCase);
 
@@ -867,78 +861,6 @@ public static class WingetService
 
     private sealed record ProcessResult(int ExitCode, string Output, string Error);
 
-    internal static UpgradeBatchStatusInfo? ParseElevatedBatchStatus(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            return null;
-
-        try
-        {
-            var payload = JsonSerializer.Deserialize<ElevatedBatchStatusPayload>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (payload is null)
-                return null;
-
-            return new UpgradeBatchStatusInfo
-            {
-                Phase = payload.Phase ?? "",
-                PackageId = payload.PackageId ?? "",
-                CurrentIndex = payload.CurrentIndex,
-                TotalCount = payload.TotalCount
-            };
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-    }
-
-    internal static UpgradeBatchResult ParseElevatedBatchResult(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new UpgradeBatchResult
-            {
-                ErrorOutput = "No se recibieron resultados del lote elevado."
-            };
-        }
-
-        try
-        {
-            var payload = JsonSerializer.Deserialize<ElevatedBatchPayload>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            return new UpgradeBatchResult
-            {
-                CancelledAfterCurrentPackage = payload?.BatchCancelled ?? false,
-                Items = payload?.Results?.Select(item => new UpgradeBatchItemResult
-                {
-                    PackageId = item.PackageId ?? "",
-                    Result = new UpgradeResult
-                    {
-                        Success = item.Success,
-                        ExitCode = item.ExitCode,
-                        UserCancelled = item.UserCancelled,
-                        Output = item.Output ?? "",
-                        ErrorOutput = item.ErrorOutput ?? ""
-                    }
-                }).ToList() ?? []
-            };
-        }
-        catch (JsonException ex)
-        {
-            return new UpgradeBatchResult
-            {
-                ErrorOutput = $"No se pudieron leer los resultados del lote elevado: {ex.Message}"
-            };
-        }
-    }
-
     private static async Task<ProcessResult> RunWingetAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
         using var process = new Process();
@@ -1266,30 +1188,6 @@ public static class WingetService
     private static string GetCurrentProcessExecutablePath() =>
         Environment.ProcessPath
         ?? throw new InvalidOperationException("No se pudo determinar la ruta del ejecutable actual.");
-
-    private sealed class ElevatedBatchPayload
-    {
-        public bool BatchCancelled { get; set; }
-        public List<ElevatedBatchItemPayload> Results { get; set; } = [];
-    }
-
-    private sealed class ElevatedBatchItemPayload
-    {
-        public string PackageId { get; set; } = "";
-        public bool Success { get; set; }
-        public int ExitCode { get; set; }
-        public bool UserCancelled { get; set; }
-        public string Output { get; set; } = "";
-        public string ErrorOutput { get; set; } = "";
-    }
-
-    private sealed class ElevatedBatchStatusPayload
-    {
-        public string Phase { get; set; } = "";
-        public string PackageId { get; set; } = "";
-        public int CurrentIndex { get; set; }
-        public int TotalCount { get; set; }
-    }
 
     private sealed class ElevatedWorkerOptions
     {

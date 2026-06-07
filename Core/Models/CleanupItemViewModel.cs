@@ -4,7 +4,7 @@ namespace WingetUSoft;
 
 public sealed class CleanupItemViewModel : INotifyPropertyChanged
 {
-    private bool _isSelected = true;
+    private bool _isSelected = false;
 
     public string Path       { get; init; } = "";
     public bool   IsDirectory { get; init; }

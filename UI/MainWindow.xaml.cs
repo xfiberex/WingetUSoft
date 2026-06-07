@@ -74,6 +74,8 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _sizeLoadCts;
     private string? _appUpdateUrl;
     private H.NotifyIcon.TaskbarIcon? _trayIcon;
+    private readonly Dictionary<string, string> _sizeCache = new(StringComparer.OrdinalIgnoreCase);
+    private DispatcherTimer? _searchDebounceTimer;
 
     private AppWindow _appWindow = null!;
 
@@ -167,7 +169,11 @@ public sealed partial class MainWindow : Window
                         "No se encontró winget en el sistema.\n\nInstala 'App Installer' desde la Microsoft Store o actualiza Windows.");
                     return;
                 }
-                Title = $"WingetUSoft - Actualiza tus programas  [{version}]";
+                var appVer = typeof(MainWindow).Assembly.GetName().Version;
+                string appVersionStr = appVer is not null
+                    ? $"v{appVer.Major}.{appVer.Minor}.{appVer.Build}"
+                    : "v1.1.0";
+                Title = $"WingetUSoft - Actualiza tus programas  [{appVersionStr}]";
                 TitleTextBlock.Text = Title;
                 txtEstado.Text = "Listo. Pulsa 'Consultar actualizaciones' para comenzar.";
                 UpdateSelectionDetails();
@@ -296,12 +302,22 @@ public sealed partial class MainWindow : Window
 
         var tasks = viewModels.Select(async vm =>
         {
+            if (_sizeCache.TryGetValue(vm.Id, out string? cached))
+            {
+                vm.InstallerSize = cached;
+                return;
+            }
+
             await semaphore.WaitAsync(token);
             try
             {
                 var info = await WingetService.GetPackageInfoAsync(vm.Id, token);
                 if (!token.IsCancellationRequested)
-                    vm.InstallerSize = string.IsNullOrEmpty(info.InstallerSize) ? "—" : info.InstallerSize;
+                {
+                    string size = string.IsNullOrEmpty(info.InstallerSize) ? "—" : info.InstallerSize;
+                    _sizeCache[vm.Id] = size;
+                    vm.InstallerSize = size;
+                }
             }
             catch (OperationCanceledException) { }
             catch { vm.InstallerSize = "—"; }
@@ -316,6 +332,7 @@ public sealed partial class MainWindow : Window
     {
         _lastIncludeUnknown = includeUnknown;
         _cancelStopsCurrentProcess = true;
+        _sizeCache.Clear();
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
         txtEstado.Text = includeUnknown
@@ -811,7 +828,15 @@ public sealed partial class MainWindow : Window
     {
         if (!_initialized) return;
         _searchFilter = txtBuscar.Text;
-        LoadPackagesToGrid();
+
+        _searchDebounceTimer?.Stop();
+        _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            LoadPackagesToGrid();
+        };
+        _searchDebounceTimer.Start();
     }
 
     // --- Package Info Panel ---
@@ -1205,38 +1230,8 @@ public sealed partial class MainWindow : Window
         UpdateTitleBarButtonColors();
     }
 
-    private void UpdateTitleBarButtonColors()
-    {
-        if (_appWindow?.TitleBar is not { } titleBar) return;
-
-        // Resolve whether the current effective theme is dark.
-        // ActualTheme is always Dark or Light (never Default).
-        bool isDark = Content is FrameworkElement fe
-            ? fe.ActualTheme == ElementTheme.Dark
-            : _settings.ThemeMode == 2;
-
-        titleBar.ButtonBackgroundColor         = Microsoft.UI.Colors.Transparent;
-        titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
-
-        if (isDark)
-        {
-            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.White;
-            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.White;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 255, 255, 255);
-            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.White;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 255, 255, 255);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 255, 255, 255);
-        }
-        else
-        {
-            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.Black;
-            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.Black;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 0, 0, 0);
-            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.Black;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 0, 0, 0);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 0, 0, 0);
-        }
-    }
+    private void UpdateTitleBarButtonColors() =>
+        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     private bool TrySaveSettings(string userMessage, bool updateStatusLabel = true)
     {
@@ -1346,31 +1341,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task ShowDialogAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = message,
-            CloseButtonText = "Aceptar",
-            XamlRoot = Content.XamlRoot
-        };
-        await dialog.ShowAsync();
-    }
+    private Task ShowDialogAsync(string title, string message) =>
+        WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, message);
 
-    private async Task<bool> ShowConfirmDialogAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = message,
-            PrimaryButtonText = "Sí",
-            CloseButtonText = "No",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = Content.XamlRoot
-        };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
-    }
+    private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
+        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message);
 
     #region Tray Icon & Notifications
 
@@ -1443,21 +1418,11 @@ public sealed partial class MainWindow : Window
     {
         if (!_settings.ShowNotifications) return;
 
-        DispatcherQueue.TryEnqueue(async () =>
-        {
-            string message = failed == 0
-                ? $"Se actualizaron {success} programa(s) correctamente."
-                : $"Actualizados: {success}, Fallidos: {failed}.";
+        string message = failed == 0
+            ? $"Se actualizaron {success} programa(s) correctamente."
+            : $"Actualizados: {success}. Fallidos: {failed}.";
 
-            var dialog = new ContentDialog
-            {
-                Title = "Actualización completada",
-                Content = message,
-                CloseButtonText = "OK",
-                XamlRoot = Content.XamlRoot
-            };
-            await dialog.ShowAsync();
-        });
+        txtEstado.Text = message;
     }
 
     #endregion

@@ -24,9 +24,15 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            File.WriteAllText(
-                Path.Combine(AppContext.BaseDirectory, "crash.log"),
-                ex.ToString());
+            try
+            {
+                string crashDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "WingetUSoft");
+                Directory.CreateDirectory(crashDir);
+                File.WriteAllText(Path.Combine(crashDir, "crash.log"), ex.ToString());
+            }
+            catch { }
             return 1;
         }
     }

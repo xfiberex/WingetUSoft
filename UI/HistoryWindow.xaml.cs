@@ -53,36 +53,8 @@ public sealed partial class HistoryWindow : Window
         LoadHistory(history);
     }
 
-    private void UpdateTitleBarButtonColors(AppWindow appWindow)
-    {
-        if (appWindow?.TitleBar is not { } titleBar) return;
-
-        bool isDark = Content is FrameworkElement fe
-            ? fe.ActualTheme == ElementTheme.Dark
-            : false;
-
-        titleBar.ButtonBackgroundColor         = Microsoft.UI.Colors.Transparent;
-        titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
-
-        if (isDark)
-        {
-            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.White;
-            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.White;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 255, 255, 255);
-            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.White;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 255, 255, 255);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 255, 255, 255);
-        }
-        else
-        {
-            titleBar.ButtonForegroundColor         = Microsoft.UI.Colors.Black;
-            titleBar.ButtonHoverForegroundColor    = Microsoft.UI.Colors.Black;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 0, 0, 0);
-            titleBar.ButtonPressedForegroundColor  = Microsoft.UI.Colors.Black;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 0, 0, 0);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 0, 0, 0);
-        }
-    }
+    private void UpdateTitleBarButtonColors(AppWindow appWindow) =>
+        TitleBarHelper.UpdateButtonColors(appWindow, Content, themeModeFallback: 0);
 
     private void LoadHistory(List<HistoryEntry> history)
     {

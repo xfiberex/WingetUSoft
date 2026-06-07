@@ -247,62 +247,15 @@ public sealed partial class CleanupWindow : Window
 
     // ---- Theme --------------------------------------------------------------
 
-    private void UpdateTitleBarButtonColors()
-    {
-        if (_appWindow?.TitleBar is not { } titleBar) return;
-
-        bool isDark = Content is FrameworkElement fe
-            ? fe.ActualTheme == ElementTheme.Dark
-            : _settings.ThemeMode == 2;
-
-        titleBar.ButtonBackgroundColor         = Colors.Transparent;
-        titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-
-        if (isDark)
-        {
-            titleBar.ButtonForegroundColor         = Colors.White;
-            titleBar.ButtonHoverForegroundColor    = Colors.White;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 255, 255, 255);
-            titleBar.ButtonPressedForegroundColor  = Colors.White;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 255, 255, 255);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 255, 255, 255);
-        }
-        else
-        {
-            titleBar.ButtonForegroundColor         = Colors.Black;
-            titleBar.ButtonHoverForegroundColor    = Colors.Black;
-            titleBar.ButtonHoverBackgroundColor    = Windows.UI.Color.FromArgb(32, 0, 0, 0);
-            titleBar.ButtonPressedForegroundColor  = Colors.Black;
-            titleBar.ButtonPressedBackgroundColor  = Windows.UI.Color.FromArgb(16, 0, 0, 0);
-            titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, 0, 0, 0);
-        }
-    }
+    private void UpdateTitleBarButtonColors() =>
+        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     // ---- Dialogs ------------------------------------------------------------
 
-    private async Task ShowDialogAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title           = title,
-            Content         = message,
-            CloseButtonText = "Aceptar",
-            XamlRoot        = Content.XamlRoot
-        };
-        await dialog.ShowAsync();
-    }
+    private Task ShowDialogAsync(string title, string message) =>
+        WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, message);
 
-    private async Task<bool> ShowConfirmDialogAsync(string title, string message)
-    {
-        var dialog = new ContentDialog
-        {
-            Title               = title,
-            Content             = message,
-            PrimaryButtonText   = "Sí, eliminar",
-            CloseButtonText     = "No",
-            DefaultButton       = ContentDialogButton.Close,
-            XamlRoot            = Content.XamlRoot
-        };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
-    }
+    private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
+        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message,
+            primaryText: "Sí, eliminar");
 }

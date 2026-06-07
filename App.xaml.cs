@@ -11,9 +11,16 @@ public partial class App : Application
         InitializeComponent();
         UnhandledException += (s, e) =>
         {
-            File.WriteAllText(
-                Path.Combine(AppContext.BaseDirectory, "crash.log"),
-                $"UnhandledException: {e.Exception}");
+            try
+            {
+                string crashDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "WingetUSoft");
+                Directory.CreateDirectory(crashDir);
+                File.WriteAllText(Path.Combine(crashDir, "crash.log"),
+                    $"UnhandledException: {e.Exception}");
+            }
+            catch { }
             e.Handled = true;
         };
     }

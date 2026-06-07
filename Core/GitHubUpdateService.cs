@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
 namespace WingetUSoft;
@@ -91,7 +92,107 @@ internal static class GitHubUpdateService
                 progress?.Report((double)totalRead / totalBytes.Value);
         }
 
+        if (!VerifyAuthenticodeSignature(tempPath))
+        {
+            File.Delete(tempPath);
+            throw new InvalidOperationException(
+                "El instalador descargado no tiene una firma digital válida y fue eliminado por seguridad.");
+        }
+
         return tempPath;
+    }
+
+    // Verifies that the file carries a valid Authenticode signature trusted by Windows.
+    // Returns false for unsigned, expired, or untrusted signatures.
+    internal static bool VerifyAuthenticodeSignature(string filePath)
+    {
+        var fileInfo = new NativeMethods.WINTRUST_FILE_INFO
+        {
+            cbStruct = (uint)Marshal.SizeOf<NativeMethods.WINTRUST_FILE_INFO>(),
+            pcwszFilePath = filePath,
+            hFile = IntPtr.Zero,
+            pgKnownSubject = IntPtr.Zero
+        };
+
+        nint fileInfoPtr = Marshal.AllocHGlobal(Marshal.SizeOf<NativeMethods.WINTRUST_FILE_INFO>());
+        try
+        {
+            Marshal.StructureToPtr(fileInfo, fileInfoPtr, false);
+
+            var trustData = new NativeMethods.WINTRUST_DATA
+            {
+                cbStruct = (uint)Marshal.SizeOf<NativeMethods.WINTRUST_DATA>(),
+                pPolicyCallbackData = IntPtr.Zero,
+                pSIPClientData = IntPtr.Zero,
+                dwUIChoice = NativeMethods.WTD_UI_NONE,
+                fdwRevocationChecks = NativeMethods.WTD_REVOKE_NONE,
+                dwUnionChoice = NativeMethods.WTD_CHOICE_FILE,
+                pUnion = fileInfoPtr,
+                dwStateAction = NativeMethods.WTD_STATEACTION_IGNORE,
+                hWVTStateData = IntPtr.Zero,
+                pwszURLReference = null,
+                dwProvFlags = NativeMethods.WTD_SAFER_FLAG,
+                dwUIContext = 0
+            };
+
+            nint trustDataPtr = Marshal.AllocHGlobal(Marshal.SizeOf<NativeMethods.WINTRUST_DATA>());
+            try
+            {
+                Marshal.StructureToPtr(trustData, trustDataPtr, false);
+                var actionId = new Guid("00AAC56B-CD44-11D0-8CC2-00C04FC295EE");
+                uint result = NativeMethods.WinVerifyTrust(IntPtr.Zero, ref actionId, trustDataPtr);
+                return result == 0;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(trustDataPtr);
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(fileInfoPtr);
+        }
+    }
+
+    private static class NativeMethods
+    {
+        internal const uint WTD_UI_NONE = 2;
+        internal const uint WTD_REVOKE_NONE = 0;
+        internal const uint WTD_CHOICE_FILE = 1;
+        internal const uint WTD_STATEACTION_IGNORE = 0;
+        internal const uint WTD_SAFER_FLAG = 0x100;
+
+        [DllImport("wintrust.dll", ExactSpelling = true, SetLastError = false, CharSet = CharSet.Unicode)]
+        internal static extern uint WinVerifyTrust(
+            IntPtr hwnd,
+            ref Guid pgActionID,
+            IntPtr pWVTData);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        internal struct WINTRUST_FILE_INFO
+        {
+            public uint cbStruct;
+            [MarshalAs(UnmanagedType.LPWStr)] public string? pcwszFilePath;
+            public IntPtr hFile;
+            public IntPtr pgKnownSubject;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        internal struct WINTRUST_DATA
+        {
+            public uint cbStruct;
+            public IntPtr pPolicyCallbackData;
+            public IntPtr pSIPClientData;
+            public uint dwUIChoice;
+            public uint fdwRevocationChecks;
+            public uint dwUnionChoice;
+            public IntPtr pUnion;
+            public uint dwStateAction;
+            public IntPtr hWVTStateData;
+            [MarshalAs(UnmanagedType.LPWStr)] public string? pwszURLReference;
+            public uint dwProvFlags;
+            public uint dwUIContext;
+        }
     }
 
     private sealed class GitHubReleaseResponse
