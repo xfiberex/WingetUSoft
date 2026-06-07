@@ -44,6 +44,9 @@ internal static class GitHubUpdateService
                 return null;
 
             string remoteTag = release.TagName.TrimStart('v', 'V');
+            // Normalize to 4-part version so "1.2.0" (Revision=-1) compares equal to "1.2.0.0"
+            while (remoteTag.Count(c => c == '.') < 3)
+                remoteTag += ".0";
             if (!Version.TryParse(remoteTag, out Version? remoteVersion))
                 return null;
 
