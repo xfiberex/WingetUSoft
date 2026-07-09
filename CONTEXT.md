@@ -7,10 +7,13 @@
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
 - **Última actualización de este documento:** 2026-07-09
-- **Versión actual:** **1.2.0**
+- **Versión actual:** **1.3.0** — primera versión real publicada con `release.ps1`
+  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.3.0), tag `v1.3.0`,
+  **sin firmar** — ver Pendientes §6).
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
-  implementadas y verificadas.
+  implementadas y verificadas. **Tier B propuesto** (2026-07-09): mejoras visuales/responsivas,
+  aún ⏳ pendiente de implementar.
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -254,12 +257,13 @@ reenviados a `build-installer.ps1`).
 ## 6. Pendientes / ideas
 
 - **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO**, 9/9
-  fases (-1 a 8) implementadas y verificadas.
-- Publicar la primera versión real con `release.ps1` (hasta ahora solo se verificó el pipeline
-  con `-DryRun` y builds locales del instalador; no se ha hecho push de tag ni GitHub Release).
+  fases (-1 a 8) implementadas y verificadas. **Tier B** (mejoras visuales/responsivas, 7 ítems)
+  propuesto el 2026-07-09, ⏳ sin implementar.
 - Conseguir un certificado de firma de código real (OV/EV) para que la auto-actualización
-  funcione en producción — sin firmar, `GitHubUpdateService.VerifyAuthenticodeSignature` rechaza
-  el instalador descargado.
+  funcione en producción — la v1.3.0 se publicó **sin firmar** (no hay certificado disponible),
+  así que `GitHubUpdateService.VerifyAuthenticodeSignature` rechazará este instalador si alguien
+  intenta auto-actualizar a él; la descarga manual desde Releases sí funciona. Sin certificado real
+  esto se repetirá en cada release hasta conseguir uno.
 
 ## 7. Cómo mantener este documento
 
@@ -273,6 +277,47 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-09 — release: v1.3.0 — primera publicación real en GitHub
+
+Ejecutado `release.ps1 -Version 1.3.0` (bump `1.2.0` → `1.3.0`, MINOR por semver: Tier A añadió
+funcionalidad nueva y retrocompatible, sin cambios de ruptura). Antes de correrlo se corrigió un
+bug en `release.ps1`: el bump de versión solo sustituía `<Version>` en el `.csproj`, dejando
+`<AssemblyVersion>`/`<FileVersion>` obsoletos — y tanto el título de la ventana
+(`MainWindow.xaml.cs`, `Assembly.GetName().Version`) como la comparación de auto-actualización
+(`GitHubUpdateService.cs:47`) leen `AssemblyVersion`, no `<Version>`. Ahora el script actualiza
+las tres etiquetas a la vez (`X.Y.Z.0` para las de 4 partes).
+
+Se añadieron a git (`git add`) los ~20 archivos nuevos de Tier A que quedaron sin rastrear en la
+sesión anterior (`CONTEXT.md`, `ROADMAP.md`, `LICENSE`, `Localization/`, `Core/ReleaseNotes.cs`,
+`Core/Throughput.cs`, `Settings/HistoryFilter.cs`, diálogos `AboutDialog`/`WhatsNewDialog`,
+`UI/Notifier.cs`, `UI/TaskbarProgress.cs`, los 5 archivos de test nuevos, y los 3 scripts de
+`installer/`+`release.ps1`) — sin esto, `git add -u` los habría dejado fuera del commit de release
+y el tag habría apuntado a un build incompleto.
+
+Resultado: 78/78 tests en verde, instalador `WingetUSoft-Setup-1.3.0.exe` (34.2 MB) compilado
+**sin firmar** (no hay certificado de código real disponible — ver Pendientes §6), commit
+`d2e4c4c` ("release: v1.3.0", 44 archivos), tag `v1.3.0` y push a `origin/main`, GitHub Release
+publicado: https://github.com/xfiberex/WingetUSoft/releases/tag/v1.3.0.
+
+### 2026-07-09 — docs: Tier B propuesto en ROADMAP.md (mejoras visuales y responsivas)
+
+A partir de un reporte del usuario (captura con el botón "Cancelar" recortado contra el borde de
+la ventana), se investigó la causa raíz en código y se añadió una tabla de 7 ítems a
+[`ROADMAP.md`](ROADMAP.md) bajo "Tier B — Mejoras visuales y revisión", todos ⏳ pendientes (solo
+documentación, sin implementar nada):
+
+1. Ventanas adaptadas a DPI/área de trabajo — las 5 ventanas usan `AppWindow.Resize(SizeInt32(...))`
+   fijo en píxeles, sin escalar por DPI ni acotar a `DisplayArea.WorkArea`; FormatDiskPro ya
+   resolvió esto con `SizeAndCenterWindow()` (`FormatDiskPro/UI/MainWindow.xaml.cs:139-168`),
+   patrón candidato a portar.
+2. Tamaño mínimo de ventana (`OverlappedPresenter.PreferredMinimumWidth/Height`, sin definir hoy).
+3. Barra "Acciones rápidas" sin wrap (`MainWindow.xaml:96`) — causa directa del recorte reportado.
+4. Columnas del DataGrid con ancho fijo en píxeles (`MainWindow.xaml:332-341` y `:392-401`).
+5. Revisión de longitud de texto por idioma (FR/IT ~20-30% más largos que ES) tras las 272 claves
+   de la Fase 7 de Tier A.
+6. Accesibilidad: `AutomationProperties.Name` en controles solo-icono, orden de tabulación.
+7. Verificación manual de snap layouts de Windows 11 en pantallas de baja resolución.
 
 ### 2026-07-09 — feat: pipeline de release con Inno Setup (Tier A #8) — Tier A COMPLETADO
 
