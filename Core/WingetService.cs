@@ -89,7 +89,7 @@ public static class WingetService
                 Success = false,
                 ExitCode = batchResult.ExitCode,
                 ErrorOutput = string.IsNullOrWhiteSpace(batchResult.ErrorOutput)
-                    ? "No se recibió resultado de la actualización elevada."
+                    ? L.T("worker.noResult")
                     : batchResult.ErrorOutput
             };
         }
@@ -271,8 +271,8 @@ public static class WingetService
         try
         {
             logProgress?.Report(normalizedPackageIds.Count == 1
-                ? "Solicitando permisos de administrador..."
-                : "Solicitando permisos de administrador para el lote seleccionado...");
+                ? L.T("worker.requestingAdminSingle")
+                : L.T("worker.requestingAdminBatch"));
 
             using var process = new Process();
             process.StartInfo = new ProcessStartInfo
@@ -287,8 +287,8 @@ public static class WingetService
 
             process.Start();
             logProgress?.Report(normalizedPackageIds.Count == 1
-                ? "Actualización elevada en curso..."
-                : "Lote elevado en curso. Se usará una sola elevación para todas las actualizaciones seleccionadas.");
+                ? L.T("worker.elevatedInProgressSingle")
+                : L.T("worker.elevatedInProgressBatch"));
             await process.WaitForExitAsync();
 
             if (!messageTask.IsCompleted)
@@ -307,20 +307,20 @@ public static class WingetService
             {
                 parsedResult = new UpgradeBatchResult
                 {
-                    ErrorOutput = "La sesión elevada finalizó sin enviar resultados válidos."
+                    ErrorOutput = L.T("worker.sessionNoResults")
                 };
             }
             catch (Exception ex)
             {
                 parsedResult = new UpgradeBatchResult
                 {
-                    ErrorOutput = $"No se pudo leer el resultado de la sesión elevada: {ex.Message}"
+                    ErrorOutput = L.T("worker.sessionReadError", ex.Message)
                 };
             }
 
             string errorOutput = parsedResult.ErrorOutput;
             if (string.IsNullOrWhiteSpace(errorOutput) && process.ExitCode != 0)
-                errorOutput = $"El lote elevado finalizó con el código {process.ExitCode}.";
+                errorOutput = L.T("worker.batchExitCode", process.ExitCode);
 
             return new UpgradeBatchResult
             {
@@ -338,7 +338,7 @@ public static class WingetService
             {
                 UserCancelled = true,
                 ExitCode = UserCancelledErrorCode,
-                ErrorOutput = "La elevación de permisos fue cancelada por el usuario."
+                ErrorOutput = L.T("worker.elevationCancelled")
             };
         }
         finally

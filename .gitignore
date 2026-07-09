@@ -24,6 +24,7 @@ artifacts/
 *.sln.docstates
 *.rsuser
 installer/Output/
+*.pfx
 
 ## Rider
 .idea/

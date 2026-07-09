@@ -12,7 +12,7 @@ public sealed class CleanupItemViewModel : INotifyPropertyChanged
     public string DisplaySize { get; init; } = "";
     public string PackageName { get; init; } = "";
 
-    public string TypeLabel => IsDirectory ? "Carpeta" : "Archivo";
+    public string TypeLabel => IsDirectory ? L.T("cleanup.typeFolder") : L.T("cleanup.typeFile");
 
     public bool IsSelected
     {

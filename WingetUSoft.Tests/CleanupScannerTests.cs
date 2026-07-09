@@ -1,32 +1,30 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using WingetUSoft;
+using Xunit;
 
 namespace WingetUSoft.Tests;
 
-[TestClass]
 public class CleanupScannerTests
 {
     // Uses a name suffix unlikely to collide with real installed software.
     private const string TestSuffix = "_WUSoftScanTest";
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_EmptyPackageList_ReturnsEmpty()
     {
         var results = await CleanupScanner.ScanAsync([]);
-        Assert.AreEqual(0, results.Count);
+        Assert.Empty(results);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_CancellationRequested_ThrowsOperationCancelled()
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() =>
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
             CleanupScanner.ScanAsync([new WingetPackage { Name = "Foo", Id = "Pub.Foo" }], cts.Token));
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_ExistingDirectoryMatchingPackageName_IsFound()
     {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -43,7 +41,7 @@ public class CleanupScannerTests
 
             var results = await CleanupScanner.ScanAsync(packages);
 
-            Assert.IsTrue(
+            Assert.True(
                 results.Any(r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase)),
                 $"Expected to find '{testDir}' in scan results.");
         }
@@ -53,7 +51,7 @@ public class CleanupScannerTests
         }
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_NonExistentPaths_ReturnsEmpty()
     {
         var packages = new[]
@@ -67,10 +65,10 @@ public class CleanupScannerTests
 
         var results = await CleanupScanner.ScanAsync(packages);
 
-        Assert.AreEqual(0, results.Count, "No residues should be found for a never-installed package.");
+        Assert.Empty(results);
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_SamePathFromMultiplePackages_ReportedOnce()
     {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -92,7 +90,7 @@ public class CleanupScannerTests
             int matches = results.Count(r =>
                 string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
 
-            Assert.AreEqual(1, matches, "The same path should only appear once even if multiple packages resolve to it.");
+            Assert.True(matches == 1, "The same path should only appear once even if multiple packages resolve to it.");
         }
         finally
         {
@@ -100,7 +98,7 @@ public class CleanupScannerTests
         }
     }
 
-    [TestMethod]
+    [Fact]
     public async Task ScanAsync_FoundItem_IsNotSelectedByDefault()
     {
         string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -116,8 +114,8 @@ public class CleanupScannerTests
             var item = results.FirstOrDefault(r =>
                 string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
 
-            Assert.IsNotNull(item);
-            Assert.IsFalse(item.IsSelected, "Cleanup items must NOT be pre-selected to avoid accidental deletion.");
+            Assert.NotNull(item);
+            Assert.False(item.IsSelected, "Cleanup items must NOT be pre-selected to avoid accidental deletion.");
         }
         finally
         {

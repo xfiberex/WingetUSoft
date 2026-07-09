@@ -99,3 +99,16 @@ Los ajustes se almacenan en `%LocalAppData%\WingetUSoft\settings.json`. Si el ar
 |---|---|
 | Configuración | `%LocalAppData%\WingetUSoft\settings.json` |
 | Logs diarios | `%LocalAppData%\WingetUSoft\logs\YYYY-MM-DD.log` |
+
+## Licencia
+
+Software libre distribuido bajo la **[MIT License](LICENSE)**: puedes usarlo, modificarlo y
+redistribuirlo libremente, incluso en proyectos privativos, conservando el aviso de copyright.
+Se ofrece **SIN NINGUNA GARANTÍA**. La licencia también se puede consultar dentro de la app en
+*Ayuda → Acerca de*.
+
+## Privacidad
+
+La aplicación **no recopila datos personales ni telemetría**. Se conecta a Internet únicamente
+para consultar/instalar paquetes vía winget y para comprobar actualizaciones de la propia app en
+GitHub Releases (HTTPS).

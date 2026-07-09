@@ -15,7 +15,7 @@
 
         <!-- Custom Title Bar -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
-            <TextBlock Text="Configuración"
+            <TextBlock x:Name="txtTitleBar" Text="Configuración"
                        VerticalAlignment="Center"
                        Margin="12,0,0,0"
                        Style="{StaticResource CaptionTextBlockStyle}" />
@@ -30,9 +30,9 @@
                 Padding="20,16"
                 Margin="20,4,20,12">
             <StackPanel Spacing="4">
-                <TextBlock Text="Configuración"
+                <TextBlock x:Name="txtHeaderTitle" Text="Configuración"
                            Style="{StaticResource TitleTextBlockStyle}" />
-                <TextBlock Text="Ajusta las opciones generales de la aplicación."
+                <TextBlock x:Name="txtHeaderSubtitle" Text="Ajusta las opciones generales de la aplicación."
                            Style="{StaticResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
@@ -49,14 +49,14 @@
                         CornerRadius="8"
                         Padding="16,12">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Consulta automática"
+                        <TextBlock x:Name="txtAutoCheckTitle" Text="Consulta automática"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <ComboBox x:Name="cmbIntervalo" Width="280"
                                   Header="Intervalo de consulta automática">
-                            <ComboBoxItem Content="Desactivada" />
-                            <ComboBoxItem Content="Cada 30 minutos" />
-                            <ComboBoxItem Content="Cada 60 minutos" />
-                            <ComboBoxItem Content="Cada 120 minutos" />
+                            <ComboBoxItem x:Name="itemIntervalOff" Content="Desactivada" />
+                            <ComboBoxItem x:Name="itemInterval30" Content="Cada 30 minutos" />
+                            <ComboBoxItem x:Name="itemInterval60" Content="Cada 60 minutos" />
+                            <ComboBoxItem x:Name="itemInterval120" Content="Cada 120 minutos" />
                         </ComboBox>
                     </StackPanel>
                 </Border>
@@ -68,12 +68,12 @@
                         CornerRadius="8"
                         Padding="16,12">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Opciones"
+                        <TextBlock x:Name="txtOptionsTitle" Text="Opciones"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <CheckBox x:Name="chkLogArchivo" Content="Guardar registro de actividad en archivo" />
                         <CheckBox x:Name="chkAdministrador" Content="Ejecutar actualizaciones como administrador" />
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Directorio de registros:"
+                            <TextBlock x:Name="txtLogDirLabel" Text="Directorio de registros:"
                                        Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBox x:Name="txtLogPath" IsReadOnly="True" />
@@ -88,14 +88,14 @@
                         CornerRadius="8"
                         Padding="16,12">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Notificaciones y bandeja"
+                        <TextBlock x:Name="txtNotifTrayTitle" Text="Notificaciones y bandeja"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Mostrar notificaciones al completar actualizaciones"
+                            <TextBlock x:Name="txtShowNotifLabel" Text="Mostrar notificaciones al completar actualizaciones"
                                        VerticalAlignment="Center"/>
                             <ToggleSwitch x:Name="tsShowNotifications" Grid.Column="1" VerticalAlignment="Center"/>
                         </Grid>
@@ -104,7 +104,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Minimizar a la bandeja del sistema al cerrar"
+                            <TextBlock x:Name="txtMinimizeTrayLabel" Text="Minimizar a la bandeja del sistema al cerrar"
                                        VerticalAlignment="Center"/>
                             <ToggleSwitch x:Name="tsMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"/>
                         </Grid>
@@ -118,9 +118,9 @@
                         CornerRadius="8"
                         Padding="16,12">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Paquetes excluidos"
+                        <TextBlock x:Name="txtExcludedTitle" Text="Paquetes excluidos"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock Text="Estos paquetes no se incluirán en las actualizaciones."
+                        <TextBlock x:Name="txtExcludedSubtitle" Text="Estos paquetes no se incluirán en las actualizaciones."
                                    Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <ListView x:Name="lstExcluidos"

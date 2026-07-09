@@ -1,23 +1,19 @@
 using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using WingetUSoft;
+using Xunit;
 
 namespace WingetUSoft.Tests;
 
-[TestClass]
-public class AppSettingsTests
+public class AppSettingsTests : IDisposable
 {
-    private string _testDataDirectory = null!;
+    private readonly string _testDataDirectory;
 
-    [TestInitialize]
-    public void Initialize()
+    public AppSettingsTests()
     {
         _testDataDirectory = Path.Combine(Path.GetTempPath(), "WingetUSoft.Tests", Guid.NewGuid().ToString("N"));
         AppSettings.DataDirectoryPath = _testDataDirectory;
     }
 
-    [TestCleanup]
-    public void Cleanup()
+    public void Dispose()
     {
         AppSettings.DataDirectoryPath = AppSettings.DefaultDataDirectoryPath;
 
@@ -28,7 +24,7 @@ public class AppSettingsTests
             Directory.Delete(_testDataDirectory, recursive: true);
     }
 
-    [TestMethod]
+    [Fact]
     public void SaveAndLoad_RoundTripsSettings()
     {
         var settings = new AppSettings
@@ -50,22 +46,22 @@ public class AppSettingsTests
             Success = true
         });
 
-        Assert.IsTrue(settings.Save());
+        Assert.True(settings.Save());
 
         var loaded = AppSettings.Load();
 
-        Assert.IsFalse(loaded.SilentMode);
-        Assert.IsTrue(loaded.RunUpdatesAsAdministrator);
-        Assert.AreEqual(60, loaded.AutoCheckIntervalMinutes);
-        Assert.IsTrue(loaded.DarkMode);
-        Assert.IsFalse(loaded.LogToFile);
-        CollectionAssert.AreEqual(new[] { "VideoLAN.VLC" }, loaded.ExcludedIds);
-        Assert.AreEqual(1, loaded.History.Count);
-        Assert.AreEqual("VLC", loaded.History[0].PackageName);
-        Assert.IsTrue(string.IsNullOrWhiteSpace(loaded.LastLoadError));
+        Assert.False(loaded.SilentMode);
+        Assert.True(loaded.RunUpdatesAsAdministrator);
+        Assert.Equal(60, loaded.AutoCheckIntervalMinutes);
+        Assert.True(loaded.DarkMode);
+        Assert.False(loaded.LogToFile);
+        Assert.Equal(new[] { "VideoLAN.VLC" }, loaded.ExcludedIds);
+        Assert.Single(loaded.History);
+        Assert.Equal("VLC", loaded.History[0].PackageName);
+        Assert.True(string.IsNullOrWhiteSpace(loaded.LastLoadError));
     }
 
-    [TestMethod]
+    [Fact]
     public void Load_InvalidJson_ReturnsDefaultsAndCreatesBackup()
     {
         Directory.CreateDirectory(AppSettings.DataDirectoryPath);
@@ -73,13 +69,13 @@ public class AppSettingsTests
 
         var loaded = AppSettings.Load();
 
-        Assert.IsTrue(loaded.SilentMode);
-        Assert.AreEqual(0, loaded.ExcludedIds.Count);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(loaded.LastLoadError));
-        Assert.AreEqual(1, Directory.GetFiles(AppSettings.DataDirectoryPath, "settings.invalid.*.json").Length);
+        Assert.True(loaded.SilentMode);
+        Assert.Empty(loaded.ExcludedIds);
+        Assert.False(string.IsNullOrWhiteSpace(loaded.LastLoadError));
+        Assert.Single(Directory.GetFiles(AppSettings.DataDirectoryPath, "settings.invalid.*.json"));
     }
 
-    [TestMethod]
+    [Fact]
     public void Save_WhenDataDirectoryIsAFile_ReturnsFalseAndExposesError()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_testDataDirectory)!);
@@ -88,7 +84,7 @@ public class AppSettingsTests
         var settings = new AppSettings();
         bool saved = settings.Save();
 
-        Assert.IsFalse(saved);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(settings.LastSaveError));
+        Assert.False(saved);
+        Assert.False(string.IsNullOrWhiteSpace(settings.LastSaveError));
     }
 }

@@ -1,0 +1,558 @@
+# Contexto del proyecto — WingetUSoft
+
+> **Propósito de este archivo.** Documento de contexto **vivo** que resume el estado del
+> proyecto y las decisiones tomadas, para no perder continuidad al cambiar de equipo (PC)
+> o de sesión. **Mantenerlo actualizado con cada cambio relevante**: actualizar
+> _Estado actual_ y añadir una entrada en el _Registro de cambios_. Usar fechas absolutas.
+
+- **Repositorio:** https://github.com/xfiberex/WingetUSoft
+- **Última actualización de este documento:** 2026-07-09
+- **Versión actual:** **1.2.0**
+- **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
+  paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
+  implementadas y verificadas.
+- **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
+  `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
+  desde MSTest en Tier A #0) · Inno Setup 6
+
+---
+
+## 1. Qué es
+
+Interfaz gráfica (WinUI 3) para gestionar **actualizaciones y desinstalaciones de software**
+mediante **winget** en Windows: consulta y actualiza paquetes (individual o en lote, silencioso
+o interactivo), desinstala programas, exporta la lista a CSV/TSV, mantiene un historial de
+actualizaciones y se auto-actualiza vía GitHub Releases. No gestiona discos ni almacenamiento
+(eso es FormatDiskPro).
+
+## 2. Arquitectura (separación por capas)
+
+```
+WingetUSoft/
+├─ Program.cs                   Punto de entrada
+├─ App.xaml / App.xaml.cs       Aplicación WinUI
+│
+├─ Core/                        Lógica de negocio (sin dependencias de UI)
+│  ├─ WingetService.cs          Ejecución de winget, parsing, elevación (worker + named pipe)
+│  ├─ GitHubUpdateService.cs    Auto-actualización desde GitHub Releases (verificación Authenticode, changelog)
+│  ├─ ReleaseNotes.cs           Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
+│  ├─ Throughput.cs             ETA (tiempo restante) para descargas y operaciones largas
+│  ├─ CleanupScanner.cs         Detección de residuos post-desinstalación
+│  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
+│  └─ Models/
+│     ├─ WingetPackage.cs           Paquete con versión disponible/instalada
+│     ├─ WingetPackageInfo.cs       Metadatos enriquecidos (winget show)
+│     ├─ WingetProgressInfo.cs      Progreso de descarga/instalación
+│     ├─ CleanupItemViewModel.cs    ViewModel para la ventana de limpieza
+│     ├─ UpgradeResult.cs
+│     └─ UpgradeBatchResult.cs
+│
+├─ Settings/                    Persistencia y configuración
+│  ├─ AppSettings.cs            Carga/guardado JSON, paths, log, backup de settings corruptos, idioma
+│  ├─ HistoryEntry.cs           DTO de entrada de historial
+│  └─ HistoryFilter.cs          Filtrado del historial por texto y estado (lógica pura)
+│
+├─ Localization/                Cadenas ES/EN/PT/FR/IT (patrón L.T("clave"), ver Tier A #1/#7)
+│  └─ Localization.cs           enum AppLang + clase L (Map, T, FromCode/ToCode/FromCulture)
+│
+├─ UI/                          Capa de presentación (WinUI 3)
+│  ├─ MainWindow.xaml/.cs       Ventana principal (actualizaciones, tray icon)
+│  ├─ SettingsWindow.xaml/.cs   Diálogo de configuración
+│  ├─ HistoryWindow.xaml/.cs    Vista de historial
+│  ├─ UninstallWindow.xaml/.cs  Ventana de desinstalación
+│  ├─ CleanupWindow.xaml/.cs    Ventana de limpieza de residuos
+│  ├─ WhatsNewDialog.xaml/.cs   ContentDialog de novedades (changelog de la versión instalada)
+│  ├─ AboutDialog.xaml/.cs      ContentDialog "Acerca de": versión, descripción, licencia MIT, privacidad
+│  ├─ Notifier.cs               Aviso al terminar: sonido + parpadeo de la barra de tareas (Win32)
+│  ├─ TaskbarProgress.cs        Progreso en el icono de la barra de tareas (ITaskbarList3, Win32)
+│  ├─ Converters.cs             Convertidores de valor para XAML
+│  ├─ TitleBarHelper.cs         Helper compartido para colores del title bar
+│  └─ WindowDialogHelper.cs     Helper compartido para diálogos modales
+│
+├─ installer/                   Inno Setup (installer.iss) — único empaquetador
+│  ├─ installer.iss             MyAppVersion/SourceDir overridables vía /D (#ifndef)
+│  ├─ build-installer.ps1       Publish framework-dependent (win-x64) + ISCC + firma opcional
+│  ├─ new-selfsigned-cert.ps1   Certificado de firma autofirmado para pruebas del pipeline
+│  └─ Output/                   Instaladores compilados (gitignored)
+│
+├─ release.ps1                  Corte de versión en un paso (build + tag + GitHub Release)
+├─ LICENSE                      Texto MIT (© 2026 xfiberex)
+│
+└─ WingetUSoft.Tests/           Tests unitarios (xUnit, migrados desde MSTest en Tier A #0)
+   ├─ AppSettingsTests.cs
+   ├─ CleanupScannerTests.cs
+   ├─ WingetServiceTests.cs
+   ├─ LocalizationTests.cs      Completitud del diccionario L.Map + FromCode/FromCulture/ToCode
+   ├─ ReleaseNotesTests.cs      Markdown → texto plano (encabezados, viñetas, negrita/código, enlaces, saltos)
+   ├─ NotifierTests.cs          Notifier.ShouldNotify (umbral, cancelado, deshabilitado)
+   ├─ ThroughputTests.cs        Eta/FormatEta (casos normales, velocidad cero, formato mm:ss / h:mm:ss)
+   └─ HistoryFilterTests.cs     Filtro por texto/estado/combinados, casos sin coincidencias
+```
+
+**Regla de oro:** la lógica de negocio testeable vive en `Core` (sin dependencias de
+WinUI/Process/HttpClient donde sea posible). La UI y `Settings` la consumen. Namespace único
+`WingetUSoft`.
+
+## 3. Estado actual
+
+- ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.csproj`).
+- ✅ Tests: **78/78** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
+  (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
+  `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5). Las Fases 6 y 7 no
+  añadieron tests nuevos (UI pura + extracción de strings; `LocalizationTests` ya cubre por
+  completitud las **272 claves** de `L.Map` sin necesitar un test por clave).
+- ✅ **Tier A — Paridad con FormatDiskPro, COMPLETADO (2026-07-08/09):**
+  Se comparó WingetUSoft con FormatDiskPro (proyecto hermano en el mismo workspace, misma
+  arquitectura por capas) para identificar infraestructura de app ya resuelta allí y ausente
+  aquí: changelog/novedades en las actualizaciones, aviso al terminar + progreso en la barra de
+  tareas, ETA/velocidad en operaciones largas, historial con filtros/exportación, diálogo Acerca
+  de con licencia, y pipeline de release en un paso. Plan completo en
+  `C:\Users\User\.claude\plans\linear-chasing-thacker.md`. Decisiones tomadas con el usuario:
+  localización a **5 idiomas** (ES/EN/PT/FR/IT, como FormatDiskPro), licencia **MIT** (a
+  diferencia de FormatDiskPro que usa GPLv3), **migrar tests a xUnit** (mejor compatibilidad con
+  FlaUI para futuros tests de UI), **Inno Setup como único empaquetador** (se descarta MSIX o
+  cualquier otra vía; el proyecto ya es unpackaged, `WindowsPackageType=None`).
+  Fases 0–8 detalladas en [`ROADMAP.md`](ROADMAP.md).
+  - **Fase 0 (✅ 2026-07-08):** tests migrados de MSTest a xUnit, 30/30 en verde.
+  - **Fase 1 (✅ 2026-07-08):** `Localization/Localization.cs` (`enum AppLang` + clase `L`,
+    port literal del patrón de FormatDiskPro) + `AppSettings.Language`/`LoadedFromFile`. Cubre
+    por ahora **solo el menú principal** (`DropDownButton "Opciones"` en `MainWindow.xaml`):
+    nuevo submenú **Idioma** (5 `RadioMenuFlyoutItem`, mismo patrón que el submenú Tema ya
+    existente) + `ApplyLocalizedStrings()` para el cambio en caliente. Detección del idioma del
+    sistema (`CultureInfo.CurrentUICulture`) solo cuando `AppSettings.Language` es `null` y no
+    había `settings.json` previo (`LoadedFromFile == false`); si ya existía configuración previa
+    sin campo `Language` (actualización desde una versión anterior a este cambio), se asume
+    español en vez de reinterpretar el sistema. La extracción completa del resto de la UI
+    (ventanas de Settings/Uninstall/Cleanup/History) queda para la **Fase 7**.
+  - **Fase 2 (✅ 2026-07-08):** `Core/GitHubUpdateService.cs` gana `Notes` (campo `body` del
+    release), `GetLatestReleaseAsync` (sin gate de versión) y `GetReleaseByTagAsync(tag)`, ambos
+    refactorizados sobre un `FetchReleaseAsync` privado compartido con `CheckForUpdateAsync`.
+    **Nuevo** `Core/ReleaseNotes.cs` (port literal de FormatDiskPro, Markdown → texto plano) y
+    **nuevo** `UI/WhatsNewDialog.xaml`/`.cs` (ContentDialog con versión + notas + botón "Ver en
+    GitHub" vía `Windows.System.Launcher.LaunchUriAsync`, patrón ya usado en
+    `CtxBuscarWeb_Click`). `AppSettings.LastVersionSeen` + `MaybeShowWhatsNewAsync()`/
+    `ShowWhatsNewAsync()` en `MainWindow`: muestra las novedades una sola vez tras actualizar
+    (gateado por `LoadedFromFile` igual que la Fase 1, para no disparar en instalación nueva),
+    llamado en el `Loaded` del arranque antes de `CheckForAppUpdateAsync()`; también accesible
+    bajo demanda vía nuevo ítem **"Novedades..."** en el dropdown `Opciones` (no se creó un menú
+    `Ayuda` dedicado todavía — **desviación deliberada del texto del plan**, que lo menciona en la
+    Fase 2 pero lo especifica en detalle recién en la Fase 6; se pospuso la reorganización del
+    menú a la Fase 6 para no tocar la disposición dos veces). El changelog (vía
+    `BuildChangelogMessage`, trunca a 500 caracteres) se antepone tanto al `InfoBar` de
+    actualización como al diálogo de confirmación en `CheckForAppUpdateAsync`/
+    `MenuBuscarActualizacion_Click`. **Nuevo test** `ReleaseNotesTests.cs` (port literal, 8 casos).
+    **Resultado: 59/59 tests en verde**, build 0/0.
+  - **Fase 3 (✅ 2026-07-08):** **Nuevos** `UI/Notifier.cs` (Win32 `FlashWindowEx`/`MessageBeep`,
+    `ShouldNotify` puro) y `UI/TaskbarProgress.cs` (COM `ITaskbarList3`), ports literales. Campo
+    `_hWnd` añadido a `MainWindow`/`UninstallWindow`/`CleanupWindow` (antes solo variable local en
+    el constructor). En `MainWindow.UpdatePackagesAsync`: `Stopwatch` de la operación,
+    `TaskbarProgress.SetValue` por paquete en el bucle secuencial (`SetIndeterminate` en el lote
+    elevado como administrador), `Notifier.ShouldNotify`/`OperationFinished` al terminar —
+    reutiliza el ajuste ya existente `AppSettings.ShowNotifications` (toggle en `SettingsWindow`),
+    sin setting nuevo. También en `LnkDescargarUpdate_Click` (descarga del instalador de la propia
+    app): progreso real en la taskbar durante la descarga, indeterminado mientras se lanza el
+    instalador. Mismo patrón replicado en `UninstallWindow.UninstallSelectedAsync` y
+    `CleanupWindow.DeleteSelectedAsync` (desinstalación y limpieza de residuos, ambas pueden ser
+    operaciones largas). **Nuevo test** `NotifierTests.cs` (port literal, 5 casos: umbral,
+    deshabilitado, cancelado). **Resultado: 64/64 tests en verde**, build 0/0.
+  - **Fase 4 (✅ 2026-07-08):** **Nuevo** `Core/Throughput.cs` (`Eta`/`FormatEta`, puro; sin
+    `FormatSpeed` — se mantuvo el `FormatBytes` inline ya existente en `MainWindow`). ETA añadido
+    a `UpdateLogDownloadLine`, al estado del lote en `UpdatePackagesAsync` y, por extrapolación
+    (sin bytes/velocidad reales disponibles en esa API), a la descarga del instalador de la propia
+    app en `LnkDescargarUpdate_Click`. **Resultado: 70/70 tests en verde**, build 0/0.
+  - **Fase 5 (✅ 2026-07-08):** **Nuevo** `Settings/HistoryFilter.cs` (`HistoryStatusFilter` enum +
+    `Apply(entries, texto, estado)`, puro). `UI/HistoryWindow.xaml` gana una barra de
+    búsqueda/filtro/exportación (mismo patrón visual que el filtro de `MainWindow`): `TextBox` de
+    búsqueda en vivo, `DropDownButton` con `RadioMenuFlyoutItem` Todos/Éxito/Fallido, botón
+    "Exportar CSV...". La exportación reutiliza `Core/DelimitedTextExporter.BuildRow` y el patrón
+    `FileSavePicker` ya usado en `MainWindow.MenuExportar_Click` (columnas: fecha, nombre, Id,
+    versión origen/destino, resultado) — exporta lo **filtrado**, no todo el historial.
+    **Resultado: 78/78 tests en verde**, build 0/0.
+  - **Fase 6 (✅ 2026-07-08):** **Nuevo** `LICENSE` (MIT, © 2026 xfiberex, decisión del usuario —
+    a diferencia de FormatDiskPro que usa GPLv3) en la raíz del repo. **Nuevo**
+    `UI/AboutDialog.xaml`/`.cs`: versión, descripción, copyright/licencia, aviso de privacidad y
+    botón "Ver en GitHub" (sin disclaimer de uso destructivo ni donaciones — no aplican al
+    propósito de esta app, a diferencia del `AboutDialog` de FormatDiskPro). **Nuevo menú Ayuda**
+    (`DropDownButton` junto al de `Opciones`): agrupa "Buscar actualización...", "Novedades..."
+    (movidos desde `Opciones`, cerrando la desviación anotada en la Fase 2) y el nuevo
+    "Acerca de...". README gana una sección de Licencia/Privacidad. Sin tests nuevos (UI pura).
+    **Resultado: 78/78 tests en verde** (sin cambios), build 0/0.
+  - **Fase 7 (✅ 2026-07-08):** extracción completa de strings a los 5 idiomas — el diccionario
+    `L.Map` pasa de ~30 claves (solo menú principal, Fase 1) a **272 claves**. Cubre las 5
+    ventanas (`MainWindow`, `SettingsWindow`, `UninstallWindow`, `CleanupWindow`,
+    `HistoryWindow`) por completo: cada `TextBlock`/`Content`/`PlaceholderText` sin nombre ganó
+    `x:Name` para poder localizarlo desde código, y cada ventana secundaria ganó su propio
+    `ApplyLocalizedStrings()` (llamado una vez en el constructor — a diferencia de `MainWindow`,
+    no tienen menú de idioma propio: heredan el idioma vigente de `L.Current` al abrirse).
+    `Converters.cs` no tenía strings que extraer. También se localizaron mensajes de `Core/`
+    que llegan directo a diálogos: `UpgradeResult.GetFailureReason()` (con test existente que
+    sigue en verde porque `L.Current` es `Es` por defecto durante los tests),
+    `GitHubUpdateService` (mensaje de instalador sin firma) y las cadenas de progreso/error del
+    modo administrador en `WingetService` (solicitudes de elevación, resultado del lote elevado).
+    **Límite deliberado**: se dejaron sin traducir (documentado, no es un olvido) (1) las claves
+    de parseo de la salida de `winget` (`"Homepage:"`, `"Description:"`, etc. — deben coincidir
+    literalmente con el CLI, no son texto de UI); (2) los mensajes de protocolo interno del
+    worker elevado en rutas de error muy profundas (fallos de negociación de la sesión IPC,
+    "no debería pasar nunca"); (3) los mensajes de `AppSettings.LastLoadError`/`LastSaveError`,
+    porque `AppSettings.Load()` se ejecuta *antes* de que el idioma se determine (el propio
+    `Language` viene del archivo que se está cargando) — traducirlos no funcionaría de verdad.
+    **Resultado: 78/78 tests en verde** (sin cambios; ninguna fase de UI pura necesitaba tests
+    nuevos), build 0/0.
+
+## 4. Decisiones y convenciones clave
+
+- **Namespace único** `WingetUSoft` para toda la app y los tests.
+- **Elevación de permisos:** worker interno con comunicación por named pipe (sin scripts
+  temporales en disco) — ver `Core/WingetService.cs`.
+- **Exportación CSV/TSV:** `Core/DelimitedTextExporter.cs` neutraliza fórmulas (prefijo `'` ante
+  `=`/`+`/`-`/`@`) para que sea seguro abrir en Excel/Calc.
+- **Actualizaciones de la app:** `Core/GitHubUpdateService.cs` **exige firma Authenticode
+  válida** en el instalador descargado (`VerifyAuthenticodeSignature`) — lo borra si no está
+  firmado. Cualquier pipeline de release que publique sin firmar rompe la auto-actualización.
+- **Publicación (verificado en Tier A #8):** `dotnet publish -r win-x64 --self-contained false`
+  (**framework-dependent**, no self-contained pese a `WindowsAppSDKSelfContained=true` en el
+  .csproj — esa propiedad solo empaqueta el Windows App SDK, no el propio runtime de .NET). El
+  instalador de Inno Setup descarga VC++ Redist / Windows App Runtime / .NET 10 Desktop Runtime
+  si faltan (ver `installer/installer.iss` → `[Code]`) — ese código de detección/descarga es lo
+  que hace que el modelo framework-dependent funcione sin fricción para el usuario final. Ver
+  `installer/build-installer.ps1`.
+- **Instalador (Inno Setup):** `AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}` — **no cambiar
+  nunca** (permite actualización in-place). `PrivilegesRequired=admin`,
+  `CloseApplications=yes`. **Único empaquetador del proyecto** (Tier A, decisión explícita).
+  `MyAppVersion`/`SourceDir` en `installer.iss` van envueltos en `#ifndef` para poder
+  sobrescribirlos vía `/D` desde `build-installer.ps1` sin romper `iscc installer.iss` a mano.
+- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.2.0`).
+- **Tests:** **xUnit** (migrado desde MSTest en Tier A #0) — no reintroducir MSTest/NUnit/TUnit.
+- **Scripts PowerShell con acentos/`—`:** guardar siempre con **BOM UTF-8**
+  (`[System.Text.UTF8Encoding($true)]`, no `Set-Content -Encoding UTF8` a secas si el archivo
+  se creó sin BOM antes). Windows PowerShell 5.1 asume el codepage ANSI del sistema para `.ps1`
+  sin BOM; un guion largo `—` o una tilde sin BOM puede generar bytes que rompen el tokenizer
+  del parser (visto en vivo: `release.ps1` fallaba con "Falta el paréntesis de cierre" hasta
+  reescribirlo con BOM). Mismo hallazgo que documenta `FormatDiskPro/CONTEXT.md`.
+- **Localización (Tier A #1 en adelante):** patrón `L.T("clave", args...)` con diccionario por
+  clave → `string[5]` (ES/EN/PT/FR/IT), idéntico al de FormatDiskPro. Detección del idioma del
+  sistema solo en el primer arranque (sin `settings.json` previo); después manda la elección
+  manual persistida. Todo string nuevo en la UI a partir de la Fase 1 debe usar `L.T()`, no texto
+  literal — evita duplicar trabajo en la Fase 7.
+
+## 5. Tareas comunes
+
+| Tarea | Comando |
+|-------|---------|
+| Compilar | `dotnet build WingetUSoft.csproj` |
+| Ejecutar | `dotnet run --project WingetUSoft.csproj` |
+| Pruebas | `dotnet test WingetUSoft.Tests/WingetUSoft.Tests.csproj` |
+| Generar instalador | `installer\build-installer.ps1` (añade `-CertThumbprint <huella>` para firmar) |
+| Crear certificado de prueba | `installer\new-selfsigned-cert.ps1` |
+| Publicar versión | `.\release.ps1 -Version X.Y.Z` (usa `-DryRun` para simular) |
+
+`release.ps1` hace: validar → tests → bump `<Version>` → build instalador → commit + tag `vX.Y.Z`
+→ push → `gh release create` con el instalador. Flags: `-DryRun`, `-SkipTests`, `-AllowDirty`,
+`-NotesFile`, y los de firma (`-CertThumbprint`/`-CertFile`/`-CertPassword`/`-TimestampUrl`,
+reenviados a `build-installer.ps1`).
+
+## 6. Pendientes / ideas
+
+- **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO**, 9/9
+  fases (-1 a 8) implementadas y verificadas.
+- Publicar la primera versión real con `release.ps1` (hasta ahora solo se verificó el pipeline
+  con `-DryRun` y builds locales del instalador; no se ha hecho push de tag ni GitHub Release).
+- Conseguir un certificado de firma de código real (OV/EV) para que la auto-actualización
+  funcione en producción — sin firmar, `GitHubUpdateService.VerifyAuthenticodeSignature` rechaza
+  el instalador descargado.
+
+## 7. Cómo mantener este documento
+
+1. Tras un cambio relevante, añadir una entrada en el **Registro de cambios** (fecha absoluta).
+2. Actualizar **Estado actual** (versión, tests, lo publicado, pendientes).
+3. Si cambia una convención o decisión, reflejarlo en la sección 4.
+4. Marcar el ítem correspondiente como ✅ en [`ROADMAP.md`](ROADMAP.md) cuando una fase quede
+   completa y verificada (build + tests + prueba manual, no solo código escrito).
+5. Commitear este archivo junto con el cambio para que viaje entre equipos.
+
+---
+
+## Registro de cambios
+
+### 2026-07-09 — feat: pipeline de release con Inno Setup (Tier A #8) — Tier A COMPLETADO
+
+**Nuevo** `installer/build-installer.ps1` (adaptado de FormatDiskPro): lee versión y TFM del
+`.csproj`, publica con `dotnet publish -r win-x64 --self-contained false` (**framework-dependent**
+— decisión distinta a FormatDiskPro, ver más abajo), firma opcionalmente el `.exe`/`.dll`
+publicados y compila `installer.iss` con ISCC pasando `/DMyAppVersion`/`/DSourceDir`, firmando
+también el instalador resultante si hay certificado. **Nuevo** `release.ps1` en la raíz: valida
+versión/árbol git → tests (`WingetUSoft.Tests.csproj`, no hay `.slnx`) → bump `<Version>` → build
+instalador → commit + tag `vX.Y.Z` → push → `gh release create`. **Nuevo**
+`installer/new-selfsigned-cert.ps1` para generar un certificado de prueba.
+
+`installer/installer.iss`: `MyAppVersion` y `SourceDir` (antes `#define` fijos) pasan a
+`#ifndef`/`#endif` para poder sobrescribirse vía `/D` desde el script sin romper `iscc
+installer.iss` ejecutado a mano (el valor por defecto de `SourceDir`, `..\publish`, no cambia).
+De paso, `ArchitecturesAllowed`/`ArchitecturesInstallIn64BitMode` pasan de `x64` (deprecado en
+Inno Setup 6.7.2) a `x64compatible`, quitando un warning del compilador — hallado al verificar el
+build real, no estaba en el plan original.
+
+**Decisión de diseño (desviación deliberada de FormatDiskPro):** el publish es
+**framework-dependent** (`--self-contained false`), no self-contained. `WindowsAppSDKSelfContained
+=true` en `WingetUSoft.csproj` solo empaqueta el Windows App SDK, no el runtime de .NET — y
+`installer.iss` ya traía código `[Code]` preexistente (de antes de este Tier A) que detecta y
+descarga VC++ Redist / Windows App Runtime / .NET 10 Desktop Runtime si faltan. Forzar
+self-contained como FormatDiskPro habría hecho ese código redundante y duplicado ~150 MB de
+runtime en el instalador sin necesidad; se respetó el modelo de despliegue que el propio
+`installer.iss` ya asumía.
+
+**Verificado con hardware real (no solo revisado, ejecutado de punta a punta):**
+- `installer\build-installer.ps1` sin firmar: publish + ISCC compilan limpio, sin advertencias,
+  `WingetUSoft-Setup-1.2.0.exe` (34.2 MB) generado en `installer\Output\`.
+- `installer\new-selfsigned-cert.ps1` + `build-installer.ps1 -CertThumbprint <huella>`: signtool
+  firma `.exe`, `.dll` y el instalador correctamente (certificado de prueba creado y **eliminado
+  del almacén al terminar** — no se dejó estado persistente en el equipo).
+- `Get-AuthenticodeSignature` sobre el instalador firmado con el cert autofirmado confirma
+  `Status=UnknownError` / "cadena termina en un certificado raíz no confiable" — el mismo
+  resultado que `GitHubUpdateService.VerifyAuthenticodeSignature` (`WinVerifyTrust`) usaría para
+  **rechazar** el instalador. Confirma que el gate de firma de la auto-actualización funciona
+  como se espera: un cert real de una CA reconocida pasaría, uno autofirmado no.
+- `release.ps1 -Version 1.3.0 -DryRun -AllowDirty`: muestra el plan completo sin tocar nada y
+  **corre las 78 pruebas inline** (verde) — confirma que el flujo de validación previo al build
+  funciona antes de comprometerse a publicar.
+
+**Hallazgo de plataforma (no estaba en el plan, encontrado al ejecutar los scripts):** los tres
+`.ps1` se habían guardado sin BOM UTF-8; Windows PowerShell 5.1 los interpretó con el codepage
+ANSI del sistema, y los acentos/guion largo (`—`) de `release.ps1` generaron bytes que rompían el
+tokenizer del parser ("Falta el paréntesis de cierre"). Reescritos los tres con BOM UTF-8
+(`System.Text.UTF8Encoding($true)`); mismo problema que ya documenta `FormatDiskPro/CONTEXT.md`
+para sus propios scripts — añadida la misma nota a la sección 4 de este documento para que no se
+repita en scripts futuros.
+
+`.gitignore` gana `*.pfx` (ya tenía `publish/` e `installer/Output/`) para no arriesgar subir una
+clave privada de firma por accidente.
+
+**Resultado: 78/78 tests en verde, build 0/0.** Con esto se cierran las 9 fases del Tier A
+(-1 a 8): WingetUSoft tiene paridad de infraestructura de app con FormatDiskPro dentro de su
+propio propósito (gestión de software vía winget), sin haber tocado nada fuera de alcance.
+
+### 2026-07-08 — feat: extracción completa de strings a 5 idiomas (Tier A #7)
+
+El diccionario `L.Map` pasa de ~30 claves (solo menú principal, Fase 1) a **272 claves**. Cubre
+las 5 ventanas (`MainWindow`, `SettingsWindow`, `UninstallWindow`, `CleanupWindow`,
+`HistoryWindow`) por completo: cada `TextBlock`/`Content`/`PlaceholderText` sin nombre ganó
+`x:Name` para poder localizarlo desde código; cada ventana secundaria ganó su propio
+`ApplyLocalizedStrings()` llamado una vez en el constructor (a diferencia de `MainWindow`, no
+tienen menú de idioma propio — heredan `L.Current` vigente al abrirse). `Converters.cs` no tenía
+strings que extraer.
+
+También se localizaron mensajes de `Core/` que llegan directo a diálogos o al log de actividad:
+`UpgradeResult.GetFailureReason()` (los tests existentes siguen en verde porque `L.Current` es
+`Es` por defecto durante toda la corrida de tests — ningún test cambia el idioma), mensaje de
+instalador sin firma en `GitHubUpdateService`, y las cadenas de progreso/error del modo
+administrador en `WingetService` (solicitud de elevación, resultado del lote elevado).
+
+**Límite deliberado (documentado, no un olvido):** se dejaron sin traducir (1) las claves de
+parseo de la salida de `winget` (`"Homepage:"`, `"Description:"`, etc. — deben coincidir
+literalmente con el texto que devuelve el CLI, no son texto de UI); (2) los mensajes de protocolo
+interno del worker elevado en rutas de error muy profundas (fallos de negociación de la sesión
+IPC — "no debería pasar nunca"); (3) `AppSettings.LastLoadError`/`LastSaveError`, porque
+`AppSettings.Load()` corre *antes* de que el idioma se determine (el propio `Language` viene del
+archivo que se está cargando) — traducirlos ahí no funcionaría de verdad.
+
+Sin tests nuevos (extracción de strings existentes, no lógica nueva); `LocalizationTests` ya
+cubre por completitud las 272 claves sin necesitar un test por clave. **Resultado: 78/78 tests en
+verde** (sin cambios respecto a la Fase 6), build 0/0.
+
+### 2026-07-08 — feat: aviso al terminar + progreso en la barra de tareas (Tier A #3)
+
+Ports literales desde FormatDiskPro: `UI/Notifier.cs` (`ShouldNotify(elapsed, enabled, cancelled,
+threshold)` puro y testeable + `OperationFinished(hwnd)` con Win32 `FlashWindowEx`/`MessageBeep`,
+nunca lanza) y `UI/TaskbarProgress.cs` (`SetValue`/`SetIndeterminate`/`Clear` sobre
+`ITaskbarList3` vía COM, no-op si el shell no lo soporta). Se colocaron en `UI/` en vez de un
+`Services/` que no existe en este proyecto (WingetUSoft usa `Core/`+`Settings/`+`UI/`, no la
+carpeta `Services/` de FormatDiskPro).
+
+Cada ventana con operaciones potencialmente largas gana un campo `_hWnd` (antes era solo una
+variable local en el constructor, descartada después de construir `AppWindow`):
+`MainWindow`, `UninstallWindow`, `CleanupWindow`.
+
+- **`MainWindow.UpdatePackagesAsync`** (actualización en lote): `Stopwatch` de la operación
+  completa; `TaskbarProgress.SetValue` por paquete en el bucle secuencial silencioso,
+  `SetIndeterminate` en el lote elevado como administrador (progreso real no disponible ahí,
+  igual que ya ocurría con el progreso in-app); `Clear` en el `finally`. Al final,
+  `Notifier.ShouldNotify`/`OperationFinished` — **reutiliza** el ajuste ya existente
+  `AppSettings.ShowNotifications` (el mismo toggle "Mostrar notificaciones al completar
+  actualizaciones" de `SettingsWindow`, que antes solo controlaba el texto de `ShowUpdateNotification`)
+  en vez de introducir un setting nuevo, tal como especificaba el plan.
+- **`LnkDescargarUpdate_Click`** (descarga del instalador de la propia app): progreso real en la
+  taskbar durante la descarga (mismo `Progress<double>` que ya alimentaba la barra in-app),
+  indeterminado mientras se lanza el instalador, limpiado si falla.
+- **`UninstallWindow.UninstallSelectedAsync`** y **`CleanupWindow.DeleteSelectedAsync`**: mismo
+  patrón (`Stopwatch` + `TaskbarProgress` + `Notifier` al final, gateado por el `ShowNotifications`
+  de cada ventana vía `_settings` compartido) — no estaban explícitos en el ejemplo del plan pero
+  sí en su alcance ("Integrar igualmente el aviso al terminar en desinstalaciones largas y
+  limpieza"). En `CleanupWindow` el `foreach` de borrado se cambió a `for` indexado para poder
+  reportar progreso por elemento sin alterar el resto de la lógica.
+
+**Nuevo test** `NotifierTests.cs` (port literal, 5 casos: umbral cumplido/no cumplido,
+deshabilitado, cancelado). El efecto real (Win32) no se cubre con pruebas unitarias, igual que en
+FormatDiskPro. **Resultado: 64/64 tests en verde** (59 previos + 5 nuevos), build 0/0.
+
+### 2026-07-08 — feat: velocidad y ETA en operaciones largas (Tier A #4)
+
+**Nuevo** `Core/Throughput.cs`: port de `Eta(remainingBytes, bytesPerSec)` y `FormatEta(TimeSpan?)`
+(`mm:ss` o `h:mm:ss` si supera la hora), lógica pura. **Se omitió `FormatSpeed`** (a diferencia de
+FormatDiskPro) porque WingetUSoft ya tenía `FormatBytes` inline en `MainWindow` reutilizado en
+varios sitios — introducir un duplicado en `Core` habría sido la opción B del plan, se eligió la A
+(mantener `FormatBytes` donde está).
+
+- **`UpdateLogDownloadLine`** (línea de progreso de descarga bajo el log): añade `ETA mm:ss` junto
+  a la velocidad ya existente, calculado con `Throughput.Eta(TotalBytes - DownloadedBytes,
+  SpeedBytesPerSecond)`.
+- **`UpdatePackagesAsync`** (bucle secuencial del lote): el texto de estado pasa de
+  `"Actualizando (i/N): pkg..."` a incluir velocidad y ETA cuando hay progreso de bytes:
+  `"Actualizando (i/N): pkg  ·  4,2 MB/s  ·  02:10 restante"`.
+- **`LnkDescargarUpdate_Click`** (descarga del instalador de la propia app): el `IProgress<double>`
+  de `GitHubUpdateService.DownloadInstallerAsync` solo reporta la **fracción** completada (0–1), no
+  bytes ni velocidad — no se tocó esa API pública. En su lugar, se **extrapola** el ETA a partir del
+  tiempo transcurrido (`Stopwatch`) y la propia fracción (`tiempo_total_estimado = transcurrido / p`),
+  mostrado en el `InfoBar`. Es una aproximación (mejora conforme avanza la descarga), documentada
+  como tal en el código — decisión pragmática para no ampliar la superficie pública de
+  `GitHubUpdateService` solo para este dato.
+
+**Nuevo test** `ThroughputTests.cs` (port parcial: `Eta`/`FormatEta`, 6 casos; sin los casos de
+`FormatSpeed` que no aplican). **Resultado: 70/70 tests en verde** (64 previos + 6 nuevos), build 0/0.
+
+### 2026-07-08 — feat: historial con búsqueda, filtros y exportación (Tier A #5)
+
+**Nuevo** `Settings/HistoryFilter.cs` (no existía un `HistoryFilter` en FormatDiskPro con ese
+nombre exacto — se diseñó desde cero siguiendo la idea del plan, `Apply(entries, texto, estado)`
+puro): `enum HistoryStatusFilter { All, Success, Failed }` + filtrado por nombre/Id (contiene,
+insensible a mayúsculas) combinable con el filtro de estado.
+
+`UI/HistoryWindow.xaml`: nueva barra entre el header y la lista (fila `Grid` añadida, filas
+siguientes desplazadas) con `TextBox` de búsqueda en vivo, `DropDownButton`+`RadioMenuFlyoutItem`
+para el estado (mismo patrón que el filtro "Excluidos" de `MainWindow`) y botón "Exportar CSV...".
+`HistoryWindow.xaml.cs`: `_allHistory` guarda el historial completo sin filtrar; `ApplyFilter()`
+recalcula la vista con `HistoryFilter.Apply` en cada cambio de texto/estado; el resumen distingue
+"N registro(s) cargados" de "N de M registro(s)" cuando el filtro reduce la lista. La exportación
+reutiliza `Core/DelimitedTextExporter.BuildRow` (mismo helper que ya usaba `MainWindow` para
+exportar la lista de paquetes) y el patrón `FileSavePicker`/`InitializeWithWindow` — exporta lo
+**filtrado**, no el historial completo. Columnas: Fecha, Nombre, Id, Version origen, Version
+destino, Resultado.
+
+**Nuevo test** `HistoryFilterTests.cs` (8 casos: sin filtros, solo éxito, solo fallido, búsqueda
+por nombre/Id insensible a mayúsculas, combinación búsqueda+estado, búsqueda en blanco ignorada,
+sin coincidencias). **Resultado: 78/78 tests en verde** (70 previos + 8 nuevos), build 0/0.
+
+### 2026-07-08 — feat: diálogo Acerca de + licencia MIT + menú Ayuda (Tier A #6)
+
+**Nuevo** `LICENSE` en la raíz del repo: texto MIT estándar, © 2026 xfiberex (decisión del usuario
+— WingetUSoft usa MIT, a diferencia de FormatDiskPro que usa GPLv3; no hay conflicto porque son
+proyectos independientes).
+
+**Nuevo** `UI/AboutDialog.xaml`/`.cs` (adaptado de FormatDiskPro, simplificado): título, versión
+(vía `Assembly.GetName().Version`, mismo patrón que `MaybeShowWhatsNewAsync`), descripción,
+copyright/licencia, sección de privacidad y botón "Ver en GitHub" (`Windows.System.Launcher`,
+sin cerrar el diálogo — `args.Cancel = true`). **Se omitieron el disclaimer de uso destructivo y
+el botón de donación** que sí tiene el `AboutDialog` de FormatDiskPro: no aplican al propósito de
+WingetUSoft (no hay operaciones irreversibles sobre datos del usuario más allá de desinstalar
+software, que winget ya confirma) y no se pidió donación en el plan aprobado.
+
+**Nuevo menú Ayuda**: `DropDownButton` "Ayuda" añadido junto al de "Opciones" en la barra de
+acciones. Agrupa "Buscar actualización de WingetUSoft...", "Novedades..." (**movidos** desde el
+dropdown `Opciones`, donde habían quedado provisionalmente en la Fase 2) y el nuevo
+"Acerca de...". Esto cierra la desviación documentada en la entrada de la Fase 2: en vez de tocar
+la disposición del menú dos veces, se dejó la reorganización completa para esta fase, tal como
+especificaba el plan aprobado.
+
+`README.md` gana una sección **Licencia** (enlaza `LICENSE`, menciona *Ayuda → Acerca de*) y
+**Privacidad** (sin telemetría, conexiones solo a winget y GitHub Releases).
+
+Sin tests nuevos: toda la fase es UI (`ContentDialog` + reorganización de menú), sin lógica nueva
+en `Core`/`Settings`. **Resultado: 78/78 tests en verde** (sin cambios respecto a la Fase 5),
+build 0/0.
+
+### 2026-07-08 — feat: changelog en actualizaciones + diálogo "Novedades" (Tier A #2)
+
+`Core/GitHubUpdateService.cs` refactorizado: la lógica de fetch+parse de un release se extrajo a
+`FetchReleaseAsync(Uri, ct)` privado, compartida por `CheckForUpdateAsync` (gatea por versión),
+`GetLatestReleaseAsync` (sin gate, para el fallback de "novedades") y el nuevo
+`GetReleaseByTagAsync(tag, ct)` (endpoint `releases/tags/{tag}`, para las notas de la versión
+instalada). `GitHubReleaseInfo` gana el campo `Notes` (poblado desde `body` en el JSON).
+
+Port literal de `Core/ReleaseNotes.cs` desde FormatDiskPro (regex-based, Markdown → texto plano:
+encabezados, viñetas, negrita/código, enlaces, colapso de saltos). Nuevo `UI/WhatsNewDialog.xaml`/
+`.cs`: `ContentDialog` con la versión, las notas y un botón "Ver en GitHub" que abre la URL del
+release con `Windows.System.Launcher.LaunchUriAsync` (mismo mecanismo que ya usaba
+`CtxBuscarWeb_Click` para abrir winget.run — no hizo falta introducir un helper nuevo).
+
+`AppSettings.LastVersionSeen` (versión cuyas novedades ya se mostraron) + `MaybeShowWhatsNewAsync()`
+en `MainWindow`: se dispara una sola vez tras detectar un cambio de versión respecto a
+`LastVersionSeen`, con el mismo gate `LoadedFromFile` que ya usa la detección de idioma de la
+Fase 1 (evita mostrarlo en una instalación nueva). Se llama en el `Loaded` del arranque, antes de
+`CheckForAppUpdateAsync()`. También accesible bajo demanda vía un nuevo ítem **"Novedades..."**
+añadido al dropdown `Opciones` existente.
+
+**Desviación deliberada del plan aprobado:** el texto de la Fase 2 menciona un menú "Ayuda →
+Novedades…", pero la Fase 6 es la que especifica en detalle la creación de ese menú dedicado
+(agrupando Buscar actualizaciones / Novedades / Acerca de). Para no reorganizar el menú dos veces
+en fases consecutivas, el ítem "Novedades..." se añadió por ahora al dropdown `Opciones` ya
+existente; la Fase 6 hará la migración a un menú `Ayuda` propio moviendo los tres ítems juntos.
+
+El changelog del release (vía nuevo `BuildChangelogMessage`, trunca a 500 caracteres) se antepone
+tanto al `InfoBar` de actualización (`CheckForAppUpdateAsync`) como al diálogo de confirmación
+(`MenuBuscarActualizacion_Click`), usando las nuevas claves de localización `update.*`.
+
+**Nuevo test** `ReleaseNotesTests.cs` (port literal desde FormatDiskPro, 8 casos: blank/null,
+encabezados, viñetas, negrita/código, enlaces, colapso de saltos). **Resultado: 59/59 tests en
+verde** (51 previos + 8 nuevos), build 0/0.
+
+### 2026-07-08 — feat: infraestructura de localización + menú Idioma (Tier A #1)
+
+Port literal de `Localization.cs` desde FormatDiskPro: `enum AppLang { Es, En, Pt, Fr, It }` +
+clase estática `L` (`Map`, `T(key, args...)` con fallback defensivo a la propia clave, `FromCode`/
+`ToCode`/`FromCulture`). `Settings/AppSettings.cs` gana `Language` (código ISO persistido, `null`
+= sin elegir todavía) y `LoadedFromFile` (`true` solo cuando `Load()` deserializa un
+`settings.json` ya existente con éxito — usado para no reinterpretar el idioma del sistema en una
+actualización desde una versión sin este campo).
+
+`UI/MainWindow.xaml`: nuevo `MenuFlyoutSubItem` **Idioma** junto al de **Tema** existente en el
+`DropDownButton "Opciones"`, con 5 `RadioMenuFlyoutItem` (mismo patrón exacto que el submenú
+Tema: `GroupName`, un `Click` por opción). `UI/MainWindow.xaml.cs`: handlers `MenuIdioma{Es,En,Pt,
+Fr,It}_Click` → `SetLanguage(AppLang)` (aplica `L.Set`, persiste `_settings.Language`, actualiza
+los radio-checks y llama `ApplyLocalizedStrings()`); en el constructor, si `_settings.Language` es
+`null` se siembra desde `CultureInfo.CurrentUICulture.Name` vía `L.FromCulture` (o español si ya
+había `settings.json` previo sin ese campo) y se guarda en silencio (sin diálogo de error — el
+`XamlRoot` aún no está listo antes de `Loaded`).
+
+`ApplyLocalizedStrings()` cubre **solo los textos del menú principal** en esta fase (según el
+plan aprobado): el propio botón "Opciones", los submenús Modo de actualización/Tema/Idioma, las
+5 etiquetas de idioma y los ítems Exportar/Configuración/Ver historial/Desinstalar/Buscar
+actualización. El resto de ventanas (Settings, Uninstall, Cleanup, History) sigue en español
+literal — se extrae por completo en la **Fase 7**.
+
+**Nuevo test** `LocalizationTests.cs` (port de FormatDiskPro, adaptado a las claves de este
+proyecto): completitud de `L.Map` (toda clave tiene 5 traducciones no vacías), `FromCode`,
+`FromCulture`, round-trip `ToCode`↔`FromCode`. **Resultado: 51/51 tests en verde** (30 previos +
+21 nuevos), build 0/0.
+
+### 2026-07-08 — test: migración de `WingetUSoft.Tests` de MSTest a xUnit (Tier A #0)
+
+`WingetUSoft.Tests.csproj` cambia `MSTest.TestAdapter`/`MSTest.TestFramework` por `xunit` +
+`xunit.runner.visualstudio`. Los 3 archivos existentes (`AppSettingsTests.cs`,
+`CleanupScannerTests.cs`, `WingetServiceTests.cs`) se convirtieron a sintaxis xUnit:
+`[TestClass]` eliminado, `[TestMethod]` → `[Fact]`, `[TestInitialize]`/`[TestCleanup]` →
+constructor/`IDisposable.Dispose()` en `AppSettingsTests`, `Assert.AreEqual`/`IsTrue`/`IsFalse`/
+`IsNull`/`IsNotNull` → `Assert.Equal`/`True`/`False`/`Null`/`NotNull`, `CollectionAssert.AreEqual`
+→ `Assert.Equal` (xUnit compara colecciones out-of-the-box), `StringAssert.Contains`/`StartsWith`
+→ `Assert.Contains`/`StartsWith` (orden de argumentos invertido: en xUnit el esperado va primero),
+`Assert.ThrowsExceptionAsync` → `Assert.ThrowsAsync`. Los `delta:` de `Assert.AreEqual` numérico
+(sin equivalente directo en xUnit) se reescribieron como `Assert.InRange(actual, esperado-delta,
+esperado+delta)`. **Resultado: 30/30 tests en verde**, mismo número que antes de la migración
+(verificado con `dotnet test`). Motivo (decisión del usuario): mejor compatibilidad de xUnit con
+FlaUI para futuros tests de UI, y consistencia con FormatDiskPro (que ya usa xUnit).
+
+### 2026-07-08 — docs: creación de `ROADMAP.md` y `CONTEXT.md` (Fase -1 del Tier A)
+
+Antes de empezar a portar código desde FormatDiskPro, se replicó su patrón de documentos vivos
+(descrito en `FormatDiskPro/CONTEXT.md`, sección 7) para dar continuidad al trabajo del Tier A
+entre sesiones y equipos. `ROADMAP.md` lista las 9 fases (0–8) del plan aprobado con el usuario;
+este archivo resume arquitectura, estado y convenciones actuales de WingetUSoft antes de que
+empiecen los cambios. Ningún código tocado todavía en esta entrada.

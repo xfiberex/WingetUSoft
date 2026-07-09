@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -49,8 +49,6 @@ public sealed class PackageViewModel : INotifyPropertyChanged
 
 public sealed partial class MainWindow : Window
 {
-    private const string DefaultSelectionDetails = "Selecciona un programa para ver sus detalles antes de actualizar.";
-    private const string EmptySelectionDetails = "Todavia no hay datos cargados. Pulsa \"Consultar actualizaciones\" para empezar.";
     private const int LogMaxLines = 400;
 
     private readonly ObservableCollection<PackageViewModel> _packageViewModels = [];
@@ -78,6 +76,8 @@ public sealed partial class MainWindow : Window
     private DispatcherTimer? _searchDebounceTimer;
 
     private AppWindow _appWindow = null!;
+    private IntPtr _hWnd;
+    private string _appVersionStr = "";
 
     private MenuFlyout ctxMenuRow = null!;
     private MenuFlyoutItem ctxActualizar = null!;
@@ -91,15 +91,15 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         // Build context menu
-        ctxActualizar = new MenuFlyoutItem { Text = "Actualizar este programa" };
+        ctxActualizar = new MenuFlyoutItem { Text = L.T("ctx.update") };
         ctxActualizar.Click += CtxActualizar_Click;
-        ctxCopiarNombre = new MenuFlyoutItem { Text = "Copiar nombre" };
+        ctxCopiarNombre = new MenuFlyoutItem { Text = L.T("ctx.copyName") };
         ctxCopiarNombre.Click += CtxCopiarNombre_Click;
-        ctxCopiarId = new MenuFlyoutItem { Text = "Copiar Id" };
+        ctxCopiarId = new MenuFlyoutItem { Text = L.T("ctx.copyId") };
         ctxCopiarId.Click += CtxCopiarId_Click;
-        ctxBuscarWeb = new MenuFlyoutItem { Text = "Ver en winget.run" };
+        ctxBuscarWeb = new MenuFlyoutItem { Text = L.T("ctx.viewOnWingetRun") };
         ctxBuscarWeb.Click += CtxBuscarWeb_Click;
-        ctxExcluir = new MenuFlyoutItem { Text = "Excluir de actualizaciones" };
+        ctxExcluir = new MenuFlyoutItem { Text = L.T("ctx.exclude") };
         ctxExcluir.Click += CtxExcluir_Click;
         ctxMenuRow = new MenuFlyout();
         ctxMenuRow.Items.Add(ctxActualizar);
@@ -113,6 +113,7 @@ public sealed partial class MainWindow : Window
 
         // Set up window
         var hWnd = WindowNative.GetWindowHandle(this);
+        _hWnd = hWnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
         _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
@@ -147,6 +148,20 @@ public sealed partial class MainWindow : Window
         }
         ApplyTheme(_settings.ThemeMode);
 
+        // Idioma: en el primer arranque (sin settings.json previo) se detecta el del sistema;
+        // a partir de ahí manda la elección persistida del usuario.
+        if (_settings.Language is null)
+        {
+            AppLang detected = _settings.LoadedFromFile
+                ? AppLang.Es
+                : L.FromCulture(System.Globalization.CultureInfo.CurrentUICulture.Name);
+            _settings.Language = L.ToCode(detected);
+            _settings.Save(); // silencioso: solo semilla el idioma, sin diálogo de error aquí
+        }
+        L.Set(L.FromCode(_settings.Language));
+        SetLanguageRadioCheck(L.Current);
+        ApplyLocalizedStrings();
+
         UpdateAutoCheckTimer();
         UpdateSelectionDetails();
 
@@ -163,20 +178,20 @@ public sealed partial class MainWindow : Window
                 if (version is null)
                 {
                     SetActionButtonsEnabled(false);
-                    txtEstado.Text = "winget no esta disponible. Instalalo desde Microsoft Store.";
-                    txtDetalleEstado.Text = "La aplicacion necesita App Installer o una version reciente de Windows.";
-                    await ShowDialogAsync("winget no disponible",
-                        "No se encontró winget en el sistema.\n\nInstala 'App Installer' desde la Microsoft Store o actualiza Windows.");
+                    txtEstado.Text = L.T("winget.unavailableStatus");
+                    txtDetalleEstado.Text = L.T("winget.unavailableDetail");
+                    await ShowDialogAsync(L.T("winget.unavailableTitle"), L.T("winget.unavailableBody"));
                     return;
                 }
                 var appVer = typeof(MainWindow).Assembly.GetName().Version;
-                string appVersionStr = appVer is not null
+                _appVersionStr = appVer is not null
                     ? $"v{appVer.Major}.{appVer.Minor}.{appVer.Build}"
                     : "v1.1.0";
-                Title = $"WingetUSoft - Actualiza tus programas  [{appVersionStr}]";
+                Title = $"{L.T("app.titleBase")}  [{_appVersionStr}]";
                 TitleTextBlock.Text = Title;
-                txtEstado.Text = "Listo. Pulsa 'Consultar actualizaciones' para comenzar.";
+                txtEstado.Text = L.T("status.readyToStart");
                 UpdateSelectionDetails();
+                await MaybeShowWhatsNewAsync();
                 _ = CheckForAppUpdateAsync();
             };
         }
@@ -249,8 +264,8 @@ public sealed partial class MainWindow : Window
     }
 
     private string GetCancelStatusText() => _cancelStopsCurrentProcess
-        ? "Cancelando..."
-        : "Cancelando después de la operación actual...";
+        ? L.T("status.cancelling")
+        : L.T("status.cancellingAfterCurrent");
 
     private void LoadPackagesToGrid()
     {
@@ -336,8 +351,8 @@ public sealed partial class MainWindow : Window
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
         txtEstado.Text = includeUnknown
-            ? "Consultando actualizaciones (incluidas desconocidas)..."
-            : "Consultando actualizaciones disponibles...";
+            ? L.T("status.queryingUpdatesUnknown")
+            : L.T("status.queryingUpdates");
 
         try
         {
@@ -347,24 +362,24 @@ public sealed partial class MainWindow : Window
             LoadPackagesToGrid();
 
             txtUpdatesHeader.Text = includeUnknown
-                ? "Actualizaciones disponibles (incluidas desconocidas)"
-                : "Actualizaciones disponibles";
+                ? L.T("list.headerUnknown")
+                : L.T("list.header");
 
-            string sufijo = includeUnknown ? " (incluidas desconocidas)" : "";
+            string sufijo = includeUnknown ? L.T("list.suffixUnknown") : "";
             txtEstado.Text = _packages.Count == 0
-                ? $"No se encontraron actualizaciones disponibles{sufijo}."
-                : $"Se encontraron {_packages.Count} actualización(es) disponible(s){sufijo}.";
+                ? L.T("status.noUpdatesFound", sufijo)
+                : L.T("status.updatesFound", _packages.Count, sufijo);
         }
         catch (OperationCanceledException)
         {
             _packageViewModels.Clear();
-            txtEstado.Text = "Consulta cancelada.";
+            txtEstado.Text = L.T("status.queryCancelled");
             UpdateSelectionDetails();
         }
         catch (Exception ex)
         {
-            txtEstado.Text = "Error al consultar actualizaciones.";
-            await ShowDialogAsync("Error", ex.Message);
+            txtEstado.Text = L.T("status.queryError");
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
         {
@@ -394,17 +409,17 @@ public sealed partial class MainWindow : Window
 
         if (packagesToUpdate.Count == 0)
         {
-            await ShowDialogAsync("Información", "No hay programas seleccionados para actualizar.");
+            await ShowDialogAsync(L.T("info.title"), L.T("msg.noPackagesSelected"));
             return;
         }
 
         if (runAsAdministrator)
         {
             string adminMessage = packagesToUpdate.Count == 1
-                ? "La actualización se ejecutará con permisos de administrador.\n\nWindows mostrará el aviso de UAC y el progreso detallado se reemplazará por un indicador general.\n\n¿Desea continuar?"
-                : $"Las {packagesToUpdate.Count} actualizaciones se ejecutarán con permisos de administrador.\n\nWindows pedirá confirmación de UAC una sola vez para todo el lote y el progreso detallado se reemplazará por un indicador general.\n\n¿Desea continuar?";
+                ? L.T("admin.confirmSingleBody")
+                : L.T("admin.confirmBatchBody", packagesToUpdate.Count);
 
-            if (!await ShowConfirmDialogAsync("Confirmar modo administrador", adminMessage))
+            if (!await ShowConfirmDialogAsync(L.T("admin.confirmTitle"), adminMessage))
                 return;
         }
 
@@ -417,6 +432,7 @@ public sealed partial class MainWindow : Window
         bool cancelled = false;
         bool shouldReload = false;
         bool historyChanged = false;
+        var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         ClearLog();
 
@@ -424,6 +440,7 @@ public sealed partial class MainWindow : Window
         {
             if (runAsAdministrator)
             {
+                TaskbarProgress.SetIndeterminate(_hWnd);
                 (success, failed, cancelled) = await UpdatePackagesAsAdministratorAsync(packagesToUpdate);
                 historyChanged = success > 0;
             }
@@ -432,12 +449,22 @@ public sealed partial class MainWindow : Window
                 for (int i = 0; i < packagesToUpdate.Count; i++)
                 {
                     var pkg = packagesToUpdate[i];
-                    txtEstado.Text = $"Actualizando ({i + 1}/{packagesToUpdate.Count}): {pkg.Name}...";
+                    txtEstado.Text = L.T("status.updating", i + 1, packagesToUpdate.Count, pkg.Name);
+                    TaskbarProgress.SetValue(_hWnd, i * 100 / packagesToUpdate.Count);
 
                     IProgress<WingetProgressInfo>? progressReporter = new Progress<WingetProgressInfo>(info =>
                     {
                         if (info.TotalBytes > 0)
+                        {
                             UpdateLogDownloadLine(info);
+
+                            string speedText = info.SpeedBytesPerSecond > 0
+                                ? $"  ·  {FormatBytes((long)info.SpeedBytesPerSecond)}/s" : "";
+                            string etaText = Throughput.FormatEta(Throughput.Eta(
+                                info.TotalBytes - info.DownloadedBytes, info.SpeedBytesPerSecond)) is { Length: > 0 } e
+                                ? L.T("eta.remaining", e) : "";
+                            txtEstado.Text = L.T("status.updatingProgress", i + 1, packagesToUpdate.Count, pkg.Name) + speedText + etaText;
+                        }
                     });
 
                     try
@@ -476,40 +503,46 @@ public sealed partial class MainWindow : Window
 
             if (cancelled)
             {
-                txtEstado.Text = $"Cancelado. Completados: {success}, Fallidos: {failed}.";
+                txtEstado.Text = L.T("status.cancelledCompleted", success, failed);
                 return;
             }
 
             if (success > 0)
             {
-                txtEstado.Text = $"Completada. Éxito: {success}, Fallidos: {failed}. Actualizando lista...";
+                txtEstado.Text = L.T("status.completedSuccessReload", success, failed);
                 shouldReload = true;
             }
             else
             {
-                txtEstado.Text = $"Actualización completada. Éxito: {success}, Fallidos: {failed}.";
+                txtEstado.Text = L.T("status.updateCompleted", success, failed);
             }
         }
         catch (OperationCanceledException)
         {
-            txtEstado.Text = $"Cancelado. Completados: {success}, Fallidos: {failed}.";
+            txtEstado.Text = L.T("status.cancelledCompleted", success, failed);
         }
         catch (Exception ex)
         {
-            txtEstado.Text = "Error al actualizar programas.";
-            await ShowDialogAsync("Error de actualización", ex.Message);
+            txtEstado.Text = L.T("status.updateError");
+            await ShowDialogAsync(L.T("error.updateTitle"), ex.Message);
         }
         finally
         {
             if (historyChanged)
-                TrySaveSettings("No se pudo guardar el historial de actualizaciones.", updateStatusLabel: false);
+                TrySaveSettings(L.T("msg.historySaveError"), updateStatusLabel: false);
 
+            TaskbarProgress.Clear(_hWnd);
             _cts?.Dispose();
             _cts = null;
             SetUIBusy(false);
         }
 
         ShowUpdateNotification(success, failed);
+
+        // Aviso al terminar (sonido + parpadeo de la barra de tareas): solo si la operación fue
+        // larga (≥ 10 s), no se canceló y el usuario no está ya mirando la ventana.
+        if (Notifier.ShouldNotify(opStopwatch.Elapsed, _settings.ShowNotifications, cancelled, TimeSpan.FromSeconds(10)))
+            Notifier.OperationFinished(_hWnd);
 
         if (shouldReload)
             await LoadPackagesAsync(_lastIncludeUnknown);
@@ -520,12 +553,12 @@ public sealed partial class MainWindow : Window
         var packagesById = packagesToUpdate.ToDictionary(pkg => pkg.Id, StringComparer.OrdinalIgnoreCase);
 
         txtEstado.Text = packagesToUpdate.Count == 1
-            ? $"Actualizando en modo administrador: {packagesToUpdate[0].Name}..."
-            : $"Actualizando {packagesToUpdate.Count} programas en modo administrador...";
+            ? L.T("status.adminUpdatingSingle", packagesToUpdate[0].Name)
+            : L.T("status.adminUpdatingBatch", packagesToUpdate.Count);
 
         AppendLog(packagesToUpdate.Count == 1
-            ? "Ejecutando la actualización en una única sesión de administrador."
-            : $"Ejecutando {packagesToUpdate.Count} actualizaciones en una única sesión de administrador.");
+            ? L.T("log.adminSingleSession")
+            : L.T("log.adminBatchSession", packagesToUpdate.Count));
 
         IProgress<WingetProgressInfo> adminDownloadProgress = new Progress<WingetProgressInfo>(info =>
         {
@@ -549,14 +582,14 @@ public sealed partial class MainWindow : Window
 
         if (batchResult.CancelledAfterCurrentPackage && batchResult.Items.Count == 0)
         {
-            AppendLog("La operación se canceló antes de iniciar el lote elevado.");
+            AppendLog(L.T("log.adminCancelledBeforeStart"));
             return (0, 0, true);
         }
 
         if (batchResult.Items.Count == 0 && !string.IsNullOrWhiteSpace(batchResult.ErrorOutput))
         {
             AppendLog($"  ✖ {batchResult.ErrorOutput}");
-            await ShowDialogAsync("Error de actualización", batchResult.ErrorOutput);
+            await ShowDialogAsync(L.T("error.updateTitle"), batchResult.ErrorOutput);
             return (0, packagesToUpdate.Count, false);
         }
 
@@ -574,18 +607,18 @@ public sealed partial class MainWindow : Window
                 if (batchResult.CancelledAfterCurrentPackage)
                 {
                     cancelled = true;
-                    AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Cancelado antes de iniciar: {pkg.Name} ({pkg.Id})");
+                    AppendLog(L.T("log.packageNotStarted", i + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
                     break;
                 }
 
                 failed++;
-                AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Resultado no disponible: {pkg.Name} ({pkg.Id})");
-                await HandleFailedUpgrade(pkg, "No se recibió un resultado de la actualización elevada.");
+                AppendLog(L.T("log.resultUnavailable", i + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
+                await HandleFailedUpgrade(pkg, L.T("msg.noElevatedResult"));
                 continue;
             }
 
-            txtEstado.Text = $"Procesando resultado ({i + 1}/{packagesToUpdate.Count}): {pkg.Name}...";
-            AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Finalizado: {pkg.Name} ({pkg.Id})");
+            txtEstado.Text = L.T("status.processingResult", i + 1, packagesToUpdate.Count, pkg.Name);
+            AppendLog(L.T("log.packageFinished", i + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
 
             if (item.Result.Success)
             {
@@ -607,24 +640,24 @@ public sealed partial class MainWindow : Window
         switch (status.Phase)
         {
             case "starting":
-                AppendLog("Preparando lote elevado...");
+                AppendLog(L.T("log.preparingElevatedBatch"));
                 break;
             case "running" when packagesById.TryGetValue(status.PackageId, out var pkg):
-                txtEstado.Text = $"Actualizando ({status.CurrentIndex}/{status.TotalCount}) en modo administrador: {pkg.Name}...";
-                AppendLog($"[{status.CurrentIndex}/{status.TotalCount}] En ejecución: {pkg.Name} ({pkg.Id})");
+                txtEstado.Text = L.T("status.adminUpdatingProgress", status.CurrentIndex, status.TotalCount, pkg.Name);
+                AppendLog(L.T("log.packageRunning", status.CurrentIndex, status.TotalCount, pkg.Name, pkg.Id));
                 break;
             case "cancelled":
-                AppendLog("Cancelando después del paquete actual...");
+                AppendLog(L.T("log.cancellingAfterCurrent"));
                 break;
             case "completed":
-                AppendLog("Lote elevado finalizado. Procesando resultados...");
+                AppendLog(L.T("log.elevatedBatchFinished"));
                 break;
         }
     }
 
     private void RecordSuccessfulUpgrade(WingetPackage pkg)
     {
-        AppendLog($"  \u2714 {pkg.Name}: actualizado correctamente.", LogLineKind.Success);
+        AppendLog(L.T("log.upgradeSuccess", pkg.Name), LogLineKind.Success);
         _settings.AddHistory(new HistoryEntry
         {
             Date = DateTime.Now,
@@ -639,11 +672,8 @@ public sealed partial class MainWindow : Window
     private async Task HandleFailedUpgrade(WingetPackage pkg, string reason)
     {
         AppendLog($"  ✖ {pkg.Name}: {reason}", LogLineKind.Error);
-        await ShowDialogAsync("Error de actualización",
-            $"No se pudo actualizar \"{pkg.Name}\" (Id: {pkg.Id}).\n\n" +
-            $"Motivo: {reason}\n\n" +
-            "Por seguridad, la aplicación no abrirá búsquedas web automáticas para descargas manuales.\n" +
-            $"Use el Id del paquete ({pkg.Id}) para verificar manualmente el sitio oficial del proveedor o revisar el paquete directamente con winget.");
+        await ShowDialogAsync(L.T("error.updateTitle"),
+            L.T("error.cannotUpdateBody", pkg.Name, pkg.Id, reason));
     }
 
     // --- Button Event Handlers ---
@@ -662,13 +692,13 @@ public sealed partial class MainWindow : Window
         var pendientes = _packages.Where(p => !_settings.ExcludedIds.Contains(p.Id)).ToList();
         if (pendientes.Count == 0)
         {
-            await ShowDialogAsync("Información", "No hay programas para actualizar.");
+            await ShowDialogAsync(L.T("info.title"), L.T("msg.noPackagesToUpdate"));
             return;
         }
         string lista = string.Join("\n  \u2022 ", pendientes.Take(10).Select(p => p.Name));
-        if (pendientes.Count > 10) lista += $"\n  ... y {pendientes.Count - 10} más";
-        if (!await ShowConfirmDialogAsync("Confirmar actualización",
-                $"Se van a actualizar {pendientes.Count} programa(s):\n\n  \u2022 {lista}\n\n¿Desea continuar?"))
+        if (pendientes.Count > 10) lista += L.T("list.andMore", pendientes.Count - 10);
+        if (!await ShowConfirmDialogAsync(L.T("confirm.updateTitle"),
+                L.T("confirm.updateBody", pendientes.Count, lista)))
             return;
         await UpdatePackagesAsync(allPackages: true);
     }
@@ -688,7 +718,7 @@ public sealed partial class MainWindow : Window
         menuSilenciosa.IsChecked = true;
         menuInteractiva.IsChecked = false;
         _settings.SilentMode = true;
-        TrySaveSettings("No se pudo guardar el modo de actualización.");
+        TrySaveSettings(L.T("msg.saveUpdateModeError"));
     }
 
     private void MenuInteractiva_Click(object sender, RoutedEventArgs e)
@@ -697,35 +727,137 @@ public sealed partial class MainWindow : Window
         menuSilenciosa.IsChecked = false;
         menuInteractiva.IsChecked = true;
         _settings.SilentMode = false;
-        TrySaveSettings("No se pudo guardar el modo de actualización.");
+        TrySaveSettings(L.T("msg.saveUpdateModeError"));
     }
 
     private void MenuTemaSistema_Click(object sender, RoutedEventArgs e)
     {
         _settings.ThemeMode = 0;
-        TrySaveSettings("No se pudo guardar la configuración visual.");
+        TrySaveSettings(L.T("msg.saveThemeError"));
         ApplyTheme(0);
     }
 
     private void MenuTemaClaro_Click(object sender, RoutedEventArgs e)
     {
         _settings.ThemeMode = 1;
-        TrySaveSettings("No se pudo guardar la configuración visual.");
+        TrySaveSettings(L.T("msg.saveThemeError"));
         ApplyTheme(1);
     }
 
     private void MenuTemaOscuro_Click(object sender, RoutedEventArgs e)
     {
         _settings.ThemeMode = 2;
-        TrySaveSettings("No se pudo guardar la configuración visual.");
+        TrySaveSettings(L.T("msg.saveThemeError"));
         ApplyTheme(2);
+    }
+
+    private void MenuIdiomaEs_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Es);
+    private void MenuIdiomaEn_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.En);
+    private void MenuIdiomaPt_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Pt);
+    private void MenuIdiomaFr_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Fr);
+    private void MenuIdiomaIt_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.It);
+
+    private void SetLanguage(AppLang lang)
+    {
+        L.Set(lang);
+        _settings.Language = L.ToCode(lang);
+        TrySaveSettings(L.T("msg.saveLanguageError"));
+        SetLanguageRadioCheck(lang);
+        ApplyLocalizedStrings();
+    }
+
+    private void SetLanguageRadioCheck(AppLang lang)
+    {
+        menuIdiomaEs.IsChecked = lang == AppLang.Es;
+        menuIdiomaEn.IsChecked = lang == AppLang.En;
+        menuIdiomaPt.IsChecked = lang == AppLang.Pt;
+        menuIdiomaFr.IsChecked = lang == AppLang.Fr;
+        menuIdiomaIt.IsChecked = lang == AppLang.It;
+    }
+
+    /// <summary>
+    /// Aplica el idioma actual (<see cref="L"/>) a los textos del menú principal. El resto de la UI
+    /// se extrae por completo en el Tier A #7 (ver ROADMAP.md); por ahora solo cubre este menú.
+    /// </summary>
+    private void ApplyLocalizedStrings()
+    {
+        if (!string.IsNullOrEmpty(_appVersionStr))
+        {
+            Title = $"{L.T("app.titleBase")}  [{_appVersionStr}]";
+            TitleTextBlock.Text = Title;
+        }
+
+        ctxActualizar.Text = L.T("ctx.update");
+        ctxCopiarNombre.Text = L.T("ctx.copyName");
+        ctxCopiarId.Text = L.T("ctx.copyId");
+        ctxBuscarWeb.Text = L.T("ctx.viewOnWingetRun");
+        ctxExcluir.Text = L.T("ctx.exclude");
+
+        txtHeaderTitle.Text = L.T("header.title");
+        txtSubtitulo.Text = L.T("header.subtitle");
+        txtShortcuts.Text = L.T("header.shortcuts");
+        btnInstalarUpdate.Content = L.T("btn.installNow");
+        txtAccionesTitle.Text = L.T("actions.title");
+        btnConsultar.Content = L.T("btn.checkUpdates");
+        btnConsultarDesconocidas.Content = L.T("btn.checkUnknown");
+        btnActualizarSeleccionados.Content = L.T("btn.updateSelected");
+        btnActualizarTodo.Content = L.T("btn.updateAll");
+        btnCancelar.Content = L.T("btn.cancel");
+        txtFuenteLabel.Text = L.T("filter.sourceLabel");
+        cmbFuenteAllItem.Content = L.T("filter.allSources");
+        txtExcluidosLabel.Text = L.T("filter.excludedLabel");
+        menuFiltroTodos.Text = L.T("filter.all");
+        menuFiltroNoExcluidos.Text = L.T("filter.notExcluded");
+        menuFiltroSoloExcluidos.Text = L.T("filter.onlyExcluded");
+        if (_excludedFilter == 0) btnFiltroExcluidos.Content = L.T("filter.all");
+        else if (_excludedFilter == 1) btnFiltroExcluidos.Content = L.T("filter.notExcluded");
+        else btnFiltroExcluidos.Content = L.T("filter.onlyExcluded");
+        txtBuscarLabel.Text = L.T("search.label");
+        txtBuscar.PlaceholderText = L.T("search.placeholder");
+        lnkHomepage.Content = L.T("info.homepage");
+        lnkNotasVersion.Content = L.T("info.releaseNotes");
+        txtUpdatesHeader.Text = L.T("list.header");
+        colSel.Text = L.T("list.colSelect");
+        colNombre.Text = L.T("list.colName");
+        colId.Text = L.T("list.colId");
+        colVersion.Text = L.T("list.colVersion");
+        colDisponible.Text = L.T("list.colAvailable");
+        colTam.Text = L.T("list.colSize");
+        colFuente.Text = L.T("list.colSource");
+        colExcl.Text = L.T("list.colExcluded");
+        txtLogHeader.Text = L.T("log.header");
+        if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
+        UpdateSelectionDetails();
+
+        btnOpciones.Content = L.T("menu.options");
+        menuModoActualizacion.Text = L.T("menu.updateMode");
+        menuSilenciosa.Text = L.T("menu.silent");
+        menuInteractiva.Text = L.T("menu.interactive");
+        menuTema.Text = L.T("menu.theme");
+        menuTemaSistema.Text = L.T("menu.themeSystem");
+        menuTemaClaro.Text = L.T("menu.themeLight");
+        menuTemaOscuro.Text = L.T("menu.themeDark");
+        menuIdioma.Text = L.T("menu.lang");
+        menuIdiomaEs.Text = L.T("menu.lang.es");
+        menuIdiomaEn.Text = L.T("menu.lang.en");
+        menuIdiomaPt.Text = L.T("menu.lang.pt");
+        menuIdiomaFr.Text = L.T("menu.lang.fr");
+        menuIdiomaIt.Text = L.T("menu.lang.it");
+        menuExportar.Text = L.T("menu.export");
+        menuConfiguracion.Text = L.T("menu.settings");
+        menuVerHistorial.Text = L.T("menu.history");
+        menuDesinstalar.Text = L.T("menu.uninstall");
+        btnAyuda.Content = L.T("menu.help");
+        menuBuscarActualizacion.Text = L.T("menu.checkUpdate");
+        menuWhatsNew.Text = L.T("menu.whatsnew");
+        menuAcercaDe.Text = L.T("menu.about");
     }
 
     private async void MenuExportar_Click(object sender, RoutedEventArgs e)
     {
         if (_packages.Count == 0)
         {
-            await ShowDialogAsync("Información", "No hay datos para exportar.");
+            await ShowDialogAsync(L.T("info.title"), L.T("msg.noDataToExport"));
             return;
         }
 
@@ -735,7 +867,7 @@ public sealed partial class MainWindow : Window
             SuggestedFileName = $"actualizaciones_{DateTime.Now:yyyy-MM-dd}"
         };
         picker.FileTypeChoices.Add("CSV", [".csv"]);
-        picker.FileTypeChoices.Add("Texto", [".txt"]);
+        picker.FileTypeChoices.Add(L.T("export.txtFormat"), [".txt"]);
 
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         var file = await picker.PickSaveFileAsync();
@@ -744,12 +876,12 @@ public sealed partial class MainWindow : Window
 
         char sep = file.FileType.Equals(".csv", StringComparison.OrdinalIgnoreCase) ? ',' : '\t';
         var sb = new StringBuilder();
-        sb.AppendLine(DelimitedTextExporter.BuildRow(sep, "Nombre", "Id", "Versión actual", "Disponible", "Fuente"));
+        sb.AppendLine(DelimitedTextExporter.BuildRow(sep, L.T("list.colName"), L.T("list.colId"), L.T("export.colCurrentVersion"), L.T("list.colAvailable"), L.T("list.colSource")));
         foreach (var pkg in _packages)
             sb.AppendLine(DelimitedTextExporter.BuildRow(sep, pkg.Name, pkg.Id, pkg.Version, pkg.Available, pkg.Source));
 
         await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
-        txtEstado.Text = $"Lista exportada: {file.Name}";
+        txtEstado.Text = L.T("status.listExported", file.Name);
     }
 
     private async void MenuConfiguracion_Click(object sender, RoutedEventArgs e)
@@ -848,7 +980,7 @@ public sealed partial class MainWindow : Window
         var token = _packageInfoCts.Token;
 
         panelPackageInfo.Visibility = Visibility.Visible;
-        txtInfoDescripcion.Text = "Cargando...";
+        txtInfoDescripcion.Text = L.T("pkg.loading");
         txtInfoTamano.Text = "";
         lnkHomepage.Visibility = Visibility.Collapsed;
         lnkNotasVersion.Visibility = Visibility.Collapsed;
@@ -865,7 +997,7 @@ public sealed partial class MainWindow : Window
 
             txtInfoTamano.Text = string.IsNullOrEmpty(info.InstallerSize)
                 ? ""
-                : $"Tamaño: {info.InstallerSize}";
+                : L.T("pkg.sizeLabel", info.InstallerSize);
 
             if (!string.IsNullOrEmpty(info.Homepage)
                 && Uri.TryCreate(info.Homepage, UriKind.Absolute, out var homeUri)
@@ -964,8 +1096,8 @@ public sealed partial class MainWindow : Window
         string url = BuildWingetRunUrl(pkg.Id);
 
         bool confirmed = await ShowConfirmDialogAsync(
-            "Abrir en winget.run",
-            $"Se abrirá la página del paquete en su navegador:\n\n{url}\n\nVerifique que el paquete es legítimo antes de instalar nada. ¿Desea continuar?");
+            L.T("confirm.openWingetRunTitle"),
+            L.T("confirm.openWingetRunBody", url));
 
         if (!confirmed) return;
 
@@ -992,7 +1124,7 @@ public sealed partial class MainWindow : Window
             _settings.ExcludedIds.Remove(pkg.Id);
         else
             _settings.ExcludedIds.Add(pkg.Id);
-        TrySaveSettings("No se pudieron guardar las exclusiones.");
+        TrySaveSettings(L.T("msg.saveExclusionsError"));
         LoadPackagesToGrid();
     }
 
@@ -1001,21 +1133,21 @@ public sealed partial class MainWindow : Window
     private void MenuFiltroTodos_Click(object sender, RoutedEventArgs e)
     {
         _excludedFilter = 0;
-        btnFiltroExcluidos.Content = "Todos";
+        btnFiltroExcluidos.Content = L.T("filter.all");
         LoadPackagesToGrid();
     }
 
     private void MenuFiltroNoExcluidos_Click(object sender, RoutedEventArgs e)
     {
         _excludedFilter = 1;
-        btnFiltroExcluidos.Content = "No excluidos";
+        btnFiltroExcluidos.Content = L.T("filter.notExcluded");
         LoadPackagesToGrid();
     }
 
     private void MenuFiltroSoloExcluidos_Click(object sender, RoutedEventArgs e)
     {
         _excludedFilter = 2;
-        btnFiltroExcluidos.Content = "Solo excluidos";
+        btnFiltroExcluidos.Content = L.T("filter.onlyExcluded");
         LoadPackagesToGrid();
     }
 
@@ -1024,7 +1156,7 @@ public sealed partial class MainWindow : Window
         string? current = cmbFuente.SelectedIndex > 0 ? (cmbFuente.SelectedItem as ComboBoxItem)?.Content as string : null;
         cmbFuente.SelectionChanged -= CmbFuente_SelectionChanged;
         cmbFuente.Items.Clear();
-        cmbFuente.Items.Add(new ComboBoxItem { Content = "Todas las fuentes" });
+        cmbFuente.Items.Add(new ComboBoxItem { Content = L.T("filter.allSources") });
         int selectedIndex = 0;
         int idx = 1;
         foreach (var src in _allPackages.Select(p => p.Source).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s))
@@ -1053,10 +1185,10 @@ public sealed partial class MainWindow : Window
         if (!_initialized) return;
         ApplySourceFilter();
         LoadPackagesToGrid();
-        string sufijo = _lastIncludeUnknown ? " (incluidas desconocidas)" : "";
+        string sufijo = _lastIncludeUnknown ? L.T("list.suffixUnknown") : "";
         txtEstado.Text = _packages.Count == 0
-            ? $"No se encontraron actualizaciones disponibles{sufijo}."
-            : $"Se encontraron {_packages.Count} actualización(es) disponible(s){sufijo}.";
+            ? L.T("status.noUpdatesFound", sufijo)
+            : L.T("status.updatesFound", _packages.Count, sufijo);
     }
 
     // --- Auto Check Timer ---
@@ -1152,8 +1284,11 @@ public sealed partial class MainWindow : Window
         string speed = info.SpeedBytesPerSecond > 0
             ? $"  {FormatBytes((long)info.SpeedBytesPerSecond)}/s"
             : "";
+        string eta = Throughput.FormatEta(Throughput.Eta(info.TotalBytes - info.DownloadedBytes, info.SpeedBytesPerSecond)) is { Length: > 0 } etaText
+            ? $"  ETA {etaText}"
+            : "";
         string bar = BuildProgressBar(percent);
-        string line = $"  \u2193  {dl} / {total}  {bar}{speed}";
+        string line = $"  \u2193  {dl} / {total}  {bar}{speed}{eta}";
 
         // Update or add download progress line
         if (rtbLog.Blocks.Count > 0 && rtbLog.Blocks[^1] is Paragraph lastPara
@@ -1205,13 +1340,13 @@ public sealed partial class MainWindow : Window
 
         if (pkg is null)
         {
-            txtDetalleEstado.Text = _packages.Count == 0 ? EmptySelectionDetails : DefaultSelectionDetails;
+            txtDetalleEstado.Text = _packages.Count == 0 ? L.T("header.detailEmpty") : L.T("header.detailDefault");
             return;
         }
 
         string state = _settings.ExcludedIds.Contains(pkg.Id)
-            ? "Excluido de actualizaciones automaticas"
-            : "Listo para actualizar";
+            ? L.T("pkg.excluded")
+            : L.T("pkg.readyToUpdate");
 
         txtDetalleEstado.Text = $"{pkg.Name} | {pkg.Id} | {pkg.Version} -> {pkg.Available} | {pkg.Source} | {state}";
     }
@@ -1239,9 +1374,9 @@ public sealed partial class MainWindow : Window
             return true;
 
         if (updateStatusLabel)
-            txtEstado.Text = "No se pudo guardar la configuración.";
+            txtEstado.Text = L.T("error.saveConfigStatus");
 
-        _ = ShowDialogAsync("Error de configuración",
+        _ = ShowDialogAsync(L.T("error.configTitle"),
             string.IsNullOrWhiteSpace(_settings.LastSaveError)
                 ? userMessage
                 : $"{userMessage}\n\n{_settings.LastSaveError}");
@@ -1253,7 +1388,7 @@ public sealed partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_settings.LastLoadError))
             return;
-        _ = ShowDialogAsync("Configuración restablecida", _settings.LastLoadError);
+        _ = ShowDialogAsync(L.T("msg.configResetTitle"), _settings.LastLoadError);
     }
 
     private async Task CheckForAppUpdateAsync()
@@ -1262,10 +1397,23 @@ public sealed partial class MainWindow : Window
         if (info is null) return;
 
         _appUpdateUrl = info.DownloadUrl;
-        infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
-        infoBarUpdate.Message = "Pulsa 'Instalar ahora' para descargar e instalar automáticamente.";
+        infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
+        infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
         infoBarUpdate.IsOpen = true;
-        menuBuscarActualizacion.Text = $"⬆ Instalar WingetUSoft {info.Version}...";
+        menuBuscarActualizacion.Text = L.T("menu.installVersion", info.Version);
+    }
+
+    /// <summary>Antepone el changelog (si lo hay) al mensaje base, truncado para no desbordar el diálogo/InfoBar.</summary>
+    private static string BuildChangelogMessage(string notesMarkdown, string baseMessage)
+    {
+        string plain = ReleaseNotes.ToPlainText(notesMarkdown);
+        if (string.IsNullOrWhiteSpace(plain)) return baseMessage;
+
+        const int maxLength = 500;
+        if (plain.Length > maxLength)
+            plain = plain[..maxLength].TrimEnd() + "…";
+
+        return $"{L.T("update.changelog")}\n{plain}\n\n{baseMessage}";
     }
 
     private async void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e)
@@ -1273,20 +1421,34 @@ public sealed partial class MainWindow : Window
         if (string.IsNullOrEmpty(_appUpdateUrl)) return;
 
         btnInstalarUpdate.IsEnabled = false;
-        btnInstalarUpdate.Content = "Descargando...";
+        btnInstalarUpdate.Content = L.T("btn.downloading");
         pbUpdate.Visibility = Visibility.Visible;
         infoBarUpdate.IsClosable = false;
 
+        var downloadStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var progress = new Progress<double>(p =>
         {
             pbUpdate.Value = p;
-            infoBarUpdate.Message = $"Descargando... {p:P0}";
+            TaskbarProgress.SetValue(_hWnd, (int)(p * 100));
+
+            // Sin acceso a los bytes totales aquí (la API solo reporta la fracción p), se extrapola
+            // el tiempo restante a partir del tiempo transcurrido y el propio progreso.
+            string etaText = "";
+            if (p > 0.01)
+            {
+                TimeSpan estimatedTotal = TimeSpan.FromSeconds(downloadStopwatch.Elapsed.TotalSeconds / p);
+                TimeSpan remaining = estimatedTotal - downloadStopwatch.Elapsed;
+                if (Throughput.FormatEta(remaining) is { Length: > 0 } eta)
+                    etaText = L.T("eta.label", eta);
+            }
+            infoBarUpdate.Message = L.T("update.downloadingProgress", $"{p:P0}", etaText);
         });
 
         try
         {
             string installerPath = await GitHubUpdateService.DownloadInstallerAsync(_appUpdateUrl, progress);
-            infoBarUpdate.Message = "Instalando... La aplicaci\u00f3n se reiniciar\u00e1 autom\u00e1ticamente.";
+            infoBarUpdate.Message = L.T("update.installingRestart");
+            TaskbarProgress.SetIndeterminate(_hWnd);
 
             Process.Start(new ProcessStartInfo(installerPath)
             {
@@ -1298,12 +1460,13 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            TaskbarProgress.Clear(_hWnd);
             pbUpdate.Visibility = Visibility.Collapsed;
             btnInstalarUpdate.IsEnabled = true;
-            btnInstalarUpdate.Content = "Instalar ahora";
+            btnInstalarUpdate.Content = L.T("btn.installNow");
             infoBarUpdate.IsClosable = true;
             infoBarUpdate.Severity = InfoBarSeverity.Error;
-            infoBarUpdate.Message = $"Error: {ex.Message}";
+            infoBarUpdate.Message = L.T("error.genericPrefix", ex.Message);
         }
     }
 
@@ -1311,25 +1474,28 @@ public sealed partial class MainWindow : Window
     {
         menuBuscarActualizacion.IsEnabled = false;
         string originalText = menuBuscarActualizacion.Text;
-        menuBuscarActualizacion.Text = "Comprobando...";
+        menuBuscarActualizacion.Text = L.T("update.checking");
         try
         {
             GitHubReleaseInfo? info = await GitHubUpdateService.CheckForUpdateAsync();
             if (info is null)
             {
                 menuBuscarActualizacion.Text = originalText;
-                await ShowDialogAsync("Sin actualizaciones",
-                    "WingetUSoft está actualizado. No hay versiones nuevas disponibles.");
+                await ShowDialogAsync(L.T("update.noUpdatesTitle"),
+                    L.T("update.noUpdatesBody"));
             }
             else
             {
                 _appUpdateUrl = info.DownloadUrl;
-                menuBuscarActualizacion.Text = $"⬆ Instalar WingetUSoft {info.Version}...";
-                infoBarUpdate.Title = $"Nueva versión {info.Version} disponible";
-                infoBarUpdate.Message = "Pulsa 'Instalar ahora' para descargar e instalar automáticamente.";
+                menuBuscarActualizacion.Text = L.T("menu.installVersion", info.Version);
+                infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
+                infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
                 infoBarUpdate.IsOpen = true;
-                if (await ShowConfirmDialogAsync("Actualización disponible",
-                    $"Hay una nueva versión disponible: {info.Version}\n\n¿Descargar e instalar automáticamente?"))
+
+                string confirmBody = BuildChangelogMessage(info.Notes,
+                    L.T("update.confirmInstall"));
+                if (await ShowConfirmDialogAsync(L.T("update.availTitle"),
+                    $"{L.T("update.availBody", info.Version)}\n\n{confirmBody}"))
                 {
                     LnkDescargarUpdate_Click(sender, e);
                 }
@@ -1339,6 +1505,66 @@ public sealed partial class MainWindow : Window
         {
             menuBuscarActualizacion.IsEnabled = true;
         }
+    }
+
+    private async void MenuWhatsNew_Click(object sender, RoutedEventArgs e) =>
+        await ShowWhatsNewAsync();
+
+    private async void MenuAcercaDe_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new AboutDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
+        };
+        await dlg.ShowAsync();
+    }
+
+    /// <summary>
+    /// Muestra las novedades una sola vez tras una actualización y persiste la versión actual como
+    /// "vista". Se considera actualización si la versión cambió respecto a la última registrada, o si
+    /// no había versión registrada pero la app ya se había usado (actualización desde una versión sin
+    /// el campo, p. ej. desde antes de esta característica). En una instalación nueva no se muestra.
+    /// </summary>
+    private async Task MaybeShowWhatsNewAsync()
+    {
+        var appVer = typeof(MainWindow).Assembly.GetName().Version;
+        string current = appVer is not null ? $"{appVer.Major}.{appVer.Minor}.{appVer.Build}" : "";
+        if (string.IsNullOrEmpty(current)) return;
+
+        string? seen = _settings.LastVersionSeen;
+
+        bool updated = string.IsNullOrEmpty(seen)
+            ? _settings.LoadedFromFile   // sin versión previa: solo si ya existía configuración (uso previo)
+            : seen != current;           // con versión previa: mostrar si cambió
+
+        _settings.LastVersionSeen = current;
+        _settings.Save();
+
+        if (updated) await ShowWhatsNewAsync();
+    }
+
+    /// <summary>
+    /// Carga las notas de la versión instalada desde GitHub (por tag; si no, la última publicada) y
+    /// las muestra en el diálogo de novedades. Si no hay red, el diálogo cae a un mensaje informativo.
+    /// </summary>
+    private async Task ShowWhatsNewAsync()
+    {
+        var appVer = typeof(MainWindow).Assembly.GetName().Version;
+        string version = appVer is not null ? $"{appVer.Major}.{appVer.Minor}.{appVer.Build}" : "";
+
+        GitHubReleaseInfo? info = await GitHubUpdateService.GetReleaseByTagAsync("v" + version)
+            ?? await GitHubUpdateService.GetLatestReleaseAsync();
+
+        var dlg = new WhatsNewDialog(
+            info?.Version ?? version,
+            info?.Notes ?? "",
+            info?.HtmlUrl ?? $"https://github.com/xfiberex/WingetUSoft/releases")
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
+        };
+        await dlg.ShowAsync();
     }
 
     private Task ShowDialogAsync(string title, string message) =>
@@ -1419,8 +1645,8 @@ public sealed partial class MainWindow : Window
         if (!_settings.ShowNotifications) return;
 
         string message = failed == 0
-            ? $"Se actualizaron {success} programa(s) correctamente."
-            : $"Actualizados: {success}. Fallidos: {failed}.";
+            ? L.T("notif.updatedSuccess", success)
+            : L.T("notif.updatedMixed", success, failed);
 
         txtEstado.Text = message;
     }

@@ -20,6 +20,7 @@ public sealed partial class UninstallWindow : Window
     private int _logLineCount;
 
     private AppWindow _appWindow = null!;
+    private IntPtr _hWnd;
 
     public UninstallWindow(AppSettings settings)
     {
@@ -27,6 +28,7 @@ public sealed partial class UninstallWindow : Window
         _settings = settings;
 
         var hWnd = WindowNative.GetWindowHandle(this);
+        _hWnd = hWnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
         _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
@@ -50,6 +52,8 @@ public sealed partial class UninstallWindow : Window
 
         lvPackages.ItemsSource = _packageViewModels;
 
+        ApplyLocalizedStrings();
+
         var root = Content as FrameworkElement;
         if (root is not null)
         {
@@ -63,6 +67,26 @@ public sealed partial class UninstallWindow : Window
         _initialized = true;
     }
 
+    private void ApplyLocalizedStrings()
+    {
+        Title = L.T("uninstall.windowTitle");
+        txtTitleBar.Text = L.T("uninstall.titleBar");
+        txtHeaderTitle.Text = L.T("uninstall.headerTitle");
+        txtSubtitulo.Text = L.T("uninstall.headerSubtitle");
+        btnRefresh.Content = L.T("btn.refreshList");
+        btnUninstall.Content = L.T("uninstall.uninstallSelected");
+        btnCancelar.Content = L.T("btn.cancel");
+        txtBuscarLabel.Text = L.T("search.label");
+        txtBuscar.PlaceholderText = L.T("search.placeholder");
+        txtListHeader.Text = L.T("uninstall.listHeader");
+        colNombre.Text = L.T("list.colName");
+        colId.Text = L.T("list.colId");
+        colVersion.Text = L.T("list.colVersion");
+        colFuente.Text = L.T("list.colSource");
+        txtLogHeader.Text = L.T("log.activity");
+        if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
+    }
+
     // --- Package Loading ---
 
     private async Task LoadPackagesAsync()
@@ -70,22 +94,22 @@ public sealed partial class UninstallWindow : Window
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
-        txtEstado.Text = "Cargando lista de programas instalados...";
+        txtEstado.Text = L.T("uninstall.loadingList");
 
         try
         {
             _allPackages = await WingetService.GetInstalledPackagesAsync(_cts.Token);
             ApplyFilter();
-            txtEstado.Text = $"Se encontraron {_allPackages.Count} programa(s) instalado(s).";
+            txtEstado.Text = L.T("uninstall.foundCount", _allPackages.Count);
         }
         catch (OperationCanceledException)
         {
-            txtEstado.Text = "Carga cancelada.";
+            txtEstado.Text = L.T("uninstall.loadCancelled");
         }
         catch (Exception ex)
         {
-            txtEstado.Text = "Error al cargar la lista.";
-            await ShowDialogAsync("Error", ex.Message);
+            txtEstado.Text = L.T("uninstall.loadError");
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
         {
@@ -110,8 +134,8 @@ public sealed partial class UninstallWindow : Window
             _packageViewModels.Add(pkg);
 
         txtContador.Text = _packageViewModels.Count == _allPackages.Count
-            ? $"{_allPackages.Count} programa(s)"
-            : $"{_packageViewModels.Count} de {_allPackages.Count}";
+            ? L.T("uninstall.countAll", _allPackages.Count)
+            : L.T("uninstall.countFiltered", _packageViewModels.Count, _allPackages.Count);
     }
 
     // --- Uninstall ---
@@ -121,16 +145,19 @@ public sealed partial class UninstallWindow : Window
         if (lvPackages.SelectedItem is not WingetPackage pkg) return;
 
         bool confirmed = await ShowConfirmDialogAsync(
-            "Confirmar desinstalación",
-            $"¿Desea desinstalar \"{pkg.Name}\" ({pkg.Id})?\n\nEsta acción no se puede deshacer.");
+            L.T("uninstall.confirmTitle"),
+            L.T("uninstall.confirmBody", pkg.Name, pkg.Id));
 
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
-        txtEstado.Text = $"Desinstalando: {pkg.Name}...";
+        txtEstado.Text = L.T("uninstall.uninstalling", pkg.Name);
         ClearLog();
-        AppendLog($"Iniciando desinstalación: {pkg.Name} ({pkg.Id})");
+        AppendLog(L.T("uninstall.startingLog", pkg.Name, pkg.Id));
+        var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        bool cancelled = false;
+        TaskbarProgress.SetIndeterminate(_hWnd);
 
         try
         {
@@ -138,8 +165,8 @@ public sealed partial class UninstallWindow : Window
 
             if (result.Success)
             {
-                AppendLog($"  ✔ {pkg.Name}: desinstalado correctamente.", LogLineKind.Success);
-                txtEstado.Text = $"Desinstalado correctamente: {pkg.Name}";
+                AppendLog(L.T("uninstall.successLog", pkg.Name), LogLineKind.Success);
+                txtEstado.Text = L.T("uninstall.successStatus", pkg.Name);
 
                 var cleanupWin = new CleanupWindow(_settings, [pkg]);
                 cleanupWin.Activate();
@@ -149,29 +176,34 @@ public sealed partial class UninstallWindow : Window
             else
             {
                 string reason = result.GetFailureReason();
-                AppendLog($"  ✖ {pkg.Name}: {reason}", LogLineKind.Error);
-                txtEstado.Text = "Error al desinstalar.";
-                await ShowDialogAsync("Error de desinstalación",
-                    $"No se pudo desinstalar \"{pkg.Name}\".\n\nMotivo: {reason}");
+                AppendLog(L.T("uninstall.errorLog", pkg.Name, reason), LogLineKind.Error);
+                txtEstado.Text = L.T("uninstall.errorStatus");
+                await ShowDialogAsync(L.T("uninstall.errorTitle"),
+                    L.T("uninstall.errorBody", pkg.Name, reason));
             }
         }
         catch (OperationCanceledException)
         {
-            AppendLog("Desinstalación cancelada.", LogLineKind.Warning);
-            txtEstado.Text = "Cancelado.";
+            cancelled = true;
+            AppendLog(L.T("uninstall.cancelledLog"), LogLineKind.Warning);
+            txtEstado.Text = L.T("status.cancelled");
         }
         catch (Exception ex)
         {
-            AppendLog($"  ✖ Error: {ex.Message}", LogLineKind.Error);
-            txtEstado.Text = "Error al desinstalar.";
-            await ShowDialogAsync("Error", ex.Message);
+            AppendLog(L.T("log.genericError", ex.Message), LogLineKind.Error);
+            txtEstado.Text = L.T("uninstall.errorStatus");
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
         {
+            TaskbarProgress.Clear(_hWnd);
             _cts?.Dispose();
             _cts = null;
             SetUIBusy(false);
         }
+
+        if (Notifier.ShouldNotify(opStopwatch.Elapsed, _settings.ShowNotifications, cancelled, TimeSpan.FromSeconds(10)))
+            Notifier.OperationFinished(_hWnd);
     }
 
     // --- UI Helpers ---
@@ -197,7 +229,7 @@ public sealed partial class UninstallWindow : Window
     {
         _cts?.Cancel();
         btnCancelar.IsEnabled = false;
-        txtEstado.Text = "Cancelando...";
+        txtEstado.Text = L.T("status.cancelling");
     }
 
     private void LvPackages_SelectionChanged(object sender, SelectionChangedEventArgs e)

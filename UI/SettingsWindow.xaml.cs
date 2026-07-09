@@ -35,11 +35,39 @@ public sealed partial class SettingsWindow : Window
         SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
         UpdateTitleBarButtonColors(appWindow);
 
+        ApplyLocalizedStrings();
         LoadFromSettings();
     }
 
     private void UpdateTitleBarButtonColors(AppWindow appWindow) =>
         TitleBarHelper.UpdateButtonColors(appWindow, Content, _settings.ThemeMode);
+
+    private void ApplyLocalizedStrings()
+    {
+        Title = L.T("settings.title");
+        txtTitleBar.Text = L.T("settings.title");
+        txtHeaderTitle.Text = L.T("settings.title");
+        txtHeaderSubtitle.Text = L.T("settings.subtitle");
+        txtAutoCheckTitle.Text = L.T("settings.autoCheckTitle");
+        cmbIntervalo.Header = L.T("settings.intervalHeader");
+        itemIntervalOff.Content = L.T("settings.intervalOff");
+        itemInterval30.Content = L.T("settings.interval30");
+        itemInterval60.Content = L.T("settings.interval60");
+        itemInterval120.Content = L.T("settings.interval120");
+        txtOptionsTitle.Text = L.T("settings.optionsTitle");
+        chkLogArchivo.Content = L.T("settings.logToFile");
+        chkAdministrador.Content = L.T("settings.runAsAdmin");
+        txtLogDirLabel.Text = L.T("settings.logDirLabel");
+        txtNotifTrayTitle.Text = L.T("settings.notifTrayTitle");
+        txtShowNotifLabel.Text = L.T("settings.showNotifications");
+        txtMinimizeTrayLabel.Text = L.T("settings.minimizeToTray");
+        txtExcludedTitle.Text = L.T("settings.excludedTitle");
+        txtExcludedSubtitle.Text = L.T("settings.excludedSubtitle");
+        btnQuitar.Content = L.T("btn.removeSelected");
+        btnLimpiar.Content = L.T("btn.clearList");
+        btnGuardar.Content = L.T("btn.save");
+        btnCancelar.Content = L.T("btn.cancel");
+    }
 
     private void LoadFromSettings()
     {

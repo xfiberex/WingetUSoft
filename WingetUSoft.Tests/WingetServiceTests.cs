@@ -1,14 +1,12 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using WingetUSoft;
+using Xunit;
 
 namespace WingetUSoft.Tests;
 
-[TestClass]
 public class WingetServiceTests
 {
     // ── ParseUpgradeOutput ──────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_EnglishOutput_ReturnsCorrectPackages()
     {
         string output =
@@ -20,14 +18,14 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(2, packages.Count);
-        Assert.AreEqual("Microsoft OneDrive", packages[0].Name);
-        Assert.AreEqual("Microsoft.OneDrive", packages[0].Id);
-        Assert.AreEqual("winget", packages[0].Source);
-        Assert.AreEqual("TeamViewer.TeamViewer", packages[1].Id);
+        Assert.Equal(2, packages.Count);
+        Assert.Equal("Microsoft OneDrive", packages[0].Name);
+        Assert.Equal("Microsoft.OneDrive", packages[0].Id);
+        Assert.Equal("winget", packages[0].Source);
+        Assert.Equal("TeamViewer.TeamViewer", packages[1].Id);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_SpanishOutput_ReturnsCorrectPackages()
     {
         string output =
@@ -38,12 +36,12 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(1, packages.Count);
-        Assert.AreEqual("MongoDB.Compass.Full", packages[0].Id);
-        Assert.AreEqual("1.49.1", packages[0].Version.Trim());
+        Assert.Single(packages);
+        Assert.Equal("MongoDB.Compass.Full", packages[0].Id);
+        Assert.Equal("1.49.1", packages[0].Version.Trim());
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_SummaryLineFiltered_NotIncludedAsPackage()
     {
         string output =
@@ -54,21 +52,21 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(1, packages.Count, "Summary line must not be parsed as a package.");
-        Assert.AreEqual("VideoLAN.VLC", packages[0].Id);
+        Assert.True(packages.Count == 1, "Summary line must not be parsed as a package.");
+        Assert.Equal("VideoLAN.VLC", packages[0].Id);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_NoUpdates_ReturnsEmpty()
     {
         string output = "No se encontraron actualizaciones disponibles.\r\n";
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(0, packages.Count);
+        Assert.Empty(packages);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_UnknownVersion_ParsedCorrectly()
     {
         string output =
@@ -79,11 +77,11 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(1, packages.Count);
-        StringAssert.StartsWith(packages[0].Version.TrimStart(), "<");
+        Assert.Single(packages);
+        Assert.StartsWith("<", packages[0].Version.TrimStart());
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_PackageNameStartsWithDigit_IsNotFilteredOut()
     {
         string output =
@@ -93,12 +91,12 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(1, packages.Count);
-        Assert.AreEqual("7-Zip", packages[0].Name);
-        Assert.AreEqual("7zip.7zip", packages[0].Id);
+        Assert.Single(packages);
+        Assert.Equal("7-Zip", packages[0].Name);
+        Assert.Equal("7zip.7zip", packages[0].Id);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_CustomHeaderLabels_ParsesUsingColumnLayout()
     {
         string output =
@@ -108,21 +106,21 @@ public class WingetServiceTests
 
         var packages = WingetService.ParseUpgradeOutput(output);
 
-        Assert.AreEqual(1, packages.Count);
-        Assert.AreEqual("Mozilla Firefox", packages[0].Name);
-        Assert.AreEqual("Mozilla.Firefox", packages[0].Id);
-        Assert.AreEqual("137.0", packages[0].Available);
-        Assert.AreEqual("winget", packages[0].Source);
+        Assert.Single(packages);
+        Assert.Equal("Mozilla Firefox", packages[0].Name);
+        Assert.Equal("Mozilla.Firefox", packages[0].Id);
+        Assert.Equal("137.0", packages[0].Available);
+        Assert.Equal("winget", packages[0].Source);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseUpgradeOutput_EmptyString_ReturnsEmpty()
     {
         var packages = WingetService.ParseUpgradeOutput(string.Empty);
-        Assert.AreEqual(0, packages.Count);
+        Assert.Empty(packages);
     }
 
-    [TestMethod]
+    [Fact]
     public void BuildWingetCommandErrorMessage_UsesLastMeaningfulLine()
     {
         string message = WingetService.BuildWingetCommandErrorMessage(
@@ -131,12 +129,12 @@ public class WingetServiceTests
             "",
             "Error interno\r\nSe agotó el tiempo de espera\r\n");
 
-        StringAssert.Contains(message, "consultar actualizaciones");
-        StringAssert.Contains(message, "Se agotó el tiempo de espera");
-        StringAssert.Contains(message, "42");
+        Assert.Contains("consultar actualizaciones", message);
+        Assert.Contains("Se agotó el tiempo de espera", message);
+        Assert.Contains("42", message);
     }
 
-    [TestMethod]
+    [Fact]
     public void GetFailureReason_UserCancelledElevation_ReturnsFriendlyMessage()
     {
         var result = new UpgradeResult
@@ -146,12 +144,12 @@ public class WingetServiceTests
             UserCancelled = true
         };
 
-        Assert.AreEqual(
+        Assert.Equal(
             "Se canceló la elevación de permisos. La actualización no se inició.",
             result.GetFailureReason());
     }
 
-    [TestMethod]
+    [Fact]
     public void GetFailureReason_HashMismatch_ReturnsFriendlyMessage()
     {
         var result = new UpgradeResult
@@ -161,10 +159,10 @@ public class WingetServiceTests
             ErrorOutput = "Hash mismatch detected for installer"
         };
 
-        StringAssert.Contains(result.GetFailureReason(), "hash");
+        Assert.Contains("hash", result.GetFailureReason());
     }
 
-    [TestMethod]
+    [Fact]
     public void GetFailureReason_NetworkError_ReturnsFriendlyMessage()
     {
         var result = new UpgradeResult
@@ -174,95 +172,100 @@ public class WingetServiceTests
             ErrorOutput = "network connection failed"
         };
 
-        StringAssert.Contains(result.GetFailureReason(), "red");
+        Assert.Contains("red", result.GetFailureReason());
     }
 
-    [TestMethod]
+    [Fact]
     public void GetFailureReason_Success_ReturnsEmpty()
     {
         var result = new UpgradeResult { Success = true, ExitCode = 0 };
-        Assert.AreEqual("", result.GetFailureReason());
+        Assert.Equal("", result.GetFailureReason());
     }
 
-    [TestMethod]
+    [Fact]
     public void GetFailureReason_UnknownError_IncludesExitCode()
     {
         var result = new UpgradeResult { Success = false, ExitCode = 42, Output = "", ErrorOutput = "" };
-        StringAssert.Contains(result.GetFailureReason(), "42");
+        Assert.Contains("42", result.GetFailureReason());
     }
 
     // ── ParseProgressLine ───────────────────────────────────────────────────
 
-    [TestMethod]
+    [Fact]
     public void ParseProgressLine_MBFormat_ReturnsCorrectValues()
     {
         string line = "  ████████████  45.3 MB / 200.0 MB  8.5 MB/s";
 
         var info = WingetService.ParseProgressLine(line);
 
-        Assert.IsNotNull(info);
-        Assert.AreEqual((long)(45.3 * 1_048_576), info.DownloadedBytes, delta: 1024);
-        Assert.AreEqual((long)(200.0 * 1_048_576), info.TotalBytes, delta: 1024);
-        Assert.IsTrue(info.SpeedBytesPerSecond > 0);
+        Assert.NotNull(info);
+        long expectedDownloaded = (long)(45.3 * 1_048_576);
+        long expectedTotal = (long)(200.0 * 1_048_576);
+        Assert.InRange(info.DownloadedBytes, expectedDownloaded - 1024, expectedDownloaded + 1024);
+        Assert.InRange(info.TotalBytes, expectedTotal - 1024, expectedTotal + 1024);
+        Assert.True(info.SpeedBytesPerSecond > 0);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseProgressLine_KBFormat_ReturnsCorrectValues()
     {
         string line = "  500 KB / 1024 KB";
 
         var info = WingetService.ParseProgressLine(line);
 
-        Assert.IsNotNull(info);
-        Assert.AreEqual(500L * 1024, info.DownloadedBytes);
-        Assert.AreEqual(1024L * 1024, info.TotalBytes);
-        Assert.AreEqual(0.0, info.SpeedBytesPerSecond);
+        Assert.NotNull(info);
+        Assert.Equal(500L * 1024, info.DownloadedBytes);
+        Assert.Equal(1024L * 1024, info.TotalBytes);
+        Assert.Equal(0.0, info.SpeedBytesPerSecond);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseProgressLine_CommaDecimalSeparator_ParsedCorrectly()
     {
         string line = "  12,5 MB / 100,0 MB  2,3 MB/s";
 
         var info = WingetService.ParseProgressLine(line);
 
-        Assert.IsNotNull(info);
-        Assert.AreEqual((long)(12.5 * 1_048_576), info.DownloadedBytes, delta: 1024);
+        Assert.NotNull(info);
+        long expectedDownloaded = (long)(12.5 * 1_048_576);
+        Assert.InRange(info.DownloadedBytes, expectedDownloaded - 1024, expectedDownloaded + 1024);
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseProgressLine_NonProgressLine_ReturnsNull()
     {
-        Assert.IsNull(WingetService.ParseProgressLine("Descargando https://example.com/installer.exe"));
-        Assert.IsNull(WingetService.ParseProgressLine("Instalando paquete..."));
-        Assert.IsNull(WingetService.ParseProgressLine(string.Empty));
+        Assert.Null(WingetService.ParseProgressLine("Descargando https://example.com/installer.exe"));
+        Assert.Null(WingetService.ParseProgressLine("Instalando paquete..."));
+        Assert.Null(WingetService.ParseProgressLine(string.Empty));
     }
 
-    [TestMethod]
+    [Fact]
     public void ParseProgressLine_GBFormat_ReturnsCorrectValues()
     {
         string line = "  1.2 GB / 4.0 GB";
 
         var info = WingetService.ParseProgressLine(line);
 
-        Assert.IsNotNull(info);
-        Assert.AreEqual((long)(1.2 * 1_073_741_824L), info.DownloadedBytes, delta: 1_048_576);
-        Assert.AreEqual((long)(4.0 * 1_073_741_824L), info.TotalBytes, delta: 1_048_576);
+        Assert.NotNull(info);
+        long expectedDownloaded = (long)(1.2 * 1_073_741_824L);
+        long expectedTotal = (long)(4.0 * 1_073_741_824L);
+        Assert.InRange(info.DownloadedBytes, expectedDownloaded - 1_048_576, expectedDownloaded + 1_048_576);
+        Assert.InRange(info.TotalBytes, expectedTotal - 1_048_576, expectedTotal + 1_048_576);
     }
 
-    [TestMethod]
+    [Fact]
     public void DelimitedTextExporter_FormatField_FormulaIsNeutralized()
     {
         string formatted = DelimitedTextExporter.FormatField("=SUM(A1:A2)");
 
-        Assert.AreEqual("\"'=SUM(A1:A2)\"", formatted);
+        Assert.Equal("\"'=SUM(A1:A2)\"", formatted);
     }
 
-    [TestMethod]
+    [Fact]
     public void DelimitedTextExporter_FormatField_QuotesAndLineBreaksAreEscaped()
     {
         string formatted = DelimitedTextExporter.FormatField("valor \"peligroso\"\r\nsegundo");
 
-        Assert.AreEqual("\"valor \"\"peligroso\"\" segundo\"", formatted);
+        Assert.Equal("\"valor \"\"peligroso\"\" segundo\"", formatted);
     }
 }

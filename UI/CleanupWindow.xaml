@@ -14,7 +14,7 @@
 
         <!-- Custom Title Bar -->
         <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
-            <TextBlock Text="Limpieza de residuos"
+            <TextBlock x:Name="txtTitleBar" Text="Limpieza de residuos"
                        VerticalAlignment="Center"
                        Margin="12,0,0,0"
                        Style="{StaticResource CaptionTextBlockStyle}" />
@@ -38,14 +38,14 @@
                     Padding="20,14"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Limpieza de residuos tras la desinstalación"
+                    <TextBlock x:Name="txtHeaderTitle" Text="Limpieza de residuos tras la desinstalación"
                                Style="{StaticResource TitleTextBlockStyle}" />
                     <TextBlock x:Name="txtSubtitulo"
                                Text="Buscando residuos..."
                                Style="{StaticResource BodyTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap" />
-                    <TextBlock Text="⚠ Verifica cuidadosamente cada elemento antes de eliminar. Esta acción no se puede deshacer."
+                    <TextBlock x:Name="txtWarning" Text="⚠ Verifica cuidadosamente cada elemento antes de eliminar. Esta acción no se puede deshacer."
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                TextWrapping="Wrap"
@@ -129,7 +129,7 @@
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0"
+                        <TextBlock x:Name="txtListHeader" Grid.Row="0"
                                    Text="Residuos encontrados"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="4,0,0,8" />
@@ -147,10 +147,10 @@
                                 <ColumnDefinition Width="160" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="Ruta" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0" />
-                            <TextBlock Grid.Column="2" Text="Tipo" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="3" Text="Tamaño" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock Grid.Column="4" Text="Programa" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colRuta" Grid.Column="1" Text="Ruta" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0" />
+                            <TextBlock x:Name="colTipo" Grid.Column="2" Text="Tipo" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colTamano" Grid.Column="3" Text="Tamaño" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colPrograma" Grid.Column="4" Text="Programa" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                         </Grid>
 
                         <ListView x:Name="lvItems"
@@ -223,7 +223,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0"
+                        <TextBlock x:Name="txtLogHeader" Grid.Row="0"
                                    Text="Actividad"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="4,0,0,8" />

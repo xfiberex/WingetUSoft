@@ -17,31 +17,31 @@ public sealed class UpgradeResult
         if (UserCancelled || ExitCode == 1223
             || combined.Contains("canceled by the user", StringComparison.OrdinalIgnoreCase)
             || combined.Contains("cancelado por el usuario", StringComparison.OrdinalIgnoreCase))
-            return "Se canceló la elevación de permisos. La actualización no se inició.";
+            return L.T("reason.userCancelled");
 
         if (combined.Contains("0x8A150011") || combined.Contains("No applicable update", StringComparison.OrdinalIgnoreCase))
-            return "No se encontró una actualización aplicable para este paquete.";
+            return L.T("reason.noApplicableUpdate");
 
         if (combined.Contains("0x8A150014") || combined.Contains("No applicable installer", StringComparison.OrdinalIgnoreCase))
-            return "No se encontró un instalador compatible para este sistema.";
+            return L.T("reason.noApplicableInstaller");
 
         if (combined.Contains("hash", StringComparison.OrdinalIgnoreCase) && combined.Contains("mismatch", StringComparison.OrdinalIgnoreCase))
-            return "El hash del instalador no coincide. El paquete podría haber sido modificado por el proveedor.";
+            return L.T("reason.hashMismatch");
 
         if (combined.Contains("administrator", StringComparison.OrdinalIgnoreCase) || combined.Contains("administrador", StringComparison.OrdinalIgnoreCase))
-            return "Se requieren permisos de administrador adicionales para este instalador específico.";
+            return L.T("reason.needsAdmin");
 
         if (combined.Contains("blocked", StringComparison.OrdinalIgnoreCase) || combined.Contains("bloqueado", StringComparison.OrdinalIgnoreCase))
-            return "La instalación fue bloqueada por una directiva del sistema.";
+            return L.T("reason.blocked");
 
         if (combined.Contains("currently running", StringComparison.OrdinalIgnoreCase) || combined.Contains("en ejecución", StringComparison.OrdinalIgnoreCase))
-            return "El programa está actualmente en ejecución. Ciérrelo e intente de nuevo.";
+            return L.T("reason.currentlyRunning");
 
         if (combined.Contains("not found", StringComparison.OrdinalIgnoreCase) || combined.Contains("no se encontró", StringComparison.OrdinalIgnoreCase))
-            return "No se encontró el paquete en los orígenes configurados.";
+            return L.T("reason.notFound");
 
         if (combined.Contains("network", StringComparison.OrdinalIgnoreCase) || combined.Contains("red", StringComparison.OrdinalIgnoreCase))
-            return "Error de red. Verifique su conexión a internet.";
+            return L.T("reason.networkError");
 
         // Fallback: extract the last meaningful line
         string[] lines = combined.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -52,6 +52,6 @@ public sealed class UpgradeResult
                 return line;
         }
 
-        return $"Error desconocido (código de salida: {ExitCode}).";
+        return L.T("reason.unknownError", ExitCode);
     }
 }

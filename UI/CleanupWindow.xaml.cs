@@ -18,6 +18,7 @@ public sealed partial class CleanupWindow : Window
     private int _logLineCount;
 
     private AppWindow _appWindow = null!;
+    private IntPtr _hWnd;
 
     public CleanupWindow(AppSettings settings, IEnumerable<WingetPackage> uninstalledPackages)
     {
@@ -26,6 +27,7 @@ public sealed partial class CleanupWindow : Window
         _uninstalledPackages = [.. uninstalledPackages];
 
         var hWnd     = WindowNative.GetWindowHandle(this);
+        _hWnd = hWnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow   = AppWindow.GetFromWindowId(windowId);
         _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
@@ -48,6 +50,8 @@ public sealed partial class CleanupWindow : Window
 
         lvItems.ItemsSource = _items;
 
+        ApplyLocalizedStrings();
+
         Closed += (_, _) => _cts?.Cancel();
 
         if (Content is FrameworkElement root)
@@ -60,6 +64,27 @@ public sealed partial class CleanupWindow : Window
         }
     }
 
+    private void ApplyLocalizedStrings()
+    {
+        Title = L.T("cleanup.windowTitle");
+        txtTitleBar.Text = L.T("cleanup.titleBar");
+        txtHeaderTitle.Text = L.T("cleanup.headerTitle");
+        txtSubtitulo.Text = L.T("cleanup.scanning");
+        txtWarning.Text = L.T("cleanup.warning");
+        btnEscanear.Content = L.T("btn.rescan");
+        btnEliminar.Content = L.T("btn.deleteSelected");
+        btnSelAll.Content = L.T("btn.selectAll");
+        btnDeselAll.Content = L.T("btn.deselectAll");
+        btnCancelar.Content = L.T("btn.cancel");
+        txtListHeader.Text = L.T("cleanup.listHeader");
+        colRuta.Text = L.T("cleanup.colPath");
+        colTipo.Text = L.T("cleanup.colType");
+        colTamano.Text = L.T("cleanup.colSize");
+        colPrograma.Text = L.T("cleanup.colProgram");
+        txtLogHeader.Text = L.T("log.activity");
+        if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
+    }
+
     // ---- Scanning -----------------------------------------------------------
 
     private async Task ScanAsync()
@@ -68,7 +93,7 @@ public sealed partial class CleanupWindow : Window
         _cts = new CancellationTokenSource();
         _items.Clear();
         SetUIBusy(true);
-        txtEstado.Text = "Escaneando residuos...";
+        txtEstado.Text = L.T("cleanup.scanningStatus");
         btnEliminar.IsEnabled = false;
 
         try
@@ -80,24 +105,24 @@ public sealed partial class CleanupWindow : Window
             string pkgList = string.Join(", ", _uninstalledPackages.Select(p => p.Name));
             if (found.Count == 0)
             {
-                txtSubtitulo.Text = $"No se encontraron residuos de: {pkgList}.";
-                txtEstado.Text    = "No se encontraron residuos.";
+                txtSubtitulo.Text = L.T("cleanup.noResiduesFound", pkgList);
+                txtEstado.Text    = L.T("cleanup.noResiduesStatus");
             }
             else
             {
-                txtSubtitulo.Text = $"Residuos potenciales de: {pkgList}. Verifica cada elemento antes de eliminar.";
-                txtEstado.Text    = $"Se encontraron {found.Count} residuo(s) potencial(es).";
+                txtSubtitulo.Text = L.T("cleanup.potentialResidues", pkgList);
+                txtEstado.Text    = L.T("cleanup.foundResidues", found.Count);
                 btnEliminar.IsEnabled = true;
             }
         }
         catch (OperationCanceledException)
         {
-            txtEstado.Text = "Escaneo cancelado.";
+            txtEstado.Text = L.T("cleanup.scanCancelled");
         }
         catch (Exception ex)
         {
-            txtEstado.Text = "Error durante el escaneo.";
-            await ShowDialogAsync("Error", ex.Message);
+            txtEstado.Text = L.T("cleanup.scanError");
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
         {
@@ -114,23 +139,26 @@ public sealed partial class CleanupWindow : Window
         var toDelete = _items.Where(i => i.IsSelected).ToList();
         if (toDelete.Count == 0)
         {
-            await ShowDialogAsync("Sin selección", "No hay elementos seleccionados para eliminar.");
+            await ShowDialogAsync(L.T("cleanup.noSelectionTitle"), L.T("cleanup.noSelectionBody"));
             return;
         }
 
         bool confirmed = await ShowConfirmDialogAsync(
-            "Confirmar eliminación",
-            $"¿Eliminar {toDelete.Count} elemento(s) seleccionado(s)?\n\nEsta acción no se puede deshacer.");
+            L.T("cleanup.confirmDeleteTitle"),
+            L.T("cleanup.confirmDeleteBody", toDelete.Count));
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
         ClearLog();
         int deleted = 0, failed = 0;
+        var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        foreach (var item in toDelete)
+        for (int i = 0; i < toDelete.Count; i++)
         {
             if (_cts.IsCancellationRequested) break;
+            var item = toDelete[i];
+            TaskbarProgress.SetValue(_hWnd, i * 100 / toDelete.Count);
 
             try
             {
@@ -140,27 +168,32 @@ public sealed partial class CleanupWindow : Window
                     File.Delete(item.Path);
 
                 _items.Remove(item);
-                AppendLog($"  ✔ Eliminado: {item.Path}", LogLineKind.Success);
+                AppendLog(L.T("cleanup.deletedLog", item.Path), LogLineKind.Success);
                 deleted++;
             }
             catch (UnauthorizedAccessException)
             {
-                AppendLog($"  ✖ Sin permisos: {item.Path}", LogLineKind.Error);
+                AppendLog(L.T("cleanup.noPermissionLog", item.Path), LogLineKind.Error);
                 failed++;
             }
             catch (Exception ex)
             {
-                AppendLog($"  ✖ Error en {System.IO.Path.GetFileName(item.Path)}: {ex.Message}", LogLineKind.Error);
+                AppendLog(L.T("cleanup.deleteErrorLog", System.IO.Path.GetFileName(item.Path), ex.Message), LogLineKind.Error);
                 failed++;
             }
         }
 
-        txtEstado.Text        = $"Completado — Eliminados: {deleted} | Errores: {failed}";
+        txtEstado.Text        = L.T("cleanup.completedStatus", deleted, failed);
         btnEliminar.IsEnabled = _items.Any(i => i.IsSelected);
 
+        TaskbarProgress.Clear(_hWnd);
+        bool cancelled = _cts.IsCancellationRequested;
         _cts?.Dispose();
         _cts = null;
         SetUIBusy(false);
+
+        if (Notifier.ShouldNotify(opStopwatch.Elapsed, _settings.ShowNotifications, cancelled, TimeSpan.FromSeconds(10)))
+            Notifier.OperationFinished(_hWnd);
     }
 
     // ---- UI Helpers ---------------------------------------------------------
@@ -187,7 +220,7 @@ public sealed partial class CleanupWindow : Window
     {
         _cts?.Cancel();
         btnCancelar.IsEnabled = false;
-        txtEstado.Text = "Cancelando...";
+        txtEstado.Text = L.T("status.cancelling");
     }
 
     private void BtnSelAll_Click(object sender, RoutedEventArgs e)
@@ -257,5 +290,5 @@ public sealed partial class CleanupWindow : Window
 
     private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
         WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message,
-            primaryText: "Sí, eliminar");
+            primaryText: L.T("btn.yesDelete"));
 }

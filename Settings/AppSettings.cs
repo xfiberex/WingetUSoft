@@ -39,11 +39,21 @@ public sealed class AppSettings
     public bool MinimizeToTray { get; set; } = false;
     public bool ShowNotifications { get; set; } = true;
 
+    /// <summary>Código ISO del idioma ("es"/"en"/"pt"/"fr"/"it"). Null = sin elegir todavía (se detecta el del sistema en el primer arranque).</summary>
+    public string? Language { get; set; }
+
+    /// <summary>Última versión de la app cuyas novedades ya se mostraron (diálogo "Novedades…"). Null = nunca se mostró.</summary>
+    public string? LastVersionSeen { get; set; }
+
     [JsonIgnore]
     public string? LastLoadError { get; private set; }
 
     [JsonIgnore]
     public string? LastSaveError { get; private set; }
+
+    /// <summary>True si estos ajustes se cargaron desde un settings.json ya existente (uso previo de la app), no desde los valores por defecto.</summary>
+    [JsonIgnore]
+    public bool LoadedFromFile { get; private set; }
 
     public static string LogDirectory => Path.Combine(DataDirectoryPath, "logs");
 
@@ -61,6 +71,7 @@ public sealed class AppSettings
             {
                 settings.LastLoadError = null;
                 settings.LastSaveError = null;
+                settings.LoadedFromFile = true;
                 return settings;
             }
 

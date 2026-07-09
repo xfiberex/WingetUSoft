@@ -1,11 +1,20 @@
+; Parámetros opcionales (vía /D al invocar ISCC — ver installer/build-installer.ps1):
+;   /DMyAppVersion=X.Y.Z   versión a estampar (por defecto: ver #define abajo)
+;   /DSourceDir=<ruta>     carpeta de publicación de .NET (por defecto: ..\publish)
 #define MyAppName "WingetUSoft"
-#define MyAppVersion "1.2.0"
 #define MyAppPublisher "xfiberex"
 #define MyAppExeName "WingetUSoft.exe"
 #define MyAppURL "https://github.com/xfiberex/WingetUSoft"
 #define MyAppUpdatesURL "https://github.com/xfiberex/WingetUSoft/releases"
-; SourceDir es relativo al .iss --> ../publish (raiz del proyecto)
-#define SourceDir "..\publish"
+
+#ifndef MyAppVersion
+  #define MyAppVersion "1.2.0"
+#endif
+
+; SourceDir es relativo al .iss --> ../publish (raiz del proyecto) salvo que se sobrescriba con /D.
+#ifndef SourceDir
+  #define SourceDir "..\publish"
+#endif
 #define VCRedistUrl "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 #define WinAppRuntimeUrl "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe"
 #define DotNet10Url "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
@@ -32,8 +41,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 PrivilegesRequired=admin
 MinVersion=10.0.19041
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 ; Permite instalar encima sin desinstalar primero
 CloseApplications=yes
 CloseApplicationsFilter=*{#MyAppExeName}*

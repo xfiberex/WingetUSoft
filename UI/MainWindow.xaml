@@ -44,7 +44,8 @@
                     Padding="20,16"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Actualiza tus programas con winget"
+                    <TextBlock x:Name="txtHeaderTitle"
+                               Text="Actualiza tus programas con winget"
                                Style="{StaticResource TitleTextBlockStyle}" />
                     <TextBlock x:Name="txtSubtitulo"
                                Text="Consulta, filtra y actualiza paquetes desde una sola vista."
@@ -55,7 +56,8 @@
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
+                    <TextBlock x:Name="txtShortcuts"
+                               Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                     <InfoBar x:Name="infoBarUpdate"
@@ -88,7 +90,7 @@
                     Padding="16,12"
                     Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Text="Acciones rápidas"
+                    <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
                                Style="{StaticResource BodyStrongTextBlockStyle}"
                                Margin="0,0,0,10" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -134,16 +136,16 @@
                         </Button>
 
                         <!-- Menu options -->
-                        <DropDownButton Content="Opciones" Height="36" MinWidth="100">
+                        <DropDownButton x:Name="btnOpciones" Content="Opciones" Height="36" MinWidth="100">
                             <DropDownButton.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutSubItem Text="Modo de actualización">
+                                    <MenuFlyoutSubItem x:Name="menuModoActualizacion" Text="Modo de actualización">
                                         <ToggleMenuFlyoutItem x:Name="menuSilenciosa" Text="Silenciosa"
                                                               IsChecked="True" Click="MenuSilenciosa_Click" />
                                         <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
                                                               Click="MenuInteractiva_Click" />
                                     </MenuFlyoutSubItem>
-                                    <MenuFlyoutSubItem Text="Tema">
+                                    <MenuFlyoutSubItem x:Name="menuTema" Text="Tema">
                                         <RadioMenuFlyoutItem x:Name="menuTemaSistema" Text="Sistema (automático)"
                                                              GroupName="Tema" IsChecked="True" Click="MenuTemaSistema_Click" />
                                         <RadioMenuFlyoutItem x:Name="menuTemaClaro" Text="Claro"
@@ -151,34 +153,64 @@
                                         <RadioMenuFlyoutItem x:Name="menuTemaOscuro" Text="Oscuro"
                                                              GroupName="Tema" Click="MenuTemaOscuro_Click" />
                                     </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="menuIdioma" Text="Idioma">
+                                        <RadioMenuFlyoutItem x:Name="menuIdiomaEs" Text="Español"
+                                                             GroupName="Idioma" IsChecked="True" Click="MenuIdiomaEs_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuIdiomaEn" Text="Inglés"
+                                                             GroupName="Idioma" Click="MenuIdiomaEn_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuIdiomaPt" Text="Portugués"
+                                                             GroupName="Idioma" Click="MenuIdiomaPt_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuIdiomaFr" Text="Francés"
+                                                             GroupName="Idioma" Click="MenuIdiomaFr_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuIdiomaIt" Text="Italiano"
+                                                             GroupName="Idioma" Click="MenuIdiomaIt_Click" />
+                                    </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Exportar lista..." Click="MenuExportar_Click">
+                                    <MenuFlyoutItem x:Name="menuExportar" Text="Exportar lista..." Click="MenuExportar_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xEDE1;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Configuración..." Click="MenuConfiguracion_Click">
+                                    <MenuFlyoutItem x:Name="menuConfiguracion" Text="Configuración..." Click="MenuConfiguracion_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE713;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                     <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem Text="Ver historial" Click="MenuHistorial_Click">
+                                    <MenuFlyoutItem x:Name="menuVerHistorial" Text="Ver historial" Click="MenuHistorial_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE81C;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutItem Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
+                                    <MenuFlyoutItem x:Name="menuDesinstalar" Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE74D;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+
+                        <!-- Help menu -->
+                        <DropDownButton x:Name="btnAyuda" Content="Ayuda" Height="36" MinWidth="90">
+                            <DropDownButton.Flyout>
+                                <MenuFlyout>
                                     <MenuFlyoutItem x:Name="menuBuscarActualizacion"
                                                     Text="Buscar actualización de WingetUSoft..."
                                                     Click="MenuBuscarActualizacion_Click">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE777;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem x:Name="menuWhatsNew" Text="Novedades..." Click="MenuWhatsNew_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE789;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="menuAcercaDe" Text="Acerca de..." Click="MenuAcercaDe_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE946;" />
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
@@ -199,13 +231,13 @@
                 <StackPanel Spacing="6">
                     <!-- Filters row -->
                     <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                        <TextBlock Text="Fuente:" VerticalAlignment="Center"
+                        <TextBlock x:Name="txtFuenteLabel" Text="Fuente:" VerticalAlignment="Center"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <ComboBox x:Name="cmbFuente" Width="200"
                                   SelectionChanged="CmbFuente_SelectionChanged">
-                            <ComboBoxItem Content="Todas las fuentes" IsSelected="True" />
+                            <ComboBoxItem x:Name="cmbFuenteAllItem" Content="Todas las fuentes" IsSelected="True" />
                         </ComboBox>
-                        <TextBlock Text="Excluidos:" VerticalAlignment="Center"
+                        <TextBlock x:Name="txtExcluidosLabel" Text="Excluidos:" VerticalAlignment="Center"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130">
                             <DropDownButton.Flyout>
@@ -219,7 +251,7 @@
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
-                        <TextBlock Text="Buscar:" VerticalAlignment="Center"
+                        <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBox x:Name="txtBuscar"
                                  PlaceholderText="Nombre o Id..."
@@ -307,45 +339,45 @@
                                 <ColumnDefinition Width="75" />
                                 <ColumnDefinition Width="55" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
                             <!-- Sortable header cells -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
-                                <TextBlock Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
-                                <TextBlock Text="Id" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
-                                <TextBlock Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
-                                <TextBlock Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
-                                <TextBlock Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
-                                <TextBlock Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                             </StackPanel>
-                            <TextBlock Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
                         </Grid>
 
                         <ListView x:Name="lvPackages"
@@ -411,7 +443,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0"
+                        <TextBlock x:Name="txtLogHeader" Grid.Row="0"
                                    Text="Actividad y resultados"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="4,0,0,8" />
