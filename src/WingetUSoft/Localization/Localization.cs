@@ -145,6 +145,7 @@ public static class L
         ["list.colSize"]      = ["Tam.", "Size", "Tam.", "Taille", "Dim."],
         ["list.colSource"]    = ["Fuente", "Source", "Fonte", "Source", "Fonte"],
         ["list.colExcluded"]  = ["Excl.", "Excl.", "Excl.", "Excl.", "Escl."],
+        ["grid.excludedAccessible"] = ["Paquete excluido", "Excluded package", "Pacote excluído", "Paquet exclu", "Pacchetto escluso"],
         ["log.header"]        = ["Actividad y resultados", "Activity and results", "Atividade e resultados", "Activité et résultats", "Attività e risultati"],
         ["status.ready"]      = ["Listo.", "Ready.", "Pronto.", "Prêt.", "Pronto."],
         ["status.readyToStart"] = ["Listo. Pulsa 'Consultar actualizaciones' para comenzar.", "Ready. Click 'Check for updates' to start.", "Pronto. Clique em 'Consultar atualizações' para começar.", "Prêt. Cliquez sur « Rechercher des mises à jour » pour commencer.", "Pronto. Premi 'Cerca aggiornamenti' per iniziare."],

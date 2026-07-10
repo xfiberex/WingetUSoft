@@ -147,10 +147,14 @@
                                 <ColumnDefinition Width="160" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" VerticalAlignment="Center" />
-                            <TextBlock x:Name="colRuta" Grid.Column="1" Text="Ruta" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0" />
-                            <TextBlock x:Name="colTipo" Grid.Column="2" Text="Tipo" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock x:Name="colTamano" Grid.Column="3" Text="Tamaño" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock x:Name="colPrograma" Grid.Column="4" Text="Programa" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colRuta" Grid.Column="1" Text="Ruta" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colTipo" Grid.Column="2" Text="Tipo" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colTamano" Grid.Column="3" Text="Tamaño" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colPrograma" Grid.Column="4" Text="Programa" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
                         </Grid>
 
                         <ListView x:Name="lvItems"

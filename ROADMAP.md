@@ -72,14 +72,14 @@ código — ver detalle por ítem — y varios puntos son, de nuevo, paridad con
 
 | # | Característica | Dónde | Estado |
 |---|----------------|-------|--------|
-| 1 | **Ventanas adaptadas a DPI y área de trabajo** (port de `SizeAndCenterWindow`, reemplaza los `AppWindow.Resize(...)` fijos en píxeles) | `UI/MainWindow.xaml.cs:120`, `UI/SettingsWindow.xaml.cs:25`, `UI/UninstallWindow.xaml.cs:35`, `UI/CleanupWindow.xaml.cs:34`, `UI/HistoryWindow.xaml.cs:49` | ⏳ Pendiente |
-| 2 | **Tamaño mínimo de ventana** (`OverlappedPresenter.PreferredMinimumWidth/Height`, hoy sin definir en ninguna ventana) | mismos 5 archivos que #1 | ⏳ Pendiente |
-| 3 | **Barra de "Acciones rápidas" responsiva** (wrap o menú de desborde cuando los 7 botones no caben — causa directa del recorte reportado) | `UI/MainWindow.xaml:96` (`StackPanel Orientation="Horizontal"`, sin wrap) | ⏳ Pendiente |
-| 4 | **Columnas del DataGrid con ancho fijo en píxeles** — revisar/adaptar comportamiento en ventana angosta | `UI/MainWindow.xaml:332-341` (cabecera) y `:392-401` (`lvPackages.ItemTemplate`); solo "Nombre" es `*` | ⏳ Pendiente |
-| 5 | **Revisión de longitud de texto por idioma** (FR/IT suelen ser 20–30% más largos que ES) contra botones/columnas de ancho fijo, tras la extracción de 272 claves de la Fase 7 de Tier A | todas las ventanas de `UI/` | ⏳ Pendiente |
-| 6 | **Accesibilidad**: `AutomationProperties.Name` en controles solo-icono (ej. el `FontIcon` de "Excluido" en la fila del DataGrid no tiene etiqueta accesible) y orden de tabulación | `UI/MainWindow.xaml:417-423` y resto de ventanas de `UI/` | ⏳ Pendiente |
+| 1 | **Ventanas adaptadas a DPI y área de trabajo** (port de `SizeAndCenterWindow`, reemplaza los `AppWindow.Resize(...)` fijos en píxeles) | `Core/WindowSizing.cs` + `UI/WindowSizer.cs`, aplicado en las 5 ventanas | ✅ Implementado y verificado |
+| 2 | **Tamaño mínimo de ventana** (`OverlappedPresenter.PreferredMinimumWidth/Height`, escalado por DPI y acotado a WorkArea) | mismos 5 archivos que #1 | ✅ Implementado y verificado |
+| 3 | **Barra de "Acciones rápidas" responsiva** (WrapPanel nativo propio: los botones bajan de fila cuando no caben — arregla el recorte reportado) | `UI/WrapPanel.cs` + `UI/MainWindow.xaml:96` | ✅ Implementado y verificado |
+| 4 | **Columnas del DataGrid con ancho fijo en píxeles** — cabecera + filas en un `ScrollViewer` horizontal (`MinWidth`+`ViewportWidth`): rellena si cabe, hace scroll si no | `UI/MainWindow.xaml:329-434` | ✅ Implementado y verificado |
+| 5 | **Revisión de longitud de texto por idioma** (FR/IT suelen ser 20–30% más largos que ES): `TextTrimming`+tooltip defensivos en cabeceras/labels de ancho fijo | Main/History/Uninstall/Cleanup (`UI/`) | ✅ Implementado y verificado |
+| 6 | **Accesibilidad**: `AutomationProperties.Name` localizado en el icono "Excluido" del DataGrid; auditadas las demás ventanas/diálogos (sin más controles solo-icono sin etiqueta) | `UI/MainWindow.xaml:417-423` + `PackageViewModel.ExcludedLabel` | ✅ Implementado y verificado |
 | 7 | **Snap layouts de Windows 11** — verificar que las ventanas quepan en snap de media/cuarto de pantalla en portátiles de resolución baja (consecuencia directa de #1/#2, verificación manual) | — | ⏳ Pendiente |
-| 8 | **Infraestructura de UI tests con FlaUI** — nuevo proyecto `WingetUSoft.UiTests` (paridad con `FormatDiskPro.UiTests`); smoke + regresión de layout sobre la app real, cubre automáticamente #1–#6 | `tests/WingetUSoft.UiTests/` (`FlaUI.Core` + `FlaUI.UIA3`, xUnit) | ⏳ Pendiente |
+| 8 | **Infraestructura de UI tests con FlaUI** — nuevo proyecto `WingetUSoft.UiTests` (paridad con `FormatDiskPro.UiTests`); smoke + regresión de layout sobre la app real, cubre #1–#6 | `tests/WingetUSoft.UiTests/` (`FlaUI.Core` + `FlaUI.UIA3`, xUnit) | ✅ Implementado y verificado (14/14) |
 
 **Sobre #8 (UI tests con FlaUI):** nuevo proyecto `tests/WingetUSoft.UiTests/` que replica el
 patrón ya probado en `FormatDiskPro.UiTests` — un `AppFixture` (`ICollectionFixture`) que lanza
@@ -98,5 +98,17 @@ etiquetas de accesibilidad y orden de tabulación (#6) y la navegación por diá
 Novedades / Configuración / Historial). Así da cobertura de regresión precisamente a los arreglos
 de layout que motivan esta tier.
 
-Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md) cuando arranque la
-implementación.
+→ **Tier B — #1–#6 y #8 completados (2026-07-10):** arreglos de layout/accesibilidad (#1–#6) con
+build 0/0, **89/89 tests unitarios** (78 previos + 11 de `WindowSizingTests`) y **verificación visual
+del usuario OK** (captura con el WrapPanel repartiendo los 7 botones en 2 filas sin recortes); más el
+proyecto **`WingetUSoft.UiTests` (#8)** con FlaUI + UIA3, **14/14 UI tests en verde** (estables en 5
+corridas), que ejercen la app real y dan regresión automática a los arreglos de layout (#1 DPI/WorkArea,
+#3 wrap de acciones), navegación de diálogos, cambio de idioma en caliente y apertura de ventanas.
+Nuevos `Core/WindowSizing.cs` (matemática pura, testeada), `UI/WindowSizer.cs` (DPI + WorkArea + mínimo),
+`UI/WrapPanel.cs` (panel de envoltura nativo, cero dependencias) y `tests/WingetUSoft.UiTests/`
+(`AppFixture`/`SettingsBackup`/`DialogHelper` portados de FormatDiskPro, **sin elevación** porque la app
+corre asInvoker). Decisiones con el usuario: WrapPanel nativo propio (no CommunityToolkit ni CommandBar),
+las 5 ventanas siguen redimensionables con mínimo acotado a la WorkArea. **Único pendiente de la tier:**
+#7 (snap layouts de Windows 11, verificación manual del usuario en resolución baja).
+
+Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md).

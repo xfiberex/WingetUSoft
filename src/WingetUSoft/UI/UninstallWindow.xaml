@@ -148,10 +148,14 @@
                                 <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="colNombre" Grid.Column="0" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0" />
-                            <TextBlock x:Name="colId" Grid.Column="1" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock x:Name="colVersion" Grid.Column="2" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                            <TextBlock x:Name="colFuente" Grid.Column="3" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                            <TextBlock x:Name="colNombre" Grid.Column="0" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colId" Grid.Column="1" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colVersion" Grid.Column="2" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="colFuente" Grid.Column="3" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                       TextTrimming="CharacterEllipsis" />
                         </Grid>
 
                         <ListView x:Name="lvPackages"

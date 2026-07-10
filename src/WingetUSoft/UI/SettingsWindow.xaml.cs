@@ -22,7 +22,7 @@ public sealed partial class SettingsWindow : Window
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
         var appWindow = AppWindow.GetFromWindowId(windowId);
         appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        appWindow.Resize(new Windows.Graphics.SizeInt32(760, 560));
+        WindowSizer.Apply(appWindow, hWnd, designWidthDip: 760, designHeightDip: 560, minWidthDip: 640, minHeightDip: 480);
 
         if (Content is FrameworkElement root)
         {

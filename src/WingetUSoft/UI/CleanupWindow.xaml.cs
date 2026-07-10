@@ -31,7 +31,7 @@ public sealed partial class CleanupWindow : Window
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow   = AppWindow.GetFromWindowId(windowId);
         _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        _appWindow.Resize(new Windows.Graphics.SizeInt32(960, 700));
+        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 960, designHeightDip: 700, minWidthDip: 720, minHeightDip: 520);
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);

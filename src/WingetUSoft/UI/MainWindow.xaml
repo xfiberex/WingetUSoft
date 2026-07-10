@@ -93,7 +93,7 @@
                     <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
                                Style="{StaticResource BodyStrongTextBlockStyle}"
                                Margin="0,0,0,10" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                         <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
                                 Content="Consultar actualizaciones"
                                 Click="BtnConsultar_Click"
@@ -216,7 +216,7 @@
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
-                    </StackPanel>
+                    </local:WrapPanel>
                 </StackPanel>
             </Border>
 
@@ -315,7 +315,6 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <TextBlock x:Name="txtUpdatesHeader"
@@ -324,107 +323,137 @@
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="4,0,0,8" />
 
-                        <!-- Column Headers -->
-                        <Grid Grid.Row="1" Height="38"
-                              Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                              CornerRadius="4,4,0,0"
-                              Padding="8,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="54" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="190" />
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="75" />
-                                <ColumnDefinition Width="55" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
-                            <!-- Sortable header cells -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
-                                <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
-                                <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
-                                <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
-                                <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
-                                <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                        Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
-                                <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
-                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                            </StackPanel>
-                            <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                        </Grid>
+                        <!-- Cabecera + filas comparten scroll horizontal (misma anchura mínima) para
+                             que sigan alineadas cuando la ventana es más angosta que las columnas
+                             fijas del DataGrid; el ListView conserva su propio scroll vertical. -->
+                        <ScrollViewer Grid.Row="1"
+                                      x:Name="DataGridScroller"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      HorizontalScrollMode="Auto"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      VerticalScrollMode="Disabled">
+                            <!-- El Grid toma el ancho del viewport del ScrollViewer (piso MinWidth=860)
+                                 para que la columna "Nombre" (*) rellene cuando la ventana es ancha, y
+                                 solo aparezca scroll horizontal por debajo de 860px. -->
+                            <Grid MinWidth="860"
+                                  Width="{Binding ViewportWidth, ElementName=DataGridScroller}">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
 
-                        <ListView x:Name="lvPackages"
-                                  Grid.Row="2"
-                                  SelectionMode="Single"
-                                  SelectionChanged="LvPackages_SelectionChanged"
-                                  RightTapped="LvPackages_RightTapped">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Height="36" Padding="8,0"
-                                          Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="54" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="190" />
-                                            <ColumnDefinition Width="100" />
-                                            <ColumnDefinition Width="100" />
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="75" />
-                                            <ColumnDefinition Width="55" />
-                                        </Grid.ColumnDefinitions>
-                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                  VerticalAlignment="Center" MinWidth="0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <FontIcon Grid.Column="7"
-                                                  Glyph="&#xE8D8;"
-                                                  FontSize="14"
-                                                  VerticalAlignment="Center"
-                                                  Margin="8,0,0,0"
-                                                  Foreground="#FFBA4636"
-                                                  Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
+                                <!-- Column Headers -->
+                                <Grid Grid.Row="0" Height="38"
+                                      Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                      CornerRadius="4,4,0,0"
+                                      Padding="8,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="54" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="190" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="80" />
+                                        <ColumnDefinition Width="75" />
+                                        <ColumnDefinition Width="55" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                                    <!-- Sortable header cells -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
+                                        <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colNombre}" />
+                                        <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
+                                        <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colId}" />
+                                        <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
+                                        <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersion}" />
+                                        <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
+                                        <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colDisponible}" />
+                                        <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
+                                        <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colTam}" />
+                                        <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
+                                        <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colFuente}" />
+                                        <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
+                                </Grid>
+
+                                <ListView x:Name="lvPackages"
+                                          Grid.Row="1"
+                                          SelectionMode="Single"
+                                          SelectionChanged="LvPackages_SelectionChanged"
+                                          RightTapped="LvPackages_RightTapped">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Height="36" Padding="8,0"
+                                                  Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="54" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="190" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="100" />
+                                                    <ColumnDefinition Width="80" />
+                                                    <ColumnDefinition Width="75" />
+                                                    <ColumnDefinition Width="55" />
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                          VerticalAlignment="Center" MinWidth="0" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                <FontIcon Grid.Column="7"
+                                                          Glyph="&#xE8D8;"
+                                                          FontSize="14"
+                                                          VerticalAlignment="Center"
+                                                          Margin="8,0,0,0"
+                                                          Foreground="#FFBA4636"
+                                                          AutomationProperties.Name="{Binding ExcludedLabel}"
+                                                          ToolTipService.ToolTip="{Binding ExcludedLabel}"
+                                                          Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </Grid>
+                        </ScrollViewer>
                     </Grid>
                 </Border>
 

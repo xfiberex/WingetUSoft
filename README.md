@@ -46,8 +46,12 @@ dotnet build WingetUSoft.slnx
 # Ejecutar
 dotnet run --project src/WingetUSoft/WingetUSoft.csproj
 
-# Ejecutar tests
+# Ejecutar tests unitarios (xUnit)
 dotnet test tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj
+
+# Ejecutar tests de UI (FlaUI — lanzan la app real; requieren sesión de escritorio
+# interactiva, pero NO elevación: la app corre asInvoker)
+dotnet test tests/WingetUSoft.UiTests/WingetUSoft.UiTests.csproj
 ```
 
 ## Estructura del proyecto
@@ -60,6 +64,7 @@ WingetUSoft/
 │   ├── Core/                   # Lógica de negocio pura (sin UI ni efectos externos)
 │   │   ├── ReleaseNotes.cs        # Notas de versión (Markdown → texto plano)
 │   │   ├── Throughput.cs          # ETA de descargas/operaciones largas
+│   │   ├── WindowSizing.cs        # Dimensionado/centrado por DPI (puro, testeable)
 │   │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
 │   │   └── Models/
 │   │       ├── WingetPackage.cs         # Paquete con versión disponible/instalada
@@ -87,16 +92,23 @@ WingetUSoft/
 │   │   ├── HistoryWindow.xaml/.cs   # Vista de historial
 │   │   ├── UninstallWindow.xaml/.cs # Ventana de desinstalación
 │   │   ├── CleanupWindow.xaml/.cs   # Ventana de limpieza de residuos
+│   │   ├── WrapPanel.cs            # Panel de envoltura nativo (barra de acciones responsiva)
+│   │   ├── WindowSizer.cs          # Wrapper DPI + WorkArea + tamaño mínimo (usa Core/WindowSizing)
 │   │   ├── Converters.cs           # Convertidores de valor para XAML
 │   │   ├── TitleBarHelper.cs       # Helper compartido para colores del title bar
 │   │   └── WindowDialogHelper.cs   # Helper compartido para diálogos modales
 │   │
 │   └── installer/             # Inno Setup (installer.iss) + build-installer.ps1
 │
-└── tests/WingetUSoft.Tests/    # Tests unitarios (xUnit)
-    ├── AppSettingsTests.cs
-    ├── CleanupScannerTests.cs
-    └── WingetServiceTests.cs
+├── tests/WingetUSoft.Tests/    # Tests unitarios (xUnit)
+│   ├── AppSettingsTests.cs
+│   ├── WindowSizingTests.cs    # Dimensionado por DPI/WorkArea (Tier B #1/#2)
+│   └── ...
+│
+└── tests/WingetUSoft.UiTests/  # Tests de UI end-to-end (FlaUI + UIA3, xUnit)
+    ├── AppFixture.cs           # Lanza el .exe, obtiene la ventana, respalda settings
+    ├── LayoutTests.cs          # Regresión de layout: DPI/WorkArea + wrap de acciones
+    └── ...
 ```
 
 ## Configuración

@@ -103,12 +103,18 @@
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="120" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="colFecha" Grid.Column="0" Text="Fecha" VerticalAlignment="Center" FontWeight="SemiBold" />
-                    <TextBlock x:Name="colNombre" Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                    <TextBlock x:Name="colId" Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                    <TextBlock x:Name="colVersionOrigen" Grid.Column="3" Text="Version origen" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                    <TextBlock x:Name="colVersionDestino" Grid.Column="4" Text="Version destino" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
-                    <TextBlock x:Name="colEstado" Grid.Column="5" Text="Estado" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0" />
+                    <TextBlock x:Name="colFecha" Grid.Column="0" Text="Fecha" VerticalAlignment="Center" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="colNombre" Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="colId" Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="colVersionOrigen" Grid.Column="3" Text="Version origen" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersionOrigen}" />
+                    <TextBlock x:Name="colVersionDestino" Grid.Column="4" Text="Version destino" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersionDestino}" />
+                    <TextBlock x:Name="colEstado" Grid.Column="5" Text="Estado" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" />
                 </Grid>
 
                 <ListView x:Name="lvHistory"

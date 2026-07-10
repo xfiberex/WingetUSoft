@@ -46,7 +46,7 @@ public sealed partial class HistoryWindow : Window
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
         var appWindow = AppWindow.GetFromWindowId(windowId);
         appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        appWindow.Resize(new Windows.Graphics.SizeInt32(1000, 620));
+        WindowSizer.Apply(appWindow, hWnd, designWidthDip: 1000, designHeightDip: 620, minWidthDip: 760, minHeightDip: 480);
 
         if (Content is FrameworkElement root)
         {

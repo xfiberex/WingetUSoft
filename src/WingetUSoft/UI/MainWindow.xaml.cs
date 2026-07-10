@@ -42,6 +42,9 @@ public sealed class PackageViewModel : INotifyPropertyChanged
 
     public bool IsExcluded { get; set; }
 
+    /// <summary>Etiqueta accesible (localizada) para el icono "Excluido" solo-icono de la fila.</summary>
+    public string ExcludedLabel => L.T("grid.excludedAccessible");
+
     public PackageViewModel(WingetPackage package) => Package = package;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -117,7 +120,7 @@ public sealed partial class MainWindow : Window
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
         _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        _appWindow.Resize(new Windows.Graphics.SizeInt32(1180, 820));
+        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600);
 
         // Set title bar
         ExtendsContentIntoTitleBar = true;

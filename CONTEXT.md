@@ -6,14 +6,16 @@
 > _Estado actual_ y añadir una entrada en el _Registro de cambios_. Usar fechas absolutas.
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
-- **Última actualización de este documento:** 2026-07-09
+- **Última actualización de este documento:** 2026-07-10
 - **Versión actual:** **1.3.0** — primera versión real publicada con `release.ps1`
   ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.3.0), tag `v1.3.0`,
   **sin firmar** — ver Pendientes §6).
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
-  implementadas y verificadas. **Tier B propuesto** (2026-07-09): mejoras visuales/responsivas,
-  aún ⏳ pendiente de implementar.
+  implementadas y verificadas. **Tier B — #1–#6 y #8 completados** (2026-07-10): mejoras
+  visuales/responsivas + accesibilidad (build 0/0, 89/89 unitarios, verificación visual del usuario
+  OK) + proyecto `WingetUSoft.UiTests` con FlaUI (**14/14 UI tests**). Único pendiente: #7 (snap
+  layouts, verificación manual del usuario).
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -39,6 +41,7 @@ WingetUSoft/
 │  ├─ Core/                     Lógica de negocio pura (sin UI ni efectos externos)
 │  │  ├─ ReleaseNotes.cs        Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
 │  │  ├─ Throughput.cs          ETA (tiempo restante) para descargas y operaciones largas
+│  │  ├─ WindowSizing.cs        Dimensionado/centrado por DPI acotado a WorkArea (puro, Tier B #1/#2)
 │  │  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
 │  │  └─ Models/
 │  │     ├─ WingetPackage.cs           Paquete con versión disponible/instalada
@@ -71,6 +74,8 @@ WingetUSoft/
 │  │  ├─ AboutDialog.xaml/.cs      ContentDialog "Acerca de": versión, descripción, licencia MIT, privacidad
 │  │  ├─ Notifier.cs               Aviso al terminar: sonido + parpadeo de la barra de tareas (Win32)
 │  │  ├─ TaskbarProgress.cs        Progreso en el icono de la barra de tareas (ITaskbarList3, Win32)
+│  │  ├─ WindowSizer.cs            Wrapper DPI + WorkArea + PreferredMinimum (usa Core/WindowSizing, Tier B #1/#2)
+│  │  ├─ WrapPanel.cs              Panel de envoltura nativo (barra "Acciones rápidas" responsiva, Tier B #3)
 │  │  ├─ Converters.cs             Convertidores de valor para XAML
 │  │  ├─ TitleBarHelper.cs         Helper compartido para colores del title bar
 │  │  └─ WindowDialogHelper.cs     Helper compartido para diálogos modales
@@ -89,7 +94,18 @@ WingetUSoft/
 │  ├─ ReleaseNotesTests.cs      Markdown → texto plano (encabezados, viñetas, negrita/código, enlaces, saltos)
 │  ├─ NotifierTests.cs          Notifier.ShouldNotify (umbral, cancelado, deshabilitado)
 │  ├─ ThroughputTests.cs        Eta/FormatEta (casos normales, velocidad cero, formato mm:ss / h:mm:ss)
-│  └─ HistoryFilterTests.cs     Filtro por texto/estado/combinados, casos sin coincidencias
+│  ├─ HistoryFilterTests.cs     Filtro por texto/estado/combinados, casos sin coincidencias
+│  └─ WindowSizingTests.cs      Dimensionado por DPI/WorkArea + clamp del mínimo (Tier B #1/#2)
+│
+├─ tests/WingetUSoft.UiTests/   Tests de UI end-to-end (FlaUI + UIA3, xUnit) — Tier B #8; lanzan la app real
+│  ├─ AppFixture.cs             ICollectionFixture: lanza el .exe, obtiene la ventana, respalda settings (sin elevación: app asInvoker)
+│  ├─ SettingsBackup.cs         Respalda/restaura %AppData%\WingetUSoft\settings.json + history.log
+│  ├─ DialogHelper.cs           Helpers de ContentDialog de WinUI (dismiss de arranque, SafeCloseAnyDialog)
+│  ├─ MenuActions.cs            Navegación de DropDownButton + MenuFlyout (Opciones/Ayuda/Idioma)
+│  ├─ LayoutTests.cs            Regresión Tier B: ventana dentro de WorkArea (#1) + wrap de acciones (#3)
+│  ├─ MainWindowTests.cs        Smoke: ventana abre, botones de acción y lvPackages presentes
+│  ├─ MenuDialogsTests.cs       Ayuda → Acerca de abre/cierra ContentDialog
+│  └─ SettingsTests.cs          Cambio de idioma en caliente + apertura/cierre de SettingsWindow
 │
 ├─ release.ps1                  Corte de versión en un paso (build + tag + GitHub Release)
 └─ LICENSE                      Texto MIT (© 2026 xfiberex)
@@ -102,11 +118,20 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
 ## 3. Estado actual
 
 - ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
-- ✅ Tests: **78/78** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
+- ✅ Tests: **89/89** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
   (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
-  `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5). Las Fases 6 y 7 no
-  añadieron tests nuevos (UI pura + extracción de strings; `LocalizationTests` ya cubre por
-  completitud las **272 claves** de `L.Map` sin necesitar un test por clave).
+  `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5) + **11 de `WindowSizingTests`
+  (Tier B Fase 1 #1/#2)**. Las Fases 6 y 7 de Tier A no añadieron tests nuevos (UI pura + extracción
+  de strings; `LocalizationTests` ya cubre por completitud las **273 claves** de `L.Map` —272 de
+  Tier A + `grid.excludedAccessible` de Tier B #6— sin necesitar un test por clave).
+- ✅ **UI tests (FlaUI): 14/14** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto nuevo
+  `WingetUSoft.UiTests` (Tier B #8): ejercen la app real vía UIA3 (ventana dentro de WorkArea, wrap
+  de acciones al angostar, navegación de diálogos, cambio de idioma, apertura de ventanas). **No** los
+  corre `release.ps1` (solo ejecuta el proyecto unitario); necesitan sesión de escritorio interactiva
+  pero **no** elevación (la app es asInvoker).
+- ✅ **Tier B — #1–#6 y #8 completados (2026-07-10):** build 0/0, 89/89 unitarios + 14/14 UI, y
+  verificación visual del usuario OK (wrap de acciones, mínimos por DPI, DataGrid, accesibilidad).
+  **Único pendiente:** #7 (snap layouts, verificación manual del usuario). Ver Registro de cambios.
 - ✅ **Tier A — Paridad con FormatDiskPro, COMPLETADO (2026-07-08/09):**
   Se comparó WingetUSoft con FormatDiskPro (proyecto hermano en el mismo workspace, misma
   arquitectura por capas) para identificar infraestructura de app ya resuelta allí y ausente
@@ -260,8 +285,10 @@ reenviados a `build-installer.ps1`).
 ## 6. Pendientes / ideas
 
 - **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO**, 9/9
-  fases (-1 a 8) implementadas y verificadas. **Tier B** (mejoras visuales/responsivas, 7 ítems)
-  propuesto el 2026-07-09, ⏳ sin implementar.
+  fases (-1 a 8) implementadas y verificadas. **Tier B — #1–#6 y #8 completados**
+  (2026-07-10), build 0/0, 89/89 unitarios + 14/14 UI (`WingetUSoft.UiTests` con FlaUI) y verificación
+  visual del usuario OK. **Único pendiente:** **#7** (snap layouts de Windows 11, verificación manual
+  del usuario en resolución baja).
 - Conseguir un certificado de firma de código real (OV/EV) para que la auto-actualización
   funcione en producción — la v1.3.0 se publicó **sin firmar** (no hay certificado disponible),
   así que `GitHubUpdateService.VerifyAuthenticodeSignature` rechazará este instalador si alguien
@@ -280,6 +307,98 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-10 — test: Tier B #8 — proyecto de UI tests con FlaUI (`WingetUSoft.UiTests`)
+
+**Nuevo proyecto `tests/WingetUSoft.UiTests/`** (FlaUI.Core + FlaUI.UIA3 5.0.0, xUnit, TFM
+`net10.0-windows10.0.19041.0`, **sin `ProjectReference` a la app** — lanza el `.exe` compilado). Porta
+el patrón ya probado de `FormatDiskPro.UiTests`. La implementación la ejecutó un subagente **Sonnet 5**
+(esfuerzo alto, workflow por pasos); Opus orquestó, revisó y verificó de forma independiente.
+Añadido a `WingetUSoft.slnx`.
+
+**Diferencia clave con FormatDiskPro (bien resuelta):** WingetUSoft corre **`asInvoker`** (winget se
+eleva bajo demanda vía worker + named pipe), así que el `AppFixture` **elimina el `EnsureElevated()`**
+de FDP — el proceso de test **no** necesita terminal elevada. No se cubren operaciones reales de winget
+(upgrade/uninstall disparan UAC en escritorio seguro, inautomatizable con FlaUI).
+
+**Infra portada:** `AppFixture` (`ICollectionFixture`, lanza el exe, `GetMainWindow`, descarta los
+diálogos de arranque Novedades/Actualización), `SettingsBackup` (respalda/restaura
+`%AppData%\WingetUSoft\settings.json` + `history.log` para no filtrar cambios de prueba a la instalación
+real), `DialogHelper` (ContentDialog de WinUI: `PrimaryButton`/`SecondaryButton`/`CloseButton` por
+AutomationId, `SafeCloseAnyDialog`, `DismissStartupDialogs`), `MenuActions` (navega los `DropDownButton`
++ `MenuFlyout` de Opciones/Ayuda; con fallback a `SelectionItem` para los `RadioMenuFlyoutItem` de
+idioma/tema).
+
+**Tests (14, todos verdes):** `MainWindowTests` (la ventana abre y no está offscreen; los 7 botones de
+"Acciones rápidas" y `lvPackages` presentes por AutomationId), **`LayoutTests`** (el corazón del Tier B:
+(a) `MainWindow.BoundingRectangle` cabe en la `WorkArea` del monitor — #1 DPI/WorkArea; (b) redimensiona
+la ventana a un ancho estrecho vía `TransformPattern.Resize` y verifica que los 7 botones siguen visibles
+con `BoundingRectangle` no vacío — #3 wrap), `MenuDialogsTests` (Ayuda → Acerca de abre un ContentDialog
+con versión y se cierra), `SettingsTests` (cambio de idioma en caliente ES↔EN restaurado, y apertura/
+cierre de la ventana real `SettingsWindow`).
+
+**Dos hallazgos reales durante el endurecimiento** (no artefactos de test): (1) el proceso de test no era
+DPI-aware, así que `GetMonitorInfo` devolvía coordenadas virtualizadas mientras UIA reporta píxeles
+físicos → se añadió un `[ModuleInitializer]` que llama `SetProcessDpiAwarenessContext(PER_MONITOR_AWARE_V2)`
+para igualar el manifest de la app; (2) el `WrapPanel` necesita su propio pase de Measure/Arrange tras el
+resize → se añadió un settle + `Retry.WhileNull` por botón. **No** hubo que añadir ningún `x:Name` a la app
+(todos los AutomationId usados ya existían). **Resultado: build 0/0, 89/89 unitarios + 14/14 UI en verde**
+(estables en 5 corridas consecutivas, sin flakiness ni procesos `WingetUSoft.exe` colgados). Con esto el
+Tier B queda completo salvo #7 (verificación manual de snap layouts).
+
+### 2026-07-10 — feat: Tier B — Fase 1 (#1–#6) mejoras visuales, responsivas y accesibilidad
+
+Implementados los ítems #1–#6 del Tier B (arreglos de layout + accesibilidad). Origen: reporte del
+usuario con el botón "Cancelar" recortado contra el borde de la ventana. La implementación la ejecutó
+un subagente **Sonnet 5** (esfuerzo alto, workflow por pasos con gates build+tests); Opus orquestó,
+revisó y detectó dos refinamientos aplicados en una segunda pasada (ver más abajo). Plan aprobado en
+`C:\Users\User\.claude\plans\encapsulated-waddling-wilkinson.md`.
+
+**Decisiones tomadas con el usuario (2026-07-10):**
+- **#3 barra responsiva:** WrapPanel **nativo propio** (cero dependencias nuevas), no CommunityToolkit
+  ni CommandBar — mantiene la filosofía minimalista (solo 3 NuGets) y el estilo visual actual.
+- **#1/#2 redimensionado:** las 5 ventanas **siguen redimensionables**; se les añade dimensionado por
+  DPI + acotado a WorkArea y `PreferredMinimumWidth/Height`. No se copia el modelo de "ventana fija"
+  de FormatDiskPro.
+- **Alcance:** esta ronda solo #1–#6. #7 (snap layouts, manual) y #8 (FlaUI) quedan aparte.
+
+**Nuevos archivos:**
+- `Core/WindowSizing.cs` — matemática **pura** y testeable (sin tipos `Windows.*`): `ComputeSizeAndCenter`
+  (réplica de `SizeAndCenterWindow` de FormatDiskPro: diseño en DIP × escala DPI, acotado a WorkArea,
+  centrado) y `ScaleMinSize` (mínimo escalado **y acotado** a la WorkArea — ver refinamiento 2).
+- `UI/WindowSizer.cs` — wrapper UI delgado reutilizado por las 5 ventanas: `GetDpiForWindow` (P/Invoke) +
+  `DisplayArea.WorkArea` + `WindowSizing` → `Resize`/`Move` + `OverlappedPresenter.PreferredMinimum*`.
+  No fija `IsResizable`/`IsMaximizable`.
+- `UI/WrapPanel.cs` — `Panel` nativo con `Measure/ArrangeOverride` + `HorizontalSpacing`/`VerticalSpacing`.
+- `tests/WingetUSoft.Tests/WindowSizingTests.cs` — 11 casos (escalas 100/150/200 %, clamp de tamaño
+  y de mínimo contra pantallas pequeñas, centrado con origen no-cero, margen escalado por DPI).
+
+**Modificados:** los 5 constructores de ventana (`MainWindow`/`Settings`/`Uninstall`/`Cleanup`/`History`
+`.xaml.cs`) reemplazan el `Resize(SizeInt32 fijo)` por `WindowSizer.Apply(...)` (#1/#2). `MainWindow.xaml`:
+`StackPanel Horizontal`→`local:WrapPanel` en "Acciones rápidas" (#3, arregla el recorte); cabecera + `ListView`
+del DataGrid envueltos en un `ScrollViewer` horizontal (`MinWidth=860` + `Width` enlazado al `ViewportWidth`)
+para que las columnas rellenen si caben y hagan scroll conjunto si no (#4); `TextTrimming`+tooltip en cabeceras
+de columna de ancho fijo (#5); `AutomationProperties.Name`+tooltip localizados en el `FontIcon` "Excluido"
+vía `PackageViewModel.ExcludedLabel` (#6). `TextTrimming` defensivo también en `HistoryWindow`/`UninstallWindow`/
+`CleanupWindow`. `Localization/Localization.cs`: nueva clave `grid.excludedAccessible` (ES/EN/PT/FR/IT).
+
+**Dos refinamientos detectados en revisión (Opus) y corregidos por Sonnet 5:**
+1. La columna "Nombre" (`*`) no rellenaba en ventanas anchas porque el `ScrollViewer` horizontal mide el
+   contenido con ancho **infinito** (el `*` colapsa a `Auto`). Se enlazó el `Width` del Grid interno al
+   `ViewportWidth` del ScrollViewer (con `MinWidth=860` de piso): rellena si el viewport ≥ 860, hace scroll
+   horizontal si < 860.
+2. El mínimo escalado por DPI podía **superar la pantalla** en portátiles de baja resolución con DPI alto
+   (900×600 @150 % = 1350×900 físico en 1366×768), impidiendo encoger la ventana o hacer snap (#7). Se acotó
+   el mínimo a la WorkArea menos el margen, en la lógica pura y con test.
+
+**Auditoría de accesibilidad (#6):** salvo el icono "Excluido", no había ningún control **solo-icono** sin
+etiqueta en las 5 ventanas ni en `AboutDialog`/`WhatsNewDialog` (los demás `FontIcon` son `MenuFlyoutItem.Icon`
+con `Text` adyacente). No se tocó `TabIndex` (no se detectó ningún orden de tabulación claramente incorrecto).
+
+**Resultado: build 0/0, 89/89 tests en verde, verificación visual del usuario OK** (captura con el
+WrapPanel repartiendo los 7 botones de "Acciones rápidas" en 2 filas sin recortes, DataGrid y
+dimensionado correctos). Queda **#7** (snap layouts, verificación manual del usuario) antes de pasar a
+**#8** (proyecto `WingetUSoft.UiTests` con FlaUI, su propia fase).
 
 ### 2026-07-09 — release: v1.3.0 — primera publicación real en GitHub
 
