@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WingetUSoft.csproj" />
+    <ProjectReference Include="..\..\src\WingetUSoft\WingetUSoft.csproj" />
   </ItemGroup>
 
 </Project>

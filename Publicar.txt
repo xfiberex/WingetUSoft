@@ -1,4 +1,4 @@
-# 1. Desde la raíz del proyecto: publicar y copiar icono
+# 1. Desde la carpeta del proyecto (src/WingetUSoft/): publicar y copiar icono
 
 dotnet publish WingetUSoft.csproj -c Release -r win-x64 --self-contained -o ./publish
 New-Item -ItemType Directory -Force publish\Assets | Out-Null

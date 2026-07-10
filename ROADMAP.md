@@ -17,9 +17,9 @@
 
 | # | Característica | Dónde | Estado |
 |---|----------------|-------|--------|
-| 0 | **Migración de tests MSTest → xUnit** | `WingetUSoft.Tests/*.csproj` + los 3 archivos de test existentes | ✅ Implementado |
+| 0 | **Migración de tests MSTest → xUnit** | `tests/WingetUSoft.Tests/*.csproj` + los 3 archivos de test existentes | ✅ Implementado |
 | 1 | **Infraestructura de localización** (`L`/`AppLang`, detección de idioma del sistema) | `Localization/Localization.cs`, `Settings/AppSettings.cs` (`Language`) | ✅ Implementado (menú principal; extracción total en #7) |
-| 2 | **Changelog en actualizaciones + diálogo "Novedades"** | `Core/GitHubUpdateService.cs`, `Core/ReleaseNotes.cs`, `UI/WhatsNewDialog.xaml` | ✅ Implementado |
+| 2 | **Changelog en actualizaciones + diálogo "Novedades"** | `Services/GitHubUpdateService.cs`, `Core/ReleaseNotes.cs`, `UI/WhatsNewDialog.xaml` | ✅ Implementado |
 | 3 | **Aviso al terminar + progreso en la barra de tareas** | `UI/Notifier.cs`, `UI/TaskbarProgress.cs` | ✅ Implementado |
 | 4 | **Velocidad y ETA en operaciones largas** | `Core/Throughput.cs` | ✅ Implementado |
 | 5 | **Historial: búsqueda, filtros y exportación** | `Settings/HistoryFilter.cs`, `UI/HistoryWindow.xaml` | ✅ Implementado |
@@ -79,6 +79,24 @@ código — ver detalle por ítem — y varios puntos son, de nuevo, paridad con
 | 5 | **Revisión de longitud de texto por idioma** (FR/IT suelen ser 20–30% más largos que ES) contra botones/columnas de ancho fijo, tras la extracción de 272 claves de la Fase 7 de Tier A | todas las ventanas de `UI/` | ⏳ Pendiente |
 | 6 | **Accesibilidad**: `AutomationProperties.Name` en controles solo-icono (ej. el `FontIcon` de "Excluido" en la fila del DataGrid no tiene etiqueta accesible) y orden de tabulación | `UI/MainWindow.xaml:417-423` y resto de ventanas de `UI/` | ⏳ Pendiente |
 | 7 | **Snap layouts de Windows 11** — verificar que las ventanas quepan en snap de media/cuarto de pantalla en portátiles de resolución baja (consecuencia directa de #1/#2, verificación manual) | — | ⏳ Pendiente |
+| 8 | **Infraestructura de UI tests con FlaUI** — nuevo proyecto `WingetUSoft.UiTests` (paridad con `FormatDiskPro.UiTests`); smoke + regresión de layout sobre la app real, cubre automáticamente #1–#6 | `tests/WingetUSoft.UiTests/` (`FlaUI.Core` + `FlaUI.UIA3`, xUnit) | ⏳ Pendiente |
+
+**Sobre #8 (UI tests con FlaUI):** nuevo proyecto `tests/WingetUSoft.UiTests/` que replica el
+patrón ya probado en `FormatDiskPro.UiTests` — un `AppFixture` (`ICollectionFixture`) que lanza
+el `.exe` compilado, obtiene la ventana con `UIA3Automation`, descarta los diálogos de arranque
+(Novedades / actualización disponible, que WinUI abre solo en los primeros segundos) y un
+`SettingsBackup` que respalda y restaura `%AppData%\WingetUSoft\settings.json` + `history.log`
+para no filtrar los cambios de las pruebas en la instalación real del usuario.
+
+Diferencia clave con FormatDiskPro: WingetUSoft corre `asInvoker` (eleva bajo demanda vía worker
++ named pipe, ver `Services/WingetService.cs`), así que el proceso de test **no** necesita una
+terminal elevada y **no** debe cubrir las operaciones reales de winget (`upgrade`/`uninstall`
+disparan UAC en el escritorio seguro, inautomatizable con FlaUI). El foco son las superficies
+no elevadas y de solo lectura: adaptación DPI y tamaño mínimo (#1/#2), wrap de la barra de
+acciones rápidas (#3), DataGrid en ventana angosta (#4), cambio de idioma en caliente (#5),
+etiquetas de accesibilidad y orden de tabulación (#6) y la navegación por diálogos (Acerca de /
+Novedades / Configuración / Historial). Así da cobertura de regresión precisamente a los arreglos
+de layout que motivan esta tier.
 
 Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md) cuando arranque la
 implementación.

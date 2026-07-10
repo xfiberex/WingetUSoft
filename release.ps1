@@ -16,7 +16,7 @@
     estuviera autenticado; nunca se imprime el token.
 
     IMPORTANTE: la auto-actualización de WingetUSoft exige que el instalador esté firmado
-    con Authenticode (Core/GitHubUpdateService.VerifyAuthenticodeSignature) — publicar sin
+    con Authenticode (Services/GitHubUpdateService.VerifyAuthenticodeSignature) — publicar sin
     -CertThumbprint/-CertFile rompe la actualización automática para quien ya tenga una
     versión anterior instalada.
 
@@ -64,10 +64,10 @@ function Die($m)   { Write-Host "[X] $m" -ForegroundColor Red; exit 1 }
 
 # ── Rutas ──────────────────────────────────────────────────────────────────
 $root         = $PSScriptRoot
-$csproj       = Join-Path $root "WingetUSoft.csproj"
-$testProject  = Join-Path $root "WingetUSoft.Tests\WingetUSoft.Tests.csproj"
-$buildScript  = Join-Path $root "installer\build-installer.ps1"
-$outputDir    = Join-Path $root "installer\Output"
+$csproj       = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
+$testProject  = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
+$buildScript  = Join-Path $root "src\WingetUSoft\installer\build-installer.ps1"
+$outputDir    = Join-Path $root "src\WingetUSoft\installer\Output"
 
 if (-not (Test-Path $csproj))      { Die "No se encontró el proyecto: $csproj" }
 if (-not (Test-Path $buildScript)) { Die "No se encontró el script de instalador: $buildScript" }

@@ -6,7 +6,7 @@
     Pensado para validar el pipeline de firma (build-installer.ps1 -CertThumbprint ...) y para
     despliegues en entornos controlados. Es especialmente util aqui porque la auto-actualizacion
     de WingetUSoft EXIGE que el instalador descargado tenga una firma Authenticode valida
-    (Core/GitHubUpdateService.VerifyAuthenticodeSignature) o lo borra; sin firmar, la
+    (Services/GitHubUpdateService.VerifyAuthenticodeSignature) o lo borra; sin firmar, la
     auto-actualizacion queda rota para quien ya tenga una version anterior instalada.
 
     IMPORTANTE: un certificado autofirmado NO elimina los avisos de SmartScreen ni de

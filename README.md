@@ -41,49 +41,59 @@ Interfaz gráfica (WinUI 3) para gestionar actualizaciones y desinstalaciones de
 
 ```bash
 # Compilar
-dotnet build WingetUSoft.csproj
+dotnet build WingetUSoft.slnx
 
 # Ejecutar
-dotnet run --project WingetUSoft.csproj
+dotnet run --project src/WingetUSoft/WingetUSoft.csproj
 
 # Ejecutar tests
-dotnet test WingetUSoft.Tests/WingetUSoft.Tests.csproj
+dotnet test tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj
 ```
 
 ## Estructura del proyecto
 
 ```
 WingetUSoft/
-├── Program.cs                   # Entry point
+├── src/WingetUSoft/             # Proyecto de aplicación (WinUI 3)
+│   ├── Program.cs              # Entry point
+│   │
+│   ├── Core/                   # Lógica de negocio pura (sin UI ni efectos externos)
+│   │   ├── ReleaseNotes.cs        # Notas de versión (Markdown → texto plano)
+│   │   ├── Throughput.cs          # ETA de descargas/operaciones largas
+│   │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
+│   │   └── Models/
+│   │       ├── WingetPackage.cs         # Paquete con versión disponible/instalada
+│   │       ├── WingetPackageInfo.cs     # Metadatos enriquecidos (winget show)
+│   │       ├── WingetProgressInfo.cs    # Progreso de descarga/instalación
+│   │       ├── CleanupItemViewModel.cs  # ViewModel para la ventana de limpieza
+│   │       ├── UpgradeResult.cs
+│   │       └── UpgradeBatchResult.cs
+│   │
+│   ├── Services/               # Operaciones con efectos externos (procesos, red, disco)
+│   │   ├── WingetService.cs       # Ejecución de winget, parsing, elevación
+│   │   ├── GitHubUpdateService.cs # Auto-actualización desde GitHub Releases
+│   │   └── CleanupScanner.cs      # Detección de residuos post-desinstalación
+│   │
+│   ├── Settings/               # Persistencia y configuración
+│   │   ├── AppSettings.cs         # Carga/guardado JSON, paths, log
+│   │   ├── HistoryEntry.cs        # DTO de entrada de historial
+│   │   └── HistoryFilter.cs       # Filtrado del historial (lógica pura)
+│   │
+│   ├── Localization/           # Cadenas ES/EN/PT/FR/IT (patrón L.T("clave"))
+│   │
+│   ├── UI/                     # Capa de presentación (WinUI 3)
+│   │   ├── MainWindow.xaml/.cs      # Ventana principal (actualizaciones)
+│   │   ├── SettingsWindow.xaml/.cs  # Diálogo de configuración
+│   │   ├── HistoryWindow.xaml/.cs   # Vista de historial
+│   │   ├── UninstallWindow.xaml/.cs # Ventana de desinstalación
+│   │   ├── CleanupWindow.xaml/.cs   # Ventana de limpieza de residuos
+│   │   ├── Converters.cs           # Convertidores de valor para XAML
+│   │   ├── TitleBarHelper.cs       # Helper compartido para colores del title bar
+│   │   └── WindowDialogHelper.cs   # Helper compartido para diálogos modales
+│   │
+│   └── installer/             # Inno Setup (installer.iss) + build-installer.ps1
 │
-├── Core/                        # Lógica de negocio (sin dependencias de UI)
-│   ├── WingetService.cs         # Ejecución de winget, parsing, elevación
-│   ├── GitHubUpdateService.cs   # Auto-actualización desde GitHub Releases
-│   ├── CleanupScanner.cs        # Detección de residuos post-desinstalación
-│   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
-│   └── Models/
-│       ├── WingetPackage.cs         # Paquete con versión disponible/instalada
-│       ├── WingetPackageInfo.cs     # Metadatos enriquecidos (winget show)
-│       ├── WingetProgressInfo.cs    # Progreso de descarga/instalación
-│       ├── CleanupItemViewModel.cs  # ViewModel para la ventana de limpieza
-│       ├── UpgradeResult.cs
-│       └── UpgradeBatchResult.cs
-│
-├── Settings/                    # Persistencia y configuración
-│   ├── AppSettings.cs           # Carga/guardado JSON, paths, log
-│   └── HistoryEntry.cs          # DTO de entrada de historial
-│
-├── UI/                          # Capa de presentación (WinUI 3)
-│   ├── MainWindow.xaml/.cs      # Ventana principal (actualizaciones)
-│   ├── SettingsWindow.xaml/.cs  # Diálogo de configuración
-│   ├── HistoryWindow.xaml/.cs   # Vista de historial
-│   ├── UninstallWindow.xaml/.cs # Ventana de desinstalación
-│   ├── CleanupWindow.xaml/.cs   # Ventana de limpieza de residuos
-│   ├── Converters.cs            # Convertidores de valor para XAML
-│   ├── TitleBarHelper.cs        # Helper compartido para colores del title bar
-│   └── WindowDialogHelper.cs    # Helper compartido para diálogos modales
-│
-└── WingetUSoft.Tests/           # Tests unitarios (MSTest)
+└── tests/WingetUSoft.Tests/    # Tests unitarios (xUnit)
     ├── AppSettingsTests.cs
     ├── CleanupScannerTests.cs
     └── WingetServiceTests.cs

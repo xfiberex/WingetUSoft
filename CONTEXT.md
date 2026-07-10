@@ -32,73 +32,76 @@ actualizaciones y se auto-actualiza vía GitHub Releases. No gestiona discos ni 
 
 ```
 WingetUSoft/
-├─ Program.cs                   Punto de entrada
-├─ App.xaml / App.xaml.cs       Aplicación WinUI
+├─ src/WingetUSoft/             Proyecto de aplicación (WinUI 3)
+│  ├─ Program.cs                Punto de entrada
+│  ├─ App.xaml / App.xaml.cs    Aplicación WinUI
+│  │
+│  ├─ Core/                     Lógica de negocio pura (sin UI ni efectos externos)
+│  │  ├─ ReleaseNotes.cs        Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
+│  │  ├─ Throughput.cs          ETA (tiempo restante) para descargas y operaciones largas
+│  │  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
+│  │  └─ Models/
+│  │     ├─ WingetPackage.cs           Paquete con versión disponible/instalada
+│  │     ├─ WingetPackageInfo.cs       Metadatos enriquecidos (winget show)
+│  │     ├─ WingetProgressInfo.cs      Progreso de descarga/instalación
+│  │     ├─ CleanupItemViewModel.cs    ViewModel para la ventana de limpieza
+│  │     ├─ UpgradeResult.cs
+│  │     └─ UpgradeBatchResult.cs
+│  │
+│  ├─ Services/                 Operaciones con efectos externos (procesos, red, disco)
+│  │  ├─ WingetService.cs       Ejecución de winget, parsing, elevación (worker + named pipe)
+│  │  ├─ GitHubUpdateService.cs Auto-actualización desde GitHub Releases (verificación Authenticode, changelog)
+│  │  └─ CleanupScanner.cs      Detección de residuos post-desinstalación
+│  │
+│  ├─ Settings/                 Persistencia y configuración
+│  │  ├─ AppSettings.cs         Carga/guardado JSON, paths, log, backup de settings corruptos, idioma
+│  │  ├─ HistoryEntry.cs        DTO de entrada de historial
+│  │  └─ HistoryFilter.cs       Filtrado del historial por texto y estado (lógica pura)
+│  │
+│  ├─ Localization/             Cadenas ES/EN/PT/FR/IT (patrón L.T("clave"), ver Tier A #1/#7)
+│  │  └─ Localization.cs        enum AppLang + clase L (Map, T, FromCode/ToCode/FromCulture)
+│  │
+│  ├─ UI/                       Capa de presentación (WinUI 3)
+│  │  ├─ MainWindow.xaml/.cs       Ventana principal (actualizaciones, tray icon)
+│  │  ├─ SettingsWindow.xaml/.cs   Diálogo de configuración
+│  │  ├─ HistoryWindow.xaml/.cs    Vista de historial
+│  │  ├─ UninstallWindow.xaml/.cs  Ventana de desinstalación
+│  │  ├─ CleanupWindow.xaml/.cs    Ventana de limpieza de residuos
+│  │  ├─ WhatsNewDialog.xaml/.cs   ContentDialog de novedades (changelog de la versión instalada)
+│  │  ├─ AboutDialog.xaml/.cs      ContentDialog "Acerca de": versión, descripción, licencia MIT, privacidad
+│  │  ├─ Notifier.cs               Aviso al terminar: sonido + parpadeo de la barra de tareas (Win32)
+│  │  ├─ TaskbarProgress.cs        Progreso en el icono de la barra de tareas (ITaskbarList3, Win32)
+│  │  ├─ Converters.cs             Convertidores de valor para XAML
+│  │  ├─ TitleBarHelper.cs         Helper compartido para colores del title bar
+│  │  └─ WindowDialogHelper.cs     Helper compartido para diálogos modales
+│  │
+│  └─ installer/                Inno Setup (installer.iss) — único empaquetador
+│     ├─ installer.iss             MyAppVersion/SourceDir overridables vía /D (#ifndef)
+│     ├─ build-installer.ps1       Publish framework-dependent (win-x64) + ISCC + firma opcional
+│     ├─ new-selfsigned-cert.ps1   Certificado de firma autofirmado para pruebas del pipeline
+│     └─ Output/                   Instaladores compilados (gitignored)
 │
-├─ Core/                        Lógica de negocio (sin dependencias de UI)
-│  ├─ WingetService.cs          Ejecución de winget, parsing, elevación (worker + named pipe)
-│  ├─ GitHubUpdateService.cs    Auto-actualización desde GitHub Releases (verificación Authenticode, changelog)
-│  ├─ ReleaseNotes.cs           Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
-│  ├─ Throughput.cs             ETA (tiempo restante) para descargas y operaciones largas
-│  ├─ CleanupScanner.cs         Detección de residuos post-desinstalación
-│  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
-│  └─ Models/
-│     ├─ WingetPackage.cs           Paquete con versión disponible/instalada
-│     ├─ WingetPackageInfo.cs       Metadatos enriquecidos (winget show)
-│     ├─ WingetProgressInfo.cs      Progreso de descarga/instalación
-│     ├─ CleanupItemViewModel.cs    ViewModel para la ventana de limpieza
-│     ├─ UpgradeResult.cs
-│     └─ UpgradeBatchResult.cs
-│
-├─ Settings/                    Persistencia y configuración
-│  ├─ AppSettings.cs            Carga/guardado JSON, paths, log, backup de settings corruptos, idioma
-│  ├─ HistoryEntry.cs           DTO de entrada de historial
-│  └─ HistoryFilter.cs          Filtrado del historial por texto y estado (lógica pura)
-│
-├─ Localization/                Cadenas ES/EN/PT/FR/IT (patrón L.T("clave"), ver Tier A #1/#7)
-│  └─ Localization.cs           enum AppLang + clase L (Map, T, FromCode/ToCode/FromCulture)
-│
-├─ UI/                          Capa de presentación (WinUI 3)
-│  ├─ MainWindow.xaml/.cs       Ventana principal (actualizaciones, tray icon)
-│  ├─ SettingsWindow.xaml/.cs   Diálogo de configuración
-│  ├─ HistoryWindow.xaml/.cs    Vista de historial
-│  ├─ UninstallWindow.xaml/.cs  Ventana de desinstalación
-│  ├─ CleanupWindow.xaml/.cs    Ventana de limpieza de residuos
-│  ├─ WhatsNewDialog.xaml/.cs   ContentDialog de novedades (changelog de la versión instalada)
-│  ├─ AboutDialog.xaml/.cs      ContentDialog "Acerca de": versión, descripción, licencia MIT, privacidad
-│  ├─ Notifier.cs               Aviso al terminar: sonido + parpadeo de la barra de tareas (Win32)
-│  ├─ TaskbarProgress.cs        Progreso en el icono de la barra de tareas (ITaskbarList3, Win32)
-│  ├─ Converters.cs             Convertidores de valor para XAML
-│  ├─ TitleBarHelper.cs         Helper compartido para colores del title bar
-│  └─ WindowDialogHelper.cs     Helper compartido para diálogos modales
-│
-├─ installer/                   Inno Setup (installer.iss) — único empaquetador
-│  ├─ installer.iss             MyAppVersion/SourceDir overridables vía /D (#ifndef)
-│  ├─ build-installer.ps1       Publish framework-dependent (win-x64) + ISCC + firma opcional
-│  ├─ new-selfsigned-cert.ps1   Certificado de firma autofirmado para pruebas del pipeline
-│  └─ Output/                   Instaladores compilados (gitignored)
+├─ tests/WingetUSoft.Tests/     Tests unitarios (xUnit, migrados desde MSTest en Tier A #0)
+│  ├─ AppSettingsTests.cs
+│  ├─ CleanupScannerTests.cs
+│  ├─ WingetServiceTests.cs
+│  ├─ LocalizationTests.cs      Completitud del diccionario L.Map + FromCode/FromCulture/ToCode
+│  ├─ ReleaseNotesTests.cs      Markdown → texto plano (encabezados, viñetas, negrita/código, enlaces, saltos)
+│  ├─ NotifierTests.cs          Notifier.ShouldNotify (umbral, cancelado, deshabilitado)
+│  ├─ ThroughputTests.cs        Eta/FormatEta (casos normales, velocidad cero, formato mm:ss / h:mm:ss)
+│  └─ HistoryFilterTests.cs     Filtro por texto/estado/combinados, casos sin coincidencias
 │
 ├─ release.ps1                  Corte de versión en un paso (build + tag + GitHub Release)
-├─ LICENSE                      Texto MIT (© 2026 xfiberex)
-│
-└─ WingetUSoft.Tests/           Tests unitarios (xUnit, migrados desde MSTest en Tier A #0)
-   ├─ AppSettingsTests.cs
-   ├─ CleanupScannerTests.cs
-   ├─ WingetServiceTests.cs
-   ├─ LocalizationTests.cs      Completitud del diccionario L.Map + FromCode/FromCulture/ToCode
-   ├─ ReleaseNotesTests.cs      Markdown → texto plano (encabezados, viñetas, negrita/código, enlaces, saltos)
-   ├─ NotifierTests.cs          Notifier.ShouldNotify (umbral, cancelado, deshabilitado)
-   ├─ ThroughputTests.cs        Eta/FormatEta (casos normales, velocidad cero, formato mm:ss / h:mm:ss)
-   └─ HistoryFilterTests.cs     Filtro por texto/estado/combinados, casos sin coincidencias
+└─ LICENSE                      Texto MIT (© 2026 xfiberex)
 ```
 
-**Regla de oro:** la lógica de negocio testeable vive en `Core` (sin dependencias de
-WinUI/Process/HttpClient donde sea posible). La UI y `Settings` la consumen. Namespace único
-`WingetUSoft`.
+**Regla de oro:** la lógica de negocio pura y testeable vive en `Core` (sin dependencias de
+WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, disco) viven en
+`Services`. La UI, `Services` y `Settings` consumen `Core`. Namespace único `WingetUSoft`.
 
 ## 3. Estado actual
 
-- ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.csproj`).
+- ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
 - ✅ Tests: **78/78** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
   (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
   `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5). Las Fases 6 y 7 no
@@ -127,7 +130,7 @@ WinUI/Process/HttpClient donde sea posible). La UI y `Settings` la consumen. Nam
     sin campo `Language` (actualización desde una versión anterior a este cambio), se asume
     español en vez de reinterpretar el sistema. La extracción completa del resto de la UI
     (ventanas de Settings/Uninstall/Cleanup/History) queda para la **Fase 7**.
-  - **Fase 2 (✅ 2026-07-08):** `Core/GitHubUpdateService.cs` gana `Notes` (campo `body` del
+  - **Fase 2 (✅ 2026-07-08):** `Services/GitHubUpdateService.cs` gana `Notes` (campo `body` del
     release), `GetLatestReleaseAsync` (sin gate de versión) y `GetReleaseByTagAsync(tag)`, ambos
     refactorizados sobre un `FetchReleaseAsync` privado compartido con `CheckForUpdateAsync`.
     **Nuevo** `Core/ReleaseNotes.cs` (port literal de FormatDiskPro, Markdown → texto plano) y
@@ -206,10 +209,10 @@ WinUI/Process/HttpClient donde sea posible). La UI y `Settings` la consumen. Nam
 
 - **Namespace único** `WingetUSoft` para toda la app y los tests.
 - **Elevación de permisos:** worker interno con comunicación por named pipe (sin scripts
-  temporales en disco) — ver `Core/WingetService.cs`.
+  temporales en disco) — ver `Services/WingetService.cs`.
 - **Exportación CSV/TSV:** `Core/DelimitedTextExporter.cs` neutraliza fórmulas (prefijo `'` ante
   `=`/`+`/`-`/`@`) para que sea seguro abrir en Excel/Calc.
-- **Actualizaciones de la app:** `Core/GitHubUpdateService.cs` **exige firma Authenticode
+- **Actualizaciones de la app:** `Services/GitHubUpdateService.cs` **exige firma Authenticode
   válida** en el instalador descargado (`VerifyAuthenticodeSignature`) — lo borra si no está
   firmado. Cualquier pipeline de release que publique sin firmar rompe la auto-actualización.
 - **Publicación (verificado en Tier A #8):** `dotnet publish -r win-x64 --self-contained false`
@@ -242,9 +245,9 @@ WinUI/Process/HttpClient donde sea posible). La UI y `Settings` la consumen. Nam
 
 | Tarea | Comando |
 |-------|---------|
-| Compilar | `dotnet build WingetUSoft.csproj` |
-| Ejecutar | `dotnet run --project WingetUSoft.csproj` |
-| Pruebas | `dotnet test WingetUSoft.Tests/WingetUSoft.Tests.csproj` |
+| Compilar | `dotnet build WingetUSoft.slnx` |
+| Ejecutar | `dotnet run --project src/WingetUSoft/WingetUSoft.csproj` |
+| Pruebas | `dotnet test tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj` |
 | Generar instalador | `installer\build-installer.ps1` (añade `-CertThumbprint <huella>` para firmar) |
 | Crear certificado de prueba | `installer\new-selfsigned-cert.ps1` |
 | Publicar versión | `.\release.ps1 -Version X.Y.Z` (usa `-DryRun` para simular) |
@@ -516,7 +519,7 @@ build 0/0.
 
 ### 2026-07-08 — feat: changelog en actualizaciones + diálogo "Novedades" (Tier A #2)
 
-`Core/GitHubUpdateService.cs` refactorizado: la lógica de fetch+parse de un release se extrajo a
+`Services/GitHubUpdateService.cs` refactorizado: la lógica de fetch+parse de un release se extrajo a
 `FetchReleaseAsync(Uri, ct)` privado, compartida por `CheckForUpdateAsync` (gatea por versión),
 `GetLatestReleaseAsync` (sin gate, para el fallback de "novedades") y el nuevo
 `GetReleaseByTagAsync(tag, ct)` (endpoint `releases/tags/{tag}`, para las notas de la versión

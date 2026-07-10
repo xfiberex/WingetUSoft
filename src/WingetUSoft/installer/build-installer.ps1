@@ -17,7 +17,7 @@
     (o -CertFile), se firma el ejecutable publicado y el instalador con Authenticode.
 
     IMPORTANTE: WingetUSoft exige que el instalador descargado esté firmado con Authenticode
-    (Core/GitHubUpdateService.VerifyAuthenticodeSignature) — sin firma, la auto-actualización
+    (Services/GitHubUpdateService.VerifyAuthenticodeSignature) — sin firma, la auto-actualización
     de la app rechaza el instalador y lo borra. Publicar sin firmar rompe la actualización
     automática para quien ya tenga una versión anterior instalada (la descarga manual desde
     Releases sigue funcionando).
@@ -108,7 +108,7 @@ if ($signEnabled) {
 }
 
 $installerDir = $PSScriptRoot
-$projectDir   = Split-Path $installerDir -Parent          # raíz del repo (WingetUSoft.csproj está aquí)
+$projectDir   = Split-Path $installerDir -Parent          # carpeta del proyecto (WingetUSoft.csproj está aquí)
 $csproj       = Join-Path $projectDir "WingetUSoft.csproj"
 
 if (-not (Test-Path $csproj)) { throw "No se encontró el proyecto: $csproj" }

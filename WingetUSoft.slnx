@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="WingetUSoft.csproj" />
-  <Project Path="WingetUSoft.Tests/WingetUSoft.Tests.csproj" />
+  <Project Path="src/WingetUSoft/WingetUSoft.csproj" />
+  <Project Path="tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj" />
 </Solution>

@@ -38,12 +38,6 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="WingetUSoft.Tests\**" />
-    <None Remove="WingetUSoft.Tests\**" />
-    <None Include="WingetUSoft.Tests\WingetUSoft.Tests.csproj" />
-  </ItemGroup>
-
   <!-- Copia .xbf y .pri del proyecto al output de publish (workaround WinUI 3 unpackaged) -->
   <Target Name="CopyXamlResourcesToPublish" AfterTargets="Publish">
     <PropertyGroup>
