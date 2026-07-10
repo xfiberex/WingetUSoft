@@ -7,9 +7,10 @@
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
 - **Última actualización de este documento:** 2026-07-10
-- **Versión actual:** **1.3.0** — primera versión real publicada con `release.ps1`
-  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.3.0), tag `v1.3.0`,
-  **sin firmar** — ver Pendientes §6).
+- **Versión actual:** **1.4.0** — Tier B (#1–#6 + #8): UI adaptable por DPI/WorkArea, tamaño mínimo,
+  barra de acciones responsiva (WrapPanel), accesibilidad y proyecto de UI tests con FlaUI
+  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.4.0), tag `v1.4.0`,
+  **sin firmar** — ver Pendientes §6). Versión previa: 1.3.0 (cierre de Tier A).
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
   implementadas y verificadas. **Tier B — #1–#6 y #8 completados** (2026-07-10): mejoras
@@ -307,6 +308,23 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-10 — release: v1.4.0 — Tier B (#1–#6 + #8)
+
+Ejecutado `release.ps1 -Version 1.4.0` (bump `1.3.0` → `1.4.0`, MINOR por semver: Tier B añadió
+funcionalidad retrocompatible —UI adaptable, tamaño mínimo, wrap responsivo, accesibilidad— más el
+proyecto de UI tests con FlaUI; ningún cambio de ruptura). Antes de correrlo se hizo `git add`
+explícito de los archivos nuevos sin rastrear (`Core/WindowSizing.cs`, `UI/WindowSizer.cs`,
+`UI/WrapPanel.cs`, `tests/WingetUSoft.Tests/WindowSizingTests.cs` y todo `tests/WingetUSoft.UiTests/`)
+porque `release.ps1` solo hace `git add -u` (rastreados) — mismo cuidado que documentó el release de
+1.3.0.
+
+Resultado: 89/89 tests unitarios en verde (el release **no** corre los 14 UI tests de FlaUI, que
+necesitan sesión de escritorio interactiva), instalador `WingetUSoft-Setup-1.4.0.exe` (34.1 MB)
+compilado **sin firmar** (no hay certificado de código real disponible — ver Pendientes §6; la
+auto-actualización desde 1.3.0 rechazará este instalador, la descarga manual sí funciona), commit
+`c9acf6c` ("release: v1.4.0", 28 archivos), tag `v1.4.0` y push a `origin/main`, GitHub Release
+publicado: https://github.com/xfiberex/WingetUSoft/releases/tag/v1.4.0.
 
 ### 2026-07-10 — test: Tier B #8 — proyecto de UI tests con FlaUI (`WingetUSoft.UiTests`)
 
