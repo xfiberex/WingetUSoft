@@ -78,7 +78,7 @@ código — ver detalle por ítem — y varios puntos son, de nuevo, paridad con
 | 4 | **Columnas del DataGrid con ancho fijo en píxeles** — cabecera + filas en un `ScrollViewer` horizontal (`MinWidth`+`ViewportWidth`): rellena si cabe, hace scroll si no | `UI/MainWindow.xaml:329-434` | ✅ Implementado y verificado |
 | 5 | **Revisión de longitud de texto por idioma** (FR/IT suelen ser 20–30% más largos que ES): `TextTrimming`+tooltip defensivos en cabeceras/labels de ancho fijo | Main/History/Uninstall/Cleanup (`UI/`) | ✅ Implementado y verificado |
 | 6 | **Accesibilidad**: `AutomationProperties.Name` localizado en el icono "Excluido" del DataGrid; auditadas las demás ventanas/diálogos (sin más controles solo-icono sin etiqueta) | `UI/MainWindow.xaml:417-423` + `PackageViewModel.ExcludedLabel` | ✅ Implementado y verificado |
-| 7 | **Snap layouts de Windows 11** — verificar que las ventanas quepan en snap de media/cuarto de pantalla en portátiles de resolución baja (consecuencia directa de #1/#2, verificación manual) | — | ⏳ Pendiente |
+| 7 | **Snap layouts de Windows 11** — la ventana encaja en las celdas de snap de media y cuarto de pantalla, y el contenido que no cabe es alcanzable (página desplazable) en vez de recortarse fuera de la ventana | `Core/WindowSizing.cs` (clamp del mínimo a media WorkArea) + `UI/MainWindow.xaml` (`ContentScroller`) | ✅ Implementado y verificado |
 | 8 | **Infraestructura de UI tests con FlaUI** — nuevo proyecto `WingetUSoft.UiTests` (paridad con `FormatDiskPro.UiTests`); smoke + regresión de layout sobre la app real, cubre #1–#6 | `tests/WingetUSoft.UiTests/` (`FlaUI.Core` + `FlaUI.UIA3`, xUnit) | ✅ Implementado y verificado (14/14) |
 
 **Sobre #8 (UI tests con FlaUI):** nuevo proyecto `tests/WingetUSoft.UiTests/` que replica el
@@ -108,7 +108,28 @@ Nuevos `Core/WindowSizing.cs` (matemática pura, testeada), `UI/WindowSizer.cs` 
 `UI/WrapPanel.cs` (panel de envoltura nativo, cero dependencias) y `tests/WingetUSoft.UiTests/`
 (`AppFixture`/`SettingsBackup`/`DialogHelper` portados de FormatDiskPro, **sin elevación** porque la app
 corre asInvoker). Decisiones con el usuario: WrapPanel nativo propio (no CommunityToolkit ni CommandBar),
-las 5 ventanas siguen redimensionables con mínimo acotado a la WorkArea. **Único pendiente de la tier:**
-#7 (snap layouts de Windows 11, verificación manual del usuario en resolución baja).
+las 5 ventanas siguen redimensionables con mínimo acotado a la WorkArea.
+
+→ **Tier B COMPLETADO (2026-07-11) con el cierre de #7 (snap layouts).** El ítem no se quedó en
+verificación manual: al automatizarlo aparecieron **dos bugs reales**, ambos arreglados y con test.
+
+1. **El mínimo de la ventana bloqueaba el snap.** El mínimo de diseño (900×600 DIP) superaba la celda
+   de snap en casos normales — en un 1920×1080 la celda de cuarto mide 960×520, y el mínimo de alto
+   (600) ya no cabía —, así que Windows no podía encoger la ventana lo suficiente.
+   `WindowSizing.ScaleMinSize` ahora acota además **cada eje a la mitad del área de trabajo**, que es
+   exactamente el tamaño de una celda de snap. No hace falta ningún número fijo: en monitores grandes
+   el mínimo cómodo se conserva intacto y solo se relaja en pantallas pequeñas.
+2. **La tabla desaparecía de la pantalla.** Con la ventana ya encogida a un cuarto, las tres tarjetas
+   superiores (cabecera, acciones, filtros) consumían los ~510 px de alto **enteros**: el DataGrid, el
+   log y la barra de estado quedaban recortados fuera de la ventana con `BoundingRectangle` 0×0 y sin
+   barra de scroll con la que llegar a ellos. Ahora todo el contenido de `MainWindow.xaml` vive en un
+   `ContentScroller` con `MinHeight` (no `Height`) atado al `ViewportHeight`: si sobra alto el Grid se
+   estira hasta el viewport y la fila `*` rellena como siempre **sin barra** (media pantalla se ve
+   idéntica a una ventana normal); si falta, el Grid conserva su alto natural y la página se desplaza.
+
+**Verificado:** build 0/0, **93/93 unitarios** (89 + 4 de `ScaleMinSize` para las celdas de snap) y
+**16/16 UI tests** (14 + 2 de `SnapLayoutTests`, estables en 3 corridas), que redimensionan la app real
+a las celdas de media y cuarto de pantalla y comprueban que la ventana encaja, que los 7 botones siguen
+visibles y que la tabla es **alcanzable desplazando** la página. Más captura de ambas celdas.
 
 Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md).

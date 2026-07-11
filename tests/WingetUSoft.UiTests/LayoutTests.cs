@@ -40,32 +40,6 @@ public sealed class LayoutTests(AppFixture fixture)
         "btnActualizarTodo", "btnCancelar", "btnOpciones", "btnAyuda"
     ];
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-
-    private const uint MONITOR_DEFAULTTONEAREST = 2;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MONITORINFO
-    {
-        public uint cbSize;
-        public RECT rcMonitor;
-        public RECT rcWork;
-        public uint dwFlags;
-    }
-
     /// <summary>
     /// Tier B #1: la ventana nunca debería posicionarse ni dimensionarse fuera del área de trabajo del
     /// monitor en el que aparece (el bug original de DPI/WorkArea).
@@ -74,25 +48,25 @@ public sealed class LayoutTests(AppFixture fixture)
     public void MainWindow_FitsWithinMonitorWorkArea()
     {
         var bounds = fixture.MainWindow.BoundingRectangle;
-        var rect = new RECT { Left = bounds.Left, Top = bounds.Top, Right = bounds.Right, Bottom = bounds.Bottom };
-
-        var hMonitor = MonitorFromRect(ref rect, MONITOR_DEFAULTTONEAREST);
-        Assert.NotEqual(IntPtr.Zero, hMonitor);
-
-        var info = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
-        Assert.True(GetMonitorInfo(hMonitor, ref info), "GetMonitorInfo falló al consultar el área de trabajo del monitor.");
+        var work = MonitorInfoHelper.GetWorkArea(new MonitorInfoHelper.RECT
+        {
+            Left = bounds.Left,
+            Top = bounds.Top,
+            Right = bounds.Right,
+            Bottom = bounds.Bottom
+        });
 
         // Pequeño margen: sombra de ventana/redondeo de algunas composiciones de escritorio pueden
         // reportar unos pocos px de más sin que la ventana esté realmente fuera de pantalla.
         const int tolerance = 4;
-        Assert.True(bounds.Left >= info.rcWork.Left - tolerance,
-            $"MainWindow.Left={bounds.Left} está a la izquierda de WorkArea.Left={info.rcWork.Left}.");
-        Assert.True(bounds.Top >= info.rcWork.Top - tolerance,
-            $"MainWindow.Top={bounds.Top} está por encima de WorkArea.Top={info.rcWork.Top}.");
-        Assert.True(bounds.Right <= info.rcWork.Right + tolerance,
-            $"MainWindow.Right={bounds.Right} se sale de WorkArea.Right={info.rcWork.Right}.");
-        Assert.True(bounds.Bottom <= info.rcWork.Bottom + tolerance,
-            $"MainWindow.Bottom={bounds.Bottom} se sale de WorkArea.Bottom={info.rcWork.Bottom}.");
+        Assert.True(bounds.Left >= work.Left - tolerance,
+            $"MainWindow.Left={bounds.Left} está a la izquierda de WorkArea.Left={work.Left}.");
+        Assert.True(bounds.Top >= work.Top - tolerance,
+            $"MainWindow.Top={bounds.Top} está por encima de WorkArea.Top={work.Top}.");
+        Assert.True(bounds.Right <= work.Right + tolerance,
+            $"MainWindow.Right={bounds.Right} se sale de WorkArea.Right={work.Right}.");
+        Assert.True(bounds.Bottom <= work.Bottom + tolerance,
+            $"MainWindow.Bottom={bounds.Bottom} se sale de WorkArea.Bottom={work.Bottom}.");
     }
 
     /// <summary>

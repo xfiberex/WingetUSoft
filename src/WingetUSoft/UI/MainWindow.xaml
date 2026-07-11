@@ -26,495 +26,511 @@
         </Grid>
 
         <!-- Main Content -->
-        <Grid Grid.Row="1" Padding="16">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <!-- Header Card -->
-            <Border Grid.Row="0"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="20,16"
-                    Margin="0,0,0,12">
-                <StackPanel Spacing="4">
-                    <TextBlock x:Name="txtHeaderTitle"
-                               Text="Actualiza tus programas con winget"
-                               Style="{StaticResource TitleTextBlockStyle}" />
-                    <TextBlock x:Name="txtSubtitulo"
-                               Text="Consulta, filtra y actualiza paquetes desde una sola vista."
-                               Style="{StaticResource BodyTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock x:Name="txtDetalleEstado"
-                               Text="Selecciona un programa para ver sus detalles antes de actualizar."
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="txtShortcuts"
-                               Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                    <InfoBar x:Name="infoBarUpdate"
-                             IsOpen="False"
-                             Severity="Informational"
-                             IsClosable="True"
-                             Margin="0,4,0,0">
-                        <InfoBar.Content>
-                            <ProgressBar x:Name="pbUpdate"
-                                         Visibility="Collapsed"
-                                         Minimum="0" Maximum="1"
-                                         IsIndeterminate="False"
-                                         Margin="0,4,0,4" />
-                        </InfoBar.Content>
-                        <InfoBar.ActionButton>
-                            <Button x:Name="btnInstalarUpdate"
-                                    Content="Instalar ahora"
-                                    Click="LnkDescargarUpdate_Click" />
-                        </InfoBar.ActionButton>
-                    </InfoBar>
-                </StackPanel>
-            </Border>
-
-            <!-- Actions Bar -->
-            <Border Grid.Row="1"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,12"
-                    Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
-                               Style="{StaticResource BodyStrongTextBlockStyle}"
-                               Margin="0,0,0,10" />
-                    <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                        <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
-                                Content="Consultar actualizaciones"
-                                Click="BtnConsultar_Click"
-                                MinWidth="180" Height="36" />
-                        <Button x:Name="btnConsultarDesconocidas"
-                                Content="Consultar con desconocidas"
-                                Click="BtnConsultarDesconocidas_Click"
-                                MinWidth="180" Height="36" />
-                        <Button x:Name="btnActualizarSeleccionados"
-                                Content="Actualizar seleccionados"
-                                Click="BtnActualizarSeleccionados_Click"
-                                MinWidth="180" Height="36" />
-                        <Button x:Name="btnActualizarTodo"
-                                Content="Actualizar todo"
-                                Click="BtnActualizarTodo_Click"
-                                MinWidth="140" Height="36" />
-                        <Button x:Name="btnCancelar"
-                                Content="Cancelar"
-                                Click="BtnCancelar_Click"
-                                IsEnabled="False"
-                                MinWidth="120" Height="36">
-                            <Button.Resources>
-                                <ResourceDictionary>
-                                    <ResourceDictionary.ThemeDictionaries>
-                                        <ResourceDictionary x:Key="Light">
-                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFBA4636" />
-                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
-                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFD05040" />
-                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
-                                        </ResourceDictionary>
-                                        <ResourceDictionary x:Key="Dark">
-                                            <SolidColorBrush x:Key="ButtonBackground" Color="#FFD55C4C" />
-                                            <SolidColorBrush x:Key="ButtonForeground" Color="White" />
-                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFE06858" />
-                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
-                                        </ResourceDictionary>
-                                    </ResourceDictionary.ThemeDictionaries>
-                                </ResourceDictionary>
-                            </Button.Resources>
-                        </Button>
-
-                        <!-- Menu options -->
-                        <DropDownButton x:Name="btnOpciones" Content="Opciones" Height="36" MinWidth="100">
-                            <DropDownButton.Flyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutSubItem x:Name="menuModoActualizacion" Text="Modo de actualización">
-                                        <ToggleMenuFlyoutItem x:Name="menuSilenciosa" Text="Silenciosa"
-                                                              IsChecked="True" Click="MenuSilenciosa_Click" />
-                                        <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
-                                                              Click="MenuInteractiva_Click" />
-                                    </MenuFlyoutSubItem>
-                                    <MenuFlyoutSubItem x:Name="menuTema" Text="Tema">
-                                        <RadioMenuFlyoutItem x:Name="menuTemaSistema" Text="Sistema (automático)"
-                                                             GroupName="Tema" IsChecked="True" Click="MenuTemaSistema_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuTemaClaro" Text="Claro"
-                                                             GroupName="Tema" Click="MenuTemaClaro_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuTemaOscuro" Text="Oscuro"
-                                                             GroupName="Tema" Click="MenuTemaOscuro_Click" />
-                                    </MenuFlyoutSubItem>
-                                    <MenuFlyoutSubItem x:Name="menuIdioma" Text="Idioma">
-                                        <RadioMenuFlyoutItem x:Name="menuIdiomaEs" Text="Español"
-                                                             GroupName="Idioma" IsChecked="True" Click="MenuIdiomaEs_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuIdiomaEn" Text="Inglés"
-                                                             GroupName="Idioma" Click="MenuIdiomaEn_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuIdiomaPt" Text="Portugués"
-                                                             GroupName="Idioma" Click="MenuIdiomaPt_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuIdiomaFr" Text="Francés"
-                                                             GroupName="Idioma" Click="MenuIdiomaFr_Click" />
-                                        <RadioMenuFlyoutItem x:Name="menuIdiomaIt" Text="Italiano"
-                                                             GroupName="Idioma" Click="MenuIdiomaIt_Click" />
-                                    </MenuFlyoutSubItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Name="menuExportar" Text="Exportar lista..." Click="MenuExportar_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xEDE1;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Name="menuConfiguracion" Text="Configuración..." Click="MenuConfiguracion_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE713;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Name="menuVerHistorial" Text="Ver historial" Click="MenuHistorial_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE81C;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Name="menuDesinstalar" Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE74D;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                </MenuFlyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-
-                        <!-- Help menu -->
-                        <DropDownButton x:Name="btnAyuda" Content="Ayuda" Height="36" MinWidth="90">
-                            <DropDownButton.Flyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutItem x:Name="menuBuscarActualizacion"
-                                                    Text="Buscar actualización de WingetUSoft..."
-                                                    Click="MenuBuscarActualizacion_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE777;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutItem x:Name="menuWhatsNew" Text="Novedades..." Click="MenuWhatsNew_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE789;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Name="menuAcercaDe" Text="Acerca de..." Click="MenuAcercaDe_Click">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE946;" />
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                </MenuFlyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-                    </local:WrapPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Source Filter + Search + Package Info -->
-            <Border Grid.Row="2"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,8"
-                    Margin="0,0,0,8">
-                <StackPanel Spacing="6">
-                    <!-- Filters row -->
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                        <TextBlock x:Name="txtFuenteLabel" Text="Fuente:" VerticalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <ComboBox x:Name="cmbFuente" Width="200"
-                                  SelectionChanged="CmbFuente_SelectionChanged">
-                            <ComboBoxItem x:Name="cmbFuenteAllItem" Content="Todas las fuentes" IsSelected="True" />
-                        </ComboBox>
-                        <TextBlock x:Name="txtExcluidosLabel" Text="Excluidos:" VerticalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130">
-                            <DropDownButton.Flyout>
-                                <MenuFlyout>
-                                    <RadioMenuFlyoutItem x:Name="menuFiltroTodos" Text="Todos" IsChecked="True"
-                                                         GroupName="FiltroExcluidos" Click="MenuFiltroTodos_Click" />
-                                    <RadioMenuFlyoutItem x:Name="menuFiltroNoExcluidos" Text="No excluidos"
-                                                         GroupName="FiltroExcluidos" Click="MenuFiltroNoExcluidos_Click" />
-                                    <RadioMenuFlyoutItem x:Name="menuFiltroSoloExcluidos" Text="Solo excluidos"
-                                                         GroupName="FiltroExcluidos" Click="MenuFiltroSoloExcluidos_Click" />
-                                </MenuFlyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
-                        <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBox x:Name="txtBuscar"
-                                 PlaceholderText="Nombre o Id..."
-                                 Width="200" Height="32"
-                                 VerticalAlignment="Center"
-                                 TextChanged="TxtBuscar_TextChanged" />
-                    </StackPanel>
-                    <!-- Package info panel (shown when a package is selected) -->
-                    <Border x:Name="panelPackageInfo"
-                            Visibility="Collapsed"
-                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                            CornerRadius="4"
-                            Padding="10,6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="txtInfoDescripcion"
-                                       Grid.Column="0"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       TextTrimming="CharacterEllipsis"
-                                       TextWrapping="NoWrap"
-                                       VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <TextBlock x:Name="txtInfoTamano"
-                                           Style="{StaticResource CaptionTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           VerticalAlignment="Center" />
-                                <HyperlinkButton x:Name="lnkHomepage"
-                                                 Content="Página web"
-                                                 Padding="4,0"
-                                                 FontSize="12"
-                                                 Visibility="Collapsed" />
-                                <HyperlinkButton x:Name="lnkNotasVersion"
-                                                 Content="Notas de versión"
-                                                 Padding="4,0"
-                                                 FontSize="12"
-                                                 Visibility="Collapsed" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </StackPanel>
-            </Border>
-
-            <!-- Main Split: DataGrid + Log -->
-            <Grid Grid.Row="3" Margin="0,0,0,8">
+        <!-- Todo el contenido vive dentro de un ScrollViewer vertical: en ventanas muy bajas (snap
+             a cuarto de pantalla de Windows 11) las tarjetas superiores no dejaban ni un pixel a la
+             tabla, que quedaba recortada entera fuera de la ventana. MinHeight (no Height) atado al
+             viewport da los dos comportamientos con una sola regla: si sobra alto, el Grid se estira
+             hasta el viewport y la fila * rellena como siempre, sin barra; si falta, el Grid conserva
+             su alto natural (mayor que el viewport) y el ScrollViewer desplaza la pagina. -->
+        <ScrollViewer Grid.Row="1"
+                      x:Name="ContentScroller"
+                      VerticalScrollBarVisibility="Auto"
+                      VerticalScrollMode="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      HorizontalScrollMode="Disabled">
+            <Grid Padding="16"
+                  MinHeight="{Binding ViewportHeight, ElementName=ContentScroller}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="2*" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" MinHeight="120" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <!-- Piso de la zona tabla+log: por debajo de esto el ScrollViewer desplaza la
+                         página en vez de seguir encogiendo la tabla hasta hacerla inservible. -->
+                    <RowDefinition Height="*" MinHeight="300" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Updates DataGrid Card -->
+                <!-- Header Card -->
                 <Border Grid.Row="0"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
-                        Padding="12">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="txtUpdatesHeader"
-                                   Grid.Row="0"
-                                   Text="Actualizaciones disponibles"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="4,0,0,8" />
-
-                        <!-- Cabecera + filas comparten scroll horizontal (misma anchura mínima) para
-                             que sigan alineadas cuando la ventana es más angosta que las columnas
-                             fijas del DataGrid; el ListView conserva su propio scroll vertical. -->
-                        <ScrollViewer Grid.Row="1"
-                                      x:Name="DataGridScroller"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      HorizontalScrollMode="Auto"
-                                      VerticalScrollBarVisibility="Disabled"
-                                      VerticalScrollMode="Disabled">
-                            <!-- El Grid toma el ancho del viewport del ScrollViewer (piso MinWidth=860)
-                                 para que la columna "Nombre" (*) rellene cuando la ventana es ancha, y
-                                 solo aparezca scroll horizontal por debajo de 860px. -->
-                            <Grid MinWidth="860"
-                                  Width="{Binding ViewportWidth, ElementName=DataGridScroller}">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-
-                                <!-- Column Headers -->
-                                <Grid Grid.Row="0" Height="38"
-                                      Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                      CornerRadius="4,4,0,0"
-                                      Padding="8,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="190" />
-                                        <ColumnDefinition Width="100" />
-                                        <ColumnDefinition Width="100" />
-                                        <ColumnDefinition Width="80" />
-                                        <ColumnDefinition Width="75" />
-                                        <ColumnDefinition Width="55" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
-                                    <!-- Sortable header cells -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
-                                        <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colNombre}" />
-                                        <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
-                                        <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colId}" />
-                                        <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
-                                        <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersion}" />
-                                        <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
-                                        <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colDisponible}" />
-                                        <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
-                                        <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colTam}" />
-                                        <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
-                                        <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colFuente}" />
-                                        <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
-                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                    </StackPanel>
-                                    <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
-                                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
-                                </Grid>
-
-                                <ListView x:Name="lvPackages"
-                                          Grid.Row="1"
-                                          SelectionMode="Single"
-                                          SelectionChanged="LvPackages_SelectionChanged"
-                                          RightTapped="LvPackages_RightTapped">
-                                    <ListView.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Height="36" Padding="8,0"
-                                                  Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="54" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="190" />
-                                                    <ColumnDefinition Width="100" />
-                                                    <ColumnDefinition Width="100" />
-                                                    <ColumnDefinition Width="80" />
-                                                    <ColumnDefinition Width="75" />
-                                                    <ColumnDefinition Width="55" />
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                          VerticalAlignment="Center" MinWidth="0" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                <FontIcon Grid.Column="7"
-                                                          Glyph="&#xE8D8;"
-                                                          FontSize="14"
-                                                          VerticalAlignment="Center"
-                                                          Margin="8,0,0,0"
-                                                          Foreground="#FFBA4636"
-                                                          AutomationProperties.Name="{Binding ExcludedLabel}"
-                                                          ToolTipService.ToolTip="{Binding ExcludedLabel}"
-                                                          Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListView.ItemTemplate>
-                                </ListView>
-                            </Grid>
-                        </ScrollViewer>
-                    </Grid>
+                        Padding="20,16"
+                        Margin="0,0,0,12">
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="txtHeaderTitle"
+                                   Text="Actualiza tus programas con winget"
+                                   Style="{StaticResource TitleTextBlockStyle}" />
+                        <TextBlock x:Name="txtSubtitulo"
+                                   Text="Consulta, filtra y actualiza paquetes desde una sola vista."
+                                   Style="{StaticResource BodyTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="txtDetalleEstado"
+                                   Text="Selecciona un programa para ver sus detalles antes de actualizar."
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="txtShortcuts"
+                                   Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                        <InfoBar x:Name="infoBarUpdate"
+                                 IsOpen="False"
+                                 Severity="Informational"
+                                 IsClosable="True"
+                                 Margin="0,4,0,0">
+                            <InfoBar.Content>
+                                <ProgressBar x:Name="pbUpdate"
+                                             Visibility="Collapsed"
+                                             Minimum="0" Maximum="1"
+                                             IsIndeterminate="False"
+                                             Margin="0,4,0,4" />
+                            </InfoBar.Content>
+                            <InfoBar.ActionButton>
+                                <Button x:Name="btnInstalarUpdate"
+                                        Content="Instalar ahora"
+                                        Click="LnkDescargarUpdate_Click" />
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </StackPanel>
                 </Border>
 
-                <!-- Splitter -->
-                <Border Grid.Row="1" Height="6" Background="Transparent" />
+                <!-- Actions Bar -->
+                <Border Grid.Row="1"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12"
+                        Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                   Margin="0,0,0,10" />
+                        <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
+                            <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
+                                    Content="Consultar actualizaciones"
+                                    Click="BtnConsultar_Click"
+                                    MinWidth="180" Height="36" />
+                            <Button x:Name="btnConsultarDesconocidas"
+                                    Content="Consultar con desconocidas"
+                                    Click="BtnConsultarDesconocidas_Click"
+                                    MinWidth="180" Height="36" />
+                            <Button x:Name="btnActualizarSeleccionados"
+                                    Content="Actualizar seleccionados"
+                                    Click="BtnActualizarSeleccionados_Click"
+                                    MinWidth="180" Height="36" />
+                            <Button x:Name="btnActualizarTodo"
+                                    Content="Actualizar todo"
+                                    Click="BtnActualizarTodo_Click"
+                                    MinWidth="140" Height="36" />
+                            <Button x:Name="btnCancelar"
+                                    Content="Cancelar"
+                                    Click="BtnCancelar_Click"
+                                    IsEnabled="False"
+                                    MinWidth="120" Height="36">
+                                <Button.Resources>
+                                    <ResourceDictionary>
+                                        <ResourceDictionary.ThemeDictionaries>
+                                            <ResourceDictionary x:Key="Light">
+                                                <SolidColorBrush x:Key="ButtonBackground" Color="#FFBA4636" />
+                                                <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFD05040" />
+                                                <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
+                                            </ResourceDictionary>
+                                            <ResourceDictionary x:Key="Dark">
+                                                <SolidColorBrush x:Key="ButtonBackground" Color="#FFD55C4C" />
+                                                <SolidColorBrush x:Key="ButtonForeground" Color="White" />
+                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFE06858" />
+                                                <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
+                                            </ResourceDictionary>
+                                        </ResourceDictionary.ThemeDictionaries>
+                                    </ResourceDictionary>
+                                </Button.Resources>
+                            </Button>
 
-                <!-- Log Card -->
+                            <!-- Menu options -->
+                            <DropDownButton x:Name="btnOpciones" Content="Opciones" Height="36" MinWidth="100">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutSubItem x:Name="menuModoActualizacion" Text="Modo de actualización">
+                                            <ToggleMenuFlyoutItem x:Name="menuSilenciosa" Text="Silenciosa"
+                                                                  IsChecked="True" Click="MenuSilenciosa_Click" />
+                                            <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
+                                                                  Click="MenuInteractiva_Click" />
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSubItem x:Name="menuTema" Text="Tema">
+                                            <RadioMenuFlyoutItem x:Name="menuTemaSistema" Text="Sistema (automático)"
+                                                                 GroupName="Tema" IsChecked="True" Click="MenuTemaSistema_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuTemaClaro" Text="Claro"
+                                                                 GroupName="Tema" Click="MenuTemaClaro_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuTemaOscuro" Text="Oscuro"
+                                                                 GroupName="Tema" Click="MenuTemaOscuro_Click" />
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSubItem x:Name="menuIdioma" Text="Idioma">
+                                            <RadioMenuFlyoutItem x:Name="menuIdiomaEs" Text="Español"
+                                                                 GroupName="Idioma" IsChecked="True" Click="MenuIdiomaEs_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuIdiomaEn" Text="Inglés"
+                                                                 GroupName="Idioma" Click="MenuIdiomaEn_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuIdiomaPt" Text="Portugués"
+                                                                 GroupName="Idioma" Click="MenuIdiomaPt_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuIdiomaFr" Text="Francés"
+                                                                 GroupName="Idioma" Click="MenuIdiomaFr_Click" />
+                                            <RadioMenuFlyoutItem x:Name="menuIdiomaIt" Text="Italiano"
+                                                                 GroupName="Idioma" Click="MenuIdiomaIt_Click" />
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Name="menuExportar" Text="Exportar lista..." Click="MenuExportar_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xEDE1;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Name="menuConfiguracion" Text="Configuración..." Click="MenuConfiguracion_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE713;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Name="menuVerHistorial" Text="Ver historial" Click="MenuHistorial_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE81C;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Name="menuDesinstalar" Text="Desinstalar programas..." Click="MenuDesinstalar_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE74D;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+
+                            <!-- Help menu -->
+                            <DropDownButton x:Name="btnAyuda" Content="Ayuda" Height="36" MinWidth="90">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem x:Name="menuBuscarActualizacion"
+                                                        Text="Buscar actualización de WingetUSoft..."
+                                                        Click="MenuBuscarActualizacion_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE777;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Name="menuWhatsNew" Text="Novedades..." Click="MenuWhatsNew_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE789;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Name="menuAcercaDe" Text="Acerca de..." Click="MenuAcercaDe_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE946;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                        </local:WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Source Filter + Search + Package Info -->
                 <Border Grid.Row="2"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
-                        Padding="12">
+                        Padding="16,8"
+                        Margin="0,0,0,8">
+                    <StackPanel Spacing="6">
+                        <!-- Filters row -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtFuenteLabel" Text="Fuente:" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <ComboBox x:Name="cmbFuente" Width="200"
+                                      SelectionChanged="CmbFuente_SelectionChanged">
+                                <ComboBoxItem x:Name="cmbFuenteAllItem" Content="Todas las fuentes" IsSelected="True" />
+                            </ComboBox>
+                            <TextBlock x:Name="txtExcluidosLabel" Text="Excluidos:" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130">
+                                <DropDownButton.Flyout>
+                                    <MenuFlyout>
+                                        <RadioMenuFlyoutItem x:Name="menuFiltroTodos" Text="Todos" IsChecked="True"
+                                                             GroupName="FiltroExcluidos" Click="MenuFiltroTodos_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuFiltroNoExcluidos" Text="No excluidos"
+                                                             GroupName="FiltroExcluidos" Click="MenuFiltroNoExcluidos_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuFiltroSoloExcluidos" Text="Solo excluidos"
+                                                             GroupName="FiltroExcluidos" Click="MenuFiltroSoloExcluidos_Click" />
+                                    </MenuFlyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                            <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBox x:Name="txtBuscar"
+                                     PlaceholderText="Nombre o Id..."
+                                     Width="200" Height="32"
+                                     VerticalAlignment="Center"
+                                     TextChanged="TxtBuscar_TextChanged" />
+                        </StackPanel>
+                        <!-- Package info panel (shown when a package is selected) -->
+                        <Border x:Name="panelPackageInfo"
+                                Visibility="Collapsed"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                CornerRadius="4"
+                                Padding="10,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="txtInfoDescripcion"
+                                           Grid.Column="0"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           TextTrimming="CharacterEllipsis"
+                                           TextWrapping="NoWrap"
+                                           VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock x:Name="txtInfoTamano"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               VerticalAlignment="Center" />
+                                    <HyperlinkButton x:Name="lnkHomepage"
+                                                     Content="Página web"
+                                                     Padding="4,0"
+                                                     FontSize="12"
+                                                     Visibility="Collapsed" />
+                                    <HyperlinkButton x:Name="lnkNotasVersion"
+                                                     Content="Notas de versión"
+                                                     Padding="4,0"
+                                                     FontSize="12"
+                                                     Visibility="Collapsed" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- Main Split: DataGrid + Log -->
+                <Grid Grid.Row="3" Margin="0,0,0,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*" MinHeight="160" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" MinHeight="120" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Updates DataGrid Card -->
+                    <Border Grid.Row="0"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock x:Name="txtUpdatesHeader"
+                                       Grid.Row="0"
+                                       Text="Actualizaciones disponibles"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="4,0,0,8" />
+
+                            <!-- Cabecera + filas comparten scroll horizontal (misma anchura mínima) para
+                                 que sigan alineadas cuando la ventana es más angosta que las columnas
+                                 fijas del DataGrid; el ListView conserva su propio scroll vertical. -->
+                            <ScrollViewer Grid.Row="1"
+                                          x:Name="DataGridScroller"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          HorizontalScrollMode="Auto"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          VerticalScrollMode="Disabled">
+                                <!-- El Grid toma el ancho del viewport del ScrollViewer (piso MinWidth=860)
+                                     para que la columna "Nombre" (*) rellene cuando la ventana es ancha, y
+                                     solo aparezca scroll horizontal por debajo de 860px. -->
+                                <Grid MinWidth="860"
+                                      Width="{Binding ViewportWidth, ElementName=DataGridScroller}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Column Headers -->
+                                    <Grid Grid.Row="0" Height="38"
+                                          Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                          CornerRadius="4,4,0,0"
+                                          Padding="8,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="54" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="190" />
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="100" />
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="75" />
+                                            <ColumnDefinition Width="55" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                                        <!-- Sortable header cells -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
+                                            <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colNombre}" />
+                                            <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
+                                            <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colId}" />
+                                            <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
+                                            <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersion}" />
+                                            <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
+                                            <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colDisponible}" />
+                                            <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
+                                            <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colTam}" />
+                                            <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                    Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
+                                            <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colFuente}" />
+                                            <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
+                                    </Grid>
+
+                                    <ListView x:Name="lvPackages"
+                                              Grid.Row="1"
+                                              SelectionMode="Single"
+                                              SelectionChanged="LvPackages_SelectionChanged"
+                                              RightTapped="LvPackages_RightTapped">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Height="36" Padding="8,0"
+                                                      Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="54" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="190" />
+                                                        <ColumnDefinition Width="100" />
+                                                        <ColumnDefinition Width="100" />
+                                                        <ColumnDefinition Width="80" />
+                                                        <ColumnDefinition Width="75" />
+                                                        <ColumnDefinition Width="55" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              VerticalAlignment="Center" MinWidth="0" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
+                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <FontIcon Grid.Column="7"
+                                                              Glyph="&#xE8D8;"
+                                                              FontSize="14"
+                                                              VerticalAlignment="Center"
+                                                              Margin="8,0,0,0"
+                                                              Foreground="#FFBA4636"
+                                                              AutomationProperties.Name="{Binding ExcludedLabel}"
+                                                              ToolTipService.ToolTip="{Binding ExcludedLabel}"
+                                                              Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </Grid>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- Splitter -->
+                    <Border Grid.Row="1" Height="6" Background="Transparent" />
+
+                    <!-- Log Card -->
+                    <Border Grid.Row="2"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock x:Name="txtLogHeader" Grid.Row="0"
+                                       Text="Actividad y resultados"
+                                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       Margin="4,0,0,8" />
+                            <ScrollViewer Grid.Row="1"
+                                          x:Name="scrollLog"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto">
+                                <RichTextBlock x:Name="rtbLog"
+                                               FontFamily="Consolas"
+                                               FontSize="12"
+                                               IsTextSelectionEnabled="True"
+                                               TextWrapping="NoWrap" />
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Status Bar -->
+                <Border Grid.Row="4"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,10">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="txtLogHeader" Grid.Row="0"
-                                   Text="Actividad y resultados"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="txtEstado"
+                                   Grid.Column="0"
+                                   Text="Listo."
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="4,0,0,8" />
-                        <ScrollViewer Grid.Row="1"
-                                      x:Name="scrollLog"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Auto">
-                            <RichTextBlock x:Name="rtbLog"
-                                           FontFamily="Consolas"
-                                           FontSize="12"
-                                           IsTextSelectionEnabled="True"
-                                           TextWrapping="NoWrap" />
-                        </ScrollViewer>
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <ProgressRing x:Name="progressRing"
+                                      Grid.Column="1"
+                                      IsActive="False"
+                                      Width="20" Height="20"
+                                      Margin="12,0,0,0" />
                     </Grid>
                 </Border>
             </Grid>
-
-            <!-- Status Bar -->
-            <Border Grid.Row="4"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="txtEstado"
-                               Grid.Column="0"
-                               Text="Listo."
-                               Style="{StaticResource BodyStrongTextBlockStyle}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" />
-                    <ProgressRing x:Name="progressRing"
-                                  Grid.Column="1"
-                                  IsActive="False"
-                                  Width="20" Height="20"
-                                  Margin="12,0,0,0" />
-                </Grid>
-            </Border>
-        </Grid>
+        </ScrollViewer>
     </Grid>
 </Window>

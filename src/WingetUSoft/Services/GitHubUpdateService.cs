@@ -1,11 +1,13 @@
 using System.Net.Http.Json;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 
 namespace WingetUSoft;
 
-internal sealed record GitHubReleaseInfo(string TagName, string HtmlUrl, string Version, string DownloadUrl, string Notes);
+internal sealed record GitHubReleaseInfo(
+    string TagName, string HtmlUrl, string Version, string DownloadUrl, string ChecksumUrl, string Notes);
 
 internal static class GitHubUpdateService
 {
@@ -77,7 +79,12 @@ internal static class GitHubUpdateService
             string downloadUrl = release.Assets
                 .FirstOrDefault(a => a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 ?.BrowserDownloadUrl ?? release.HtmlUrl;
-            return new GitHubReleaseInfo(release.TagName, release.HtmlUrl, version, downloadUrl, release.Body);
+            // Publicado junto al instalador por release.ps1 (ver VerifyInstallerAsync).
+            string checksumUrl = release.Assets
+                .FirstOrDefault(a => a.Name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+                ?.BrowserDownloadUrl ?? "";
+            return new GitHubReleaseInfo(
+                release.TagName, release.HtmlUrl, version, downloadUrl, checksumUrl, release.Body);
         }
         catch
         {
@@ -95,6 +102,7 @@ internal static class GitHubUpdateService
 
     public static async Task<string> DownloadInstallerAsync(
         string downloadUrl,
+        string? checksumUrl = null,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -121,13 +129,66 @@ internal static class GitHubUpdateService
                 progress?.Report((double)totalRead / totalBytes.Value);
         }
 
-        if (!VerifyAuthenticodeSignature(tempPath))
+        try
+        {
+            await VerifyInstallerAsync(tempPath, checksumUrl, cancellationToken).ConfigureAwait(false);
+        }
+        catch
         {
             File.Delete(tempPath);
-            throw new InvalidOperationException(L.T("update.unsignedInstaller"));
+            throw;
         }
 
         return tempPath;
+    }
+
+    /// <summary>
+    /// Comprueba que el instalador recién descargado es el que publicó el proyecto, antes de
+    /// ejecutarlo con permisos de administrador.
+    ///
+    /// Se aceptan dos pruebas, en este orden:
+    ///
+    /// 1. <b>Firma Authenticode válida</b> (la más fuerte: la avala una CA en la que confía Windows).
+    ///    Es la vía preferente y la que se usará sola el día que el proyecto tenga un certificado.
+    /// 2. <b>SHA-256 publicado como asset del release</b> (<c>...exe.sha256</c>, lo genera
+    ///    <c>installer/build-installer.ps1</c> y lo sube <c>release.ps1</c>). Hoy los instaladores se
+    ///    publican SIN firmar —no hay certificado—, así que sin este segundo camino la
+    ///    auto-actualización estaría muerta: rechazaría siempre su propio instalador.
+    ///
+    /// Alcance honesto del hash: el instalador y su .sha256 salen del mismo release, así que esto
+    /// detecta corrupción y manipulación en tránsito, pero NO protege frente a un compromiso de la
+    /// cuenta de GitHub (quien pudiera sustituir el .exe podría sustituir también el hash). Es el
+    /// compromiso habitual en proyectos sin certificado; la firma sigue siendo el objetivo.
+    ///
+    /// Sin firma válida y sin .sha256 no se ejecuta nada: el instalador se borra.
+    /// </summary>
+    private static async Task VerifyInstallerAsync(
+        string filePath, string? checksumUrl, CancellationToken cancellationToken)
+    {
+        if (VerifyAuthenticodeSignature(filePath))
+            return;
+
+        if (string.IsNullOrWhiteSpace(checksumUrl))
+            throw new InvalidOperationException(L.T("update.unverifiableInstaller"));
+
+        string published = await DownloadHttp
+            .GetStringAsync(checksumUrl, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Admite tanto "<hash>" a secas como el formato de sha256sum: "<hash> *WingetUSoft-Setup-X.Y.Z.exe".
+        string expected = published.Trim().Split((char[])[' ', '\t', '\r', '\n'], 2)[0];
+        string actual = await ComputeSha256Async(filePath, cancellationToken).ConfigureAwait(false);
+
+        if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(L.T("update.checksumMismatch"));
+    }
+
+    internal static async Task<string> ComputeSha256Async(
+        string filePath, CancellationToken cancellationToken = default)
+    {
+        await using FileStream stream = File.OpenRead(filePath);
+        byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+        return Convert.ToHexString(hash);
     }
 
     // Verifies that the file carries a valid Authenticode signature trusted by Windows.

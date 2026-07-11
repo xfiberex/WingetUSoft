@@ -15,8 +15,14 @@
 #ifndef SourceDir
   #define SourceDir "..\publish"
 #endif
+; Dependencias reales de la app (ver [Code] abajo):
+;  - VC++ Redist: si.
+;  - Windows App Runtime: NO. El proyecto compila con WindowsAppSDKSelfContained=true, asi que el
+;    runtime viaja dentro de la propia carpeta de la app (Microsoft.WindowsAppRuntime.dll,
+;    Microsoft.ui.xaml.dll, ...). No se descarga ni se instala: descargarlo era un ~40 MB inutil en
+;    cada actualizacion.
+;  - .NET: si. La app es framework-dependent (no hay hostfxr.dll junto al .exe).
 #define VCRedistUrl "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-#define WinAppRuntimeUrl "https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe"
 #define DotNet10Url "https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe"
 
 [Setup]
@@ -67,16 +73,14 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\Assets\app.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Flags: nowait shellexec; Check: IsAutoUpdate
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; runasoriginaluser: Setup corre elevado (PrivilegesRequired=admin), asi que sin esto la app se
+; relanzaria heredando el token de administrador. WingetUSoft es asInvoker a proposito (eleva bajo
+; demanda con un worker por named pipe, ver Services/WingetService.cs): debe volver a arrancar como
+; el usuario normal, igual que si la abriera el con su acceso directo.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait shellexec runasoriginaluser; Check: IsAutoUpdate
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent shellexec runasoriginaluser
 
 [Code]
-var
-  VCRedistNeedsInstall: Boolean;
-  WinAppRuntimeNeedsInstall: Boolean;
-  DotNet10NeedsInstall: Boolean;
-  ResultCode: Integer;
-
 function IsAutoUpdate: Boolean;
 begin
   Result := ExpandConstant('{param:autoinstall|0}') = '1';
@@ -91,79 +95,88 @@ begin
     'Installed', Installed) and (Installed = 1);
 end;
 
-function WinAppRuntimeInstalled(): Boolean;
-begin
-  // Windows App Runtime 1.x registra su presencia aquí
-  Result := RegKeyExists(HKLM, 'SOFTWARE\Microsoft\WindowsAppRuntime\1.8') or
-            RegKeyExists(HKLM, 'SOFTWARE\Microsoft\WindowsAppSDK\1.8');
-end;
-
-function DotNet10Installed(): Boolean;
+// La app es framework-dependent: junto al .exe NO hay hostfxr.dll, asi que necesita el runtime
+// compartido. Su WingetUSoft.runtimeconfig.json pide "Microsoft.NETCore.App" 10.0.0 -- NO
+// "Microsoft.WindowsDesktop.App": WinUI 3 no es una app WindowsDesktop (eso es WPF/WinForms).
+//
+// La comprobacion anterior miraba subclaves de
+//   HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App
+// y era doblemente incorrecta: framework equivocado, y esa clave 'sharedfx' no existe (bajo
+// InstalledVersions\x64 solo hay 'sharedhost'). Por eso daba SIEMPRE "falta .NET" en cualquier
+// maquina, y cada actualizacion se bajaba y reinstalaba el runtime que el usuario ya tenia.
+//
+// Se comprueba la carpeta del framework compartido, que es lo que hostfxr resuelve de verdad y lo
+// mismo que lista 'dotnet --list-runtimes'.
+function DotNetRuntimeInstalled(): Boolean;
 var
-  Names: TArrayOfString;
-  I: Integer;
+  FindRec: TFindRec;
 begin
   Result := False;
-  // Comprueba si alguna versión 10.x del Desktop Runtime está instalada
-  if RegGetSubkeyNames(HKLM,
-    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
-    Names) then
+  if FindFirst(ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.NETCore.App\10.*'), FindRec) then
   begin
-    for I := 0 to GetArrayLength(Names) - 1 do
-      if Copy(Names[I], 1, 3) = '10.' then
-      begin
-        Result := True;
-        Exit;
-      end;
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+        begin
+          Result := True;
+          Exit;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
   end;
-end;
-
-procedure InitializeWizard();
-begin
-  VCRedistNeedsInstall := not VCRedistInstalled();
-  WinAppRuntimeNeedsInstall := not WinAppRuntimeInstalled();
-  DotNet10NeedsInstall := not DotNet10Installed();
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   DownloadPage: TDownloadWizardPage;
+  NeedVCRedist, NeedDotNet: Boolean;
+  ResultCode: Integer;
 begin
-  if CurStep = ssInstall then
-  begin
-    if VCRedistNeedsInstall or WinAppRuntimeNeedsInstall or DotNet10NeedsInstall then
-    begin
-      DownloadPage := CreateDownloadPage(
-        'Descargando dependencias',
-        'Descargando componentes requeridos...',
-        nil);
-      DownloadPage.Clear;
+  if CurStep <> ssInstall then
+    Exit;
 
-      if VCRedistNeedsInstall then
-        DownloadPage.Add('{#VCRedistUrl}', 'vc_redist.x64.exe', '');
-      if WinAppRuntimeNeedsInstall then
-        DownloadPage.Add('{#WinAppRuntimeUrl}', 'windowsappruntimeinstall-x64.exe', '');
-      if DotNet10NeedsInstall then
-        DownloadPage.Add('{#DotNet10Url}', 'windowsdesktop-runtime-win-x64.exe', '');
+  // Se evaluan aqui (y no en InitializeWizard) para que el resultado sea el mismo en instalacion
+  // interactiva y en la silenciosa de la auto-actualizacion.
+  NeedVCRedist := not VCRedistInstalled();
+  NeedDotNet := not DotNetRuntimeInstalled();
 
-      DownloadPage.Show;
-      try
-        DownloadPage.Download;
-      finally
-        DownloadPage.Hide;
-      end;
+  // Caso normal en una actualizacion: no falta nada, no se descarga ni se ejecuta nada.
+  if not (NeedVCRedist or NeedDotNet) then
+    Exit;
 
-      if VCRedistNeedsInstall then
-        Exec(ExpandConstant('{tmp}\vc_redist.x64.exe'),
-          '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+  DownloadPage := CreateDownloadPage(
+    'Descargando dependencias',
+    'Descargando componentes requeridos...',
+    nil);
+  DownloadPage.Clear;
 
-      if WinAppRuntimeNeedsInstall then
-        Exec(ExpandConstant('{tmp}\windowsappruntimeinstall-x64.exe'),
-          '--quiet', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+  if NeedVCRedist then
+    DownloadPage.Add('{#VCRedistUrl}', 'vc_redist.x64.exe', '');
+  if NeedDotNet then
+    DownloadPage.Add('{#DotNet10Url}', 'windowsdesktop-runtime-win-x64.exe', '');
 
-      if DotNet10NeedsInstall then
-        Exec(ExpandConstant('{tmp}\windowsdesktop-runtime-win-x64.exe'),
-          '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
-    end;
+  // En la auto-actualizacion Setup corre /VERYSILENT: no se muestra pagina de asistente.
+  if not WizardSilent then
+    DownloadPage.Show;
+  try
+    DownloadPage.Download;
+  finally
+    if not WizardSilent then
+      DownloadPage.Hide;
   end;
+
+  // SW_HIDE (antes SW_SHOW): estos instaladores corren en modo silencioso, no deben abrir ninguna
+  // ventana -- y menos en una auto-actualizacion, donde Setup los espera (ewWaitUntilTerminated).
+  if NeedVCRedist then
+    Exec(ExpandConstant('{tmp}\vc_redist.x64.exe'),
+      '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  // El Desktop Runtime es un superconjunto del .NET Runtime: trae el Microsoft.NETCore.App que la
+  // app pide y ademas cubre a quien luego necesite WindowsDesktop. Por eso se comprueba NETCore.App
+  // pero se instala el Desktop Runtime.
+  if NeedDotNet then
+    Exec(ExpandConstant('{tmp}\windowsdesktop-runtime-win-x64.exe'),
+      '/install /quiet /norestart', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;

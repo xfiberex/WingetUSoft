@@ -6,17 +6,17 @@
 > _Estado actual_ y añadir una entrada en el _Registro de cambios_. Usar fechas absolutas.
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
-- **Última actualización de este documento:** 2026-07-10
+- **Última actualización de este documento:** 2026-07-11
 - **Versión actual:** **1.4.0** — Tier B (#1–#6 + #8): UI adaptable por DPI/WorkArea, tamaño mínimo,
   barra de acciones responsiva (WrapPanel), accesibilidad y proyecto de UI tests con FlaUI
   ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.4.0), tag `v1.4.0`,
-  **sin firmar** — ver Pendientes §6). Versión previa: 1.3.0 (cierre de Tier A).
+  **sin firmar** — ver Pendientes §6). Versión previa: 1.3.0 (cierre de Tier A). **El arreglo de snap
+  layouts (#7, 2026-07-11) está en `main` sin publicar todavía** — entra en la próxima release.
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
-  implementadas y verificadas. **Tier B — #1–#6 y #8 completados** (2026-07-10): mejoras
-  visuales/responsivas + accesibilidad (build 0/0, 89/89 unitarios, verificación visual del usuario
-  OK) + proyecto `WingetUSoft.UiTests` con FlaUI (**14/14 UI tests**). Único pendiente: #7 (snap
-  layouts, verificación manual del usuario).
+  implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11): mejoras visuales/responsivas +
+  accesibilidad + proyecto `WingetUSoft.UiTests` con FlaUI, y cierre de #7 (snap layouts de
+  Windows 11) — build 0/0, **93/93 unitarios**, **16/16 UI tests**.
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -103,7 +103,9 @@ WingetUSoft/
 │  ├─ SettingsBackup.cs         Respalda/restaura %AppData%\WingetUSoft\settings.json + history.log
 │  ├─ DialogHelper.cs           Helpers de ContentDialog de WinUI (dismiss de arranque, SafeCloseAnyDialog)
 │  ├─ MenuActions.cs            Navegación de DropDownButton + MenuFlyout (Opciones/Ayuda/Idioma)
+│  ├─ MonitorInfo.cs            P/Invoke compartido: WorkArea del monitor bajo una ventana (px físicos)
 │  ├─ LayoutTests.cs            Regresión Tier B: ventana dentro de WorkArea (#1) + wrap de acciones (#3)
+│  ├─ SnapLayoutTests.cs        Regresión Tier B #7: celdas de snap de media y cuarto de pantalla
 │  ├─ MainWindowTests.cs        Smoke: ventana abre, botones de acción y lvPackages presentes
 │  ├─ MenuDialogsTests.cs       Ayuda → Acerca de abre/cierra ContentDialog
 │  └─ SettingsTests.cs          Cambio de idioma en caliente + apertura/cierre de SettingsWindow
@@ -119,20 +121,22 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
 ## 3. Estado actual
 
 - ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
-- ✅ Tests: **89/89** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
+- ✅ Tests: **95/95** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
   (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
-  `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5) + **11 de `WindowSizingTests`
-  (Tier B Fase 1 #1/#2)**. Las Fases 6 y 7 de Tier A no añadieron tests nuevos (UI pura + extracción
-  de strings; `LocalizationTests` ya cubre por completitud las **273 claves** de `L.Map` —272 de
-  Tier A + `grid.excludedAccessible` de Tier B #6— sin necesitar un test por clave).
-- ✅ **UI tests (FlaUI): 14/14** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto nuevo
+  `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5) + **15 de `WindowSizingTests`
+  (Tier B #1/#2, +4 del clamp de snap de #7)** + **2 de `GitHubUpdateServiceTests`** (hash SHA-256 con
+  el que se verifica el instalador descargado). Las Fases 6 y 7 de Tier A no añadieron tests nuevos
+  (UI pura + extracción de strings; `LocalizationTests` ya cubre por completitud las **273 claves** de
+  `L.Map` —272 de Tier A + `grid.excludedAccessible` de Tier B #6— sin necesitar un test por clave).
+- ✅ **UI tests (FlaUI): 16/16** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto
   `WingetUSoft.UiTests` (Tier B #8): ejercen la app real vía UIA3 (ventana dentro de WorkArea, wrap
-  de acciones al angostar, navegación de diálogos, cambio de idioma, apertura de ventanas). **No** los
-  corre `release.ps1` (solo ejecuta el proyecto unitario); necesitan sesión de escritorio interactiva
-  pero **no** elevación (la app es asInvoker).
-- ✅ **Tier B — #1–#6 y #8 completados (2026-07-10):** build 0/0, 89/89 unitarios + 14/14 UI, y
-  verificación visual del usuario OK (wrap de acciones, mínimos por DPI, DataGrid, accesibilidad).
-  **Único pendiente:** #7 (snap layouts, verificación manual del usuario). Ver Registro de cambios.
+  de acciones al angostar, **celdas de snap de media y cuarto de pantalla (#7)**, navegación de
+  diálogos, cambio de idioma, apertura de ventanas). **No** los corre `release.ps1` (solo ejecuta el
+  proyecto unitario); necesitan sesión de escritorio interactiva pero **no** elevación (la app es
+  asInvoker).
+- ✅ **Tier B COMPLETADO (2026-07-10/11):** build 0/0, 93/93 unitarios + 16/16 UI, y verificación
+  visual del usuario OK (wrap de acciones, mínimos por DPI, DataGrid, accesibilidad, snap layouts).
+  Ver Registro de cambios.
 - ✅ **Tier A — Paridad con FormatDiskPro, COMPLETADO (2026-07-08/09):**
   Se comparó WingetUSoft con FormatDiskPro (proyecto hermano en el mismo workspace, misma
   arquitectura por capas) para identificar infraestructura de app ya resuelta allí y ausente
@@ -286,15 +290,21 @@ reenviados a `build-installer.ps1`).
 ## 6. Pendientes / ideas
 
 - **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO**, 9/9
-  fases (-1 a 8) implementadas y verificadas. **Tier B — #1–#6 y #8 completados**
-  (2026-07-10), build 0/0, 89/89 unitarios + 14/14 UI (`WingetUSoft.UiTests` con FlaUI) y verificación
-  visual del usuario OK. **Único pendiente:** **#7** (snap layouts de Windows 11, verificación manual
-  del usuario en resolución baja).
-- Conseguir un certificado de firma de código real (OV/EV) para que la auto-actualización
-  funcione en producción — la v1.3.0 se publicó **sin firmar** (no hay certificado disponible),
-  así que `GitHubUpdateService.VerifyAuthenticodeSignature` rechazará este instalador si alguien
-  intenta auto-actualizar a él; la descarga manual desde Releases sí funciona. Sin certificado real
-  esto se repetirá en cada release hasta conseguir uno.
+  fases (-1 a 8) implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11), 8/8 ítems:
+  build 0/0, 93/93 unitarios + 16/16 UI (`WingetUSoft.UiTests` con FlaUI) y verificación visual del
+  usuario OK. No hay ninguna tier en curso.
+- **Publicar la 1.4.1:** el `.csproj` ya está en **1.4.1** y el instalador está construido y probado en
+  local, pero **sin publicar en GitHub**. Contiene el arreglo de snap layouts (#7) y los tres arreglos
+  del updater (ver Registro de cambios). Publicar con `release.ps1 -Version 1.4.1` — ahora sube dos
+  assets: el `.exe` y su `.sha256` (**imprescindible**: sin el `.sha256`, la app no puede verificar un
+  instalador sin firmar y rechaza la actualización).
+- Conseguir un certificado de firma de código real (OV/EV). **Ya no bloquea la auto-actualización**
+  (desde 2026-07-11 se verifica por SHA-256 cuando no hay firma), pero sigue siendo deseable por dos
+  motivos: (a) SmartScreen muestra "editor desconocido" en cada instalación, y (b) una firma es una
+  garantía más fuerte que el hash — el hash y el `.exe` salen del mismo release, así que detecta
+  manipulación en tránsito pero no protegería frente a un compromiso de la cuenta de GitHub. El
+  código ya prefiere la firma si existe: `build-installer.ps1 -CertThumbprint ...` y listo, sin más
+  cambios.
 
 ## 7. Cómo mantener este documento
 
@@ -308,6 +318,116 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-11 — fix: el flujo instalar / actualizar / desinstalar vía GitHub (3 bugs)
+
+Reporte del usuario: al actualizar, la app mostraba **una ventana pidiendo descargar una librería que
+ya estaba instalada**, y después **no volvía a ejecutarse** (había que cerrar la ventana y abrirla a
+mano). Al auditar el flujo aparecieron **tres bugs**, los tres confirmados con datos del equipo real.
+
+**Bug 1 — el Windows App Runtime se descargaba sin necesitarlo.** `installer.iss` comprobaba
+`HKLM\SOFTWARE\Microsoft\WindowsAppRuntime\1.8`, que no existe, así que siempre concluía "falta" y se
+bajaba ~40 MB. Pero la app **no lo necesita**: el `.csproj` usa `WindowsAppSDKSelfContained=true` y el
+runtime viaja dentro de la carpeta de la app (`Microsoft.WindowsAppRuntime.dll`, `Microsoft.ui.xaml.dll`,
+el bootstrap...; se verificó en el output de publish y en el propio log de instalación). Comprobación y
+descarga **eliminadas**.
+
+**Bug 2 — el .NET siempre se daba por ausente.** La comprobación buscaba subclaves de
+`...\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App`, y era **doblemente incorrecta**:
+(a) esa rama `sharedfx` **no existe** (bajo `InstalledVersions\x64` solo hay `sharedhost`), y (b) el
+framework es el equivocado — `WingetUSoft.runtimeconfig.json` pide **`Microsoft.NETCore.App`**, no
+`Microsoft.WindowsDesktop.App` (WinUI 3 no es una app WindowsDesktop; eso es WPF/WinForms). Resultado:
+daba "falta .NET" **en cualquier máquina**, y cada instalación/actualización rebajaba y reinstalaba el
+runtime que el usuario ya tenía. Ahora se comprueba la carpeta del framework compartido
+(`{commonpf64}\dotnet\shared\Microsoft.NETCore.App\10.*`), que es lo que hostfxr resuelve de verdad y
+lo mismo que lista `dotnet --list-runtimes`.
+
+Esos dos falsos positivos son la "ventana de la librería": en una instalación **interactiva** (descarga
+manual desde Releases, que es como se actualizaba en la práctica — ver Bug 3) la `TDownloadWizardPage`
+de Inno **sí se muestra**. Se comprobó en un `.iss` de laboratorio que en `/VERYSILENT` esa página
+**no** aparece (`WizardForm.Visible=0`) y que el `[Run]` con `Check: IsAutoUpdate` **sí** se ejecuta —
+lo que descartó la primera hipótesis y obligó a buscar la causa real. Además los instaladores de
+dependencias se ejecutaban con `SW_SHOW` y `ewWaitUntilTerminated` (podían abrir ventana y bloquear
+Setup): ahora `SW_HIDE`.
+
+**Bug 3 — la auto-actualización estaba muerta.** `GitHubUpdateService` exigía una firma Authenticode
+válida y **borraba** el instalador si no la tenía... pero los releases se publican **sin firmar** (no
+hay certificado): `Get-AuthenticodeSignature` sobre el instalador 1.4.0 publicado devuelve `NotSigned`.
+O sea que la actualización *desde dentro de la app* fallaba **siempre**, antes de ejecutar nada. Por eso
+el usuario acababa instalando a mano. **Decidido con el usuario:** verificar por **SHA-256** publicado
+como asset del release, manteniendo la firma como vía preferente si algún día hay certificado
+(`VerifyInstallerAsync`: firma válida → OK; si no, hash contra el asset `...exe.sha256`; sin ninguna de
+las dos, se borra y se aborta). `build-installer.ps1` genera el `.sha256` (después de firmar, porque
+firmar cambia el binario) y `release.ps1` lo sube como segundo asset. **Alcance honesto:** el hash y el
+`.exe` salen del mismo release, así que esto detecta corrupción/manipulación en tránsito pero no
+protegería un compromiso de la cuenta de GitHub; es el compromiso habitual sin certificado.
+
+**Extra:** el `[Run]` relanzaba la app heredando el token de administrador de Setup. Con
+`runasoriginaluser` vuelve a arrancar como el usuario normal, que es como debe correr (la app es
+asInvoker y eleva bajo demanda con un worker por named pipe).
+
+**Verificado de punta a punta en el equipo real** (instalador 1.4.1, ejecutado exactamente como lo hace
+la auto-actualización: `/VERYSILENT /NORESTART /autoinstall=1` con `/LOG`): actualiza **1.3.0 → 1.4.1**,
+**0 descargas** y **0 instaladores de runtime** en el log, **ninguna ventana**, la app **se relanza sola**
+y el log confirma `Run as: Original user` (proceso no elevado). Entrada de desinstalación correcta y
+única (el `AppId` fijo actualiza en sitio, no duplica). Build 0/0, **95/95 unitarios** (+2 de
+`GitHubUpdateServiceTests`, que fijan el formato hex/mayúsculas del hash: si cambiara, la app
+rechazaría su propio instalador).
+
+### 2026-07-11 — fix: Tier B #7 — snap layouts de Windows 11 — **TIER B COMPLETADO**
+
+#7 estaba planteado como "verificación manual" y se esperaba que fuera una consecuencia gratuita de
+#1/#2. Al automatizarlo con FlaUI aparecieron **dos bugs reales**, ambos arreglados y con test de
+regresión. Ninguno era visible en una ventana de tamaño normal, que es por lo que sobrevivieron a la
+verificación visual de #1–#6.
+
+**Bug 1 — el mínimo de la ventana impedía el snap.** `WindowSizing.ScaleMinSize` solo acotaba el
+mínimo de diseño (900×600 DIP) a "WorkArea menos el margen", un techo demasiado alto: una celda de
+snap mide **la mitad** de la WorkArea en uno o ambos ejes. En un 1920×1080 corriente (WorkArea
+~1920×1040) la celda de cuarto es 960×520 y el mínimo de alto (600) ya no cabía, así que Windows no
+podía encoger la ventana lo suficiente para completar el snap. Ahora `ScaleMinSize` acota además cada
+eje a `workWidth/2` / `workHeight/2`. No hace falta ningún número fijo: en monitores grandes la mitad
+de la WorkArea es mucho mayor que el mínimo de diseño y este se conserva **intacto**; solo se relaja
+en pantallas pequeñas, que es justo donde estorbaba. En la práctica este clamp domina siempre al del
+margen (la mitad de cualquier resolución real es más restrictiva que "menos un puñado de DIP"), pero
+se conserva el otro como red de seguridad — `Math.Min` escoge el menor sin coste.
+
+**Bug 2 — la tabla desaparecía de la pantalla.** Con la ventana ya encogida a un cuarto (960×510), las
+tres tarjetas superiores (cabecera, acciones, filtros) consumían los ~510 px de alto **enteros**: el
+volcado del árbol de UIA mostraba el DataGrid, el log y la barra de estado con `BoundingRectangle`
+**0×0 y `IsOffscreen=True`**. No estaban "bajo el pliegue": estaban recortados fuera de la ventana, sin
+barra de scroll con la que llegar a ellos, porque **la página no tenía scroll vertical**. Ahora todo el
+contenido de `MainWindow.xaml` vive en un `ScrollViewer` (`ContentScroller`) cuyo Grid usa
+**`MinHeight` (no `Height`) atado al `ViewportHeight`** del propio scroller. Esa sola regla da los dos
+comportamientos: si sobra alto, `MinHeight` estira el Grid hasta el viewport y la fila `*` rellena como
+siempre, **sin barra** (media pantalla se ve idéntica a una ventana normal); si falta, `MinHeight` es
+solo un mínimo, el Grid conserva su alto natural (mayor que el viewport) y el ScrollViewer desplaza la
+página. Es el mismo patrón que ya usaba `DataGridScroller` en horizontal (`MinWidth` + `ViewportWidth`).
+Además, `MinHeight` en la fila de tabla+log (300, y 160/120 dentro) pone un piso: por debajo, la página
+se desplaza en vez de seguir encogiendo la tabla hasta hacerla inservible.
+
+**Método (por qué importa):** el primer intento de #2 fue un ScrollViewer que envolvía **solo**
+tabla+log+pie, sobre la teoría de que un scroller de toda la página dejaría el DataGrid sin viewport.
+El volcado del árbol de UIA en la celda real lo refutó: el scroller acotado tenía él mismo viewport
+**0 px de alto**, así que no había ni barra que arrastrar. Se descartó y se sustituyó por el
+`ContentScroller` de página completa, confirmado con el patrón `Scroll` de UIA
+(`VerticallyScrollable=True`, `VerticalViewSize=50.2 %` → contenido ~916 px en un viewport de 460).
+
+**Tests:** +4 unitarios en `WindowSizingTests` (celda de cuarto en 1920×1080, celda de media en un
+portátil 1366×768, monitor QHD donde el mínimo se conserva intacto, y clamp en píxeles físicos a
+150 % de DPI) y +2 UI en el nuevo **`SnapLayoutTests`** (`MonitorInfo.cs` extrae el P/Invoke de
+WorkArea que `LayoutTests` ya tenía, para compartirlo). El test de la celda de cuarto **no** exige ver
+la tabla nada más encoger —a esa altura es correcto que quede bajo el pliegue—, exige lo que de verdad
+importa: que la página sea desplazable y que, al bajar del todo, la tabla esté visible y en pantalla.
+
+**Nota de proceso:** el XAML en curso traía un `--` dentro de un comentario `<!-- -->`, ilegal en XML.
+El XamlCompiler de WinUI fallaba con **exit 1 y cero diagnóstico** (`MSB3073`, sin línea ni archivo);
+el error solo salió al validar el XAML como XML a mano. Si el markup compiler vuelve a fallar mudo,
+ese es el primer sitio donde mirar.
+
+**Resultado: build 0/0, 93/93 unitarios (89 + 4) y 16/16 UI tests (14 + 2, estables en 3 corridas)**,
+más captura de la app real en ambas celdas de snap. **Con esto Tier B queda completo (8/8).** El
+arreglo está en `main` **sin publicar**: al ser corrección de bug, la próxima release sería 1.4.1.
 
 ### 2026-07-10 — release: v1.4.0 — Tier B (#1–#6 + #8)
 

@@ -104,28 +104,88 @@ public sealed class WindowSizingTests
     }
 
     [Fact]
-    public void ScaleMinSize_ExceedsSmallWorkArea_ClampsToWorkAreaMinusMargin()
+    public void ScaleMinSize_ExceedsSmallWorkArea_ClampsToHalfWorkArea()
     {
         // Portátil de baja resolución con DPI alto: min 900x600 a 150% = 1350x900 físico, que no
-        // cabe en 1366x768. Debe acotarse a workWidth/Height - margen (margen también escalado).
+        // cabe en 1366x728. El clamp que termina dominando ya no es "workWidth/Height - margen"
+        // (1342x704) sino la mitad del área de trabajo (683x364, snap a media pantalla): el snap-aware
+        // clamp de ScaleMinSize es más restrictivo que el clamp por margen en cualquier resolución real.
         double scale = 1.5;
-        int margin = (int)Math.Round(16 * scale);
         var (w, h) = WindowSizing.ScaleMinSize(
             minWidthDip: 900, minHeightDip: 600, scale: scale, workWidth: 1366, workHeight: 728, marginDip: 16);
 
-        Assert.Equal(1366 - margin, w);
-        Assert.Equal(728 - margin, h);
+        Assert.Equal(1366 / 2, w);
+        Assert.Equal(728 / 2, h);
     }
 
     [Fact]
-    public void ScaleMinSize_MarginScalesWithDpi()
+    public void ScaleMinSize_MarginScalesWithDpi_ButHalfWorkAreaClampDominates()
     {
-        // A escala 2.0 el margen de 16 DIP resta 32 px físicos antes del clamp.
+        // A escala 2.0 el margen de 16 DIP resta 32 px físicos antes del clamp (1000-32=968), pero el
+        // clamp por mitad de área de trabajo (500x500) es más restrictivo todavía y es el que gana:
+        // exactamente el comportamiento "snap-aware" que arregla el bug de #7 (Tier B).
         var (w, h) = WindowSizing.ScaleMinSize(
             minWidthDip: 2000, minHeightDip: 2000, scale: 2.0, workWidth: 1000, workHeight: 1000, marginDip: 16);
 
-        int expectedMargin = (int)Math.Round(16 * 2.0);
-        Assert.Equal(1000 - expectedMargin, w);
-        Assert.Equal(1000 - expectedMargin, h);
+        Assert.Equal(1000 / 2, w);
+        Assert.Equal(1000 / 2, h);
+    }
+
+    [Fact]
+    public void ScaleMinSize_QuarterSnapCell_RelaxesHeightOnly_FullHdMonitor()
+    {
+        // Bug real de #7 (Tier B): 1920x1080 físico con WorkArea ~1920x1040 a 100%. La celda de
+        // cuarto de pantalla mide 960x520. El mínimo de MainWindow (900x600 DIP) ya cabía en ancho
+        // (900 < 960) pero NO en alto (600 > 520) -- antes del fix, esto bloqueaba el snap a cuarto.
+        // Tras el fix, el alto se relaja exactamente a la mitad del work area (520) y el ancho se
+        // conserva (900, sigue siendo más chico que la mitad de 1920).
+        var (w, h) = WindowSizing.ScaleMinSize(
+            minWidthDip: 900, minHeightDip: 600, scale: 1.0, workWidth: 1920, workHeight: 1040, marginDip: 16);
+
+        Assert.Equal(900, w);
+        Assert.Equal(520, h);
+    }
+
+    [Fact]
+    public void ScaleMinSize_HalfSnapCell_RelaxesBothAxes_LowResLaptop()
+    {
+        // Bug real de #7 (Tier B): portátil 1366x768 con WorkArea ~1366x728 a 100%. La celda de media
+        // pantalla mide 683x728. El mínimo de MainWindow (900x600 DIP) ni siquiera cabía en ancho
+        // (900 > 683) -- antes del fix, esto bloqueaba el snap a media pantalla. Tras el fix, ambos
+        // ejes se relajan a la mitad del work area (683x364).
+        var (w, h) = WindowSizing.ScaleMinSize(
+            minWidthDip: 900, minHeightDip: 600, scale: 1.0, workWidth: 1366, workHeight: 728, marginDip: 16);
+
+        Assert.Equal(683, w);
+        Assert.Equal(364, h);
+    }
+
+    [Fact]
+    public void ScaleMinSize_LargeMonitor_MinFitsWithinHalfWorkArea_PreservesMinIntact()
+    {
+        // Monitor QHD (2560x1440): la mitad del área de trabajo (1280x720) es mucho mayor que el
+        // mínimo escalado (900x600 a 100%), así que el snap-aware clamp no relaja nada -- el mínimo
+        // cómodo de diseño se mantiene intacto, igual que antes del fix.
+        var (w, h) = WindowSizing.ScaleMinSize(
+            minWidthDip: 900, minHeightDip: 600, scale: 1.0, workWidth: 2560, workHeight: 1440, marginDip: 16);
+
+        Assert.Equal(900, w);
+        Assert.Equal(600, h);
+    }
+
+    [Fact]
+    public void ScaleMinSize_QuarterSnapCell_ClampsInPhysicalPixels_AtHighDpi()
+    {
+        // A 150% de DPI, el clamp por mitad de área de trabajo debe operar sobre los píxeles físicos
+        // del work area (que ya vienen en físico desde DisplayArea.WorkArea), no sobre DIP: con
+        // workWidth=1920 / workHeight=1000 físicos, la mitad es 960x500 -- el ancho lo fija el propio
+        // mínimo escalado (900*1.5=1350, pero 1350 > 960 así que también se acota) y el alto se acota
+        // a 500 en vez de a 900 (600 DIP * 1.5), demostrando que el clamp no reintroduce DIP a mitad
+        // de camino.
+        var (w, h) = WindowSizing.ScaleMinSize(
+            minWidthDip: 900, minHeightDip: 600, scale: 1.5, workWidth: 1920, workHeight: 1000, marginDip: 16);
+
+        Assert.Equal(960, w);
+        Assert.Equal(500, h);
     }
 }

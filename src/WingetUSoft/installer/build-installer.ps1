@@ -4,9 +4,10 @@
 
 .DESCRIPTION
     1. Lee la versión del .csproj (o usa -Version).
-    2. dotnet publish -c Release -r win-x64  (framework-dependent: el instalador
-       descarga .NET 10 Desktop Runtime / VC++ Redist / Windows App Runtime si faltan,
-       ver installer.iss → [Code]).
+    2. dotnet publish -c Release -r win-x64  (framework-dependent en .NET: el instalador
+       descarga el .NET Desktop Runtime o el VC++ Redist SOLO si faltan de verdad, ver
+       installer.iss → [Code]). El Windows App Runtime NO se descarga: viaja dentro de la app
+       (WindowsAppSDKSelfContained=true en el .csproj).
     3. Compila installer.iss con ISCC; el .exe queda en installer/Output.
 
 .PARAMETER Version
@@ -104,7 +105,7 @@ if ($signEnabled) {
     if (-not $signtool) { throw "Se pidió firmar pero no se encontró signtool.exe. Instala el Windows SDK o añádelo al PATH." }
     Write-Host "==> Firma de código habilitada (signtool: $signtool)" -ForegroundColor Cyan
 } else {
-    Write-Warning "Firma de código DESHABILITADA (sin -CertThumbprint/-CertFile). El instalador NO estará firmado: la auto-actualización de WingetUSoft rechazará este instalador (VerifyAuthenticodeSignature) y SmartScreen mostrará 'editor desconocido'."
+    Write-Warning "Firma de código DESHABILITADA (sin -CertThumbprint/-CertFile). El instalador NO estará firmado, así que SmartScreen mostrará 'editor desconocido'. La auto-actualización SÍ funciona igualmente: al no haber firma, la app verifica la descarga contra el .sha256 que se genera aquí y que release.ps1 sube como asset del release (GitHubUpdateService.VerifyInstallerAsync). Firmar sigue siendo lo deseable: es una garantía más fuerte que el hash."
 }
 
 $installerDir = $PSScriptRoot
@@ -170,8 +171,19 @@ $setup = Join-Path $installerDir "Output\WingetUSoft-Setup-$Version.exe"
 if (Test-Path $setup) {
     # Firmar el instalador (lo que comprueba SmartScreen y VerifyAuthenticodeSignature al descargarlo).
     if ($signEnabled) { Invoke-Sign @($setup) }
+
+    # SHA-256 del instalador YA FIRMADO (firmar cambia el binario, así que el hash va después).
+    # La auto-actualización lo usa para verificar la descarga cuando el instalador no está firmado
+    # (GitHubUpdateService.VerifyInstallerAsync). release.ps1 lo sube como asset del release: sin
+    # este archivo, la app no puede verificar un instalador sin firma y aborta la actualización.
+    $hash = (Get-FileHash $setup -Algorithm SHA256).Hash
+    $sha256File = "$setup.sha256"
+    "$hash *$(Split-Path $setup -Leaf)" | Out-File -FilePath $sha256File -Encoding ascii -NoNewline
+    Write-Host "==> SHA-256: $hash" -ForegroundColor Cyan
+
     $sizeMB = [math]::Round((Get-Item $setup).Length / 1MB, 1)
     Write-Host "`n[OK] Instalador generado: $setup ($sizeMB MB)" -ForegroundColor Green
+    Write-Host "[OK] Checksum generado:   $sha256File" -ForegroundColor Green
 } else {
     Write-Warning "ISCC terminó pero no se encontró el instalador esperado en $setup"
 }

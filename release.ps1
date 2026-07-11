@@ -10,15 +10,18 @@
       4. Compila el instalador (publish framework-dependent + Inno Setup).
       5. Commit del bump de versión + tag anotado vX.Y.Z.
       6. Push de la rama y el tag a origin.
-      7. Crea el GitHub Release adjuntando el instalador.
+      7. Crea el GitHub Release adjuntando el instalador Y su .sha256.
 
     Para 'gh' reutiliza la credencial de GitHub ya cacheada (la del push) si no
     estuviera autenticado; nunca se imprime el token.
 
-    IMPORTANTE: la auto-actualización de WingetUSoft exige que el instalador esté firmado
-    con Authenticode (Services/GitHubUpdateService.VerifyAuthenticodeSignature) — publicar sin
-    -CertThumbprint/-CertFile rompe la actualización automática para quien ya tenga una
-    versión anterior instalada.
+    IMPORTANTE: el asset .sha256 es OBLIGATORIO mientras se publique sin firmar. La app verifica
+    el instalador descargado antes de ejecutarlo (Services/GitHubUpdateService.VerifyInstallerAsync):
+    firma Authenticode válida si la hay; si no, el hash SHA-256 publicado como asset. Sin ninguna de
+    las dos cosas, la app borra el instalador y la auto-actualización falla.
+
+    Firmar (-CertThumbprint/-CertFile) sigue siendo lo deseable: evita el aviso de SmartScreen
+    ("editor desconocido") y es una garantía más fuerte que el hash.
 
 .PARAMETER Version
     Versión a publicar (X.Y.Z). Si se omite, usa la del .csproj.
@@ -90,7 +93,7 @@ if ($currentVersion -and $currentVersion -ne $Version) {
     Info "Bump de versión: $currentVersion -> $Version"
 }
 if (-not ($CertThumbprint -or $CertFile)) {
-    Warn "Sin firma de código (-CertThumbprint/-CertFile): la auto-actualización de WingetUSoft rechazará este instalador."
+    Warn "Sin firma de código (-CertThumbprint/-CertFile): SmartScreen mostrará 'editor desconocido'. La auto-actualización sí funcionará: se verificará contra el asset .sha256."
 }
 
 # ── Validaciones de git ──────────────────────────────────────────────────────
@@ -138,11 +141,13 @@ try {
         @(
             "## WingetUSoft v$Version",
             "",
-            "Instalador para Windows x64 (descarga automáticamente .NET 10 / VC++ Redist / Windows App Runtime si faltan).",
+            "Instalador para Windows x64 (descarga .NET 10 o el VC++ Redist solo si faltan en el equipo).",
             "",
             "Descarga ``WingetUSoft-Setup-$Version.exe`` y ejecútalo.",
             "",
-            "La app comprueba actualizaciones automáticamente desde el menú *Ayuda → Buscar actualización de WingetUSoft…*."
+            "La app comprueba actualizaciones automáticamente desde el menú *Ayuda → Buscar actualización de WingetUSoft…*.",
+            "",
+            "El asset ``WingetUSoft-Setup-$Version.exe.sha256`` es el hash con el que la app verifica la descarga antes de ejecutarla."
         ) | Out-File -FilePath $tempNotes -Encoding utf8
         $notesPath = $tempNotes
     }
@@ -152,7 +157,7 @@ try {
     if ($DryRun) {
         Write-Host ""
         Warn "DRY RUN — no se modificará nada. Plan:"
-        $signNote = if ($CertThumbprint -or $CertFile) { " (firmando con Authenticode)" } else { " (SIN firmar — rompe la auto-actualización)" }
+        $signNote = if ($CertThumbprint -or $CertFile) { " (firmando con Authenticode)" } else { " (SIN firmar — la app verificará por el .sha256)" }
         Write-Host "    1. Actualizar <Version> a $Version en el .csproj" -ForegroundColor DarkGray
         Write-Host "    2. build-installer.ps1 -Version $Version$signNote" -ForegroundColor DarkGray
         Write-Host "    3. git add -u  (todos los archivos rastreados modificados)" -ForegroundColor DarkGray
@@ -160,7 +165,7 @@ try {
         Write-Host "       git tag -a $tag" -ForegroundColor DarkGray
         Write-Host "    4. git push origin $branch" -ForegroundColor DarkGray
         Write-Host "       git push origin $tag" -ForegroundColor DarkGray
-        Write-Host "    5. gh release create $tag (asset: WingetUSoft-Setup-$Version.exe)" -ForegroundColor DarkGray
+        Write-Host "    5. gh release create $tag (assets: WingetUSoft-Setup-$Version.exe + .sha256)" -ForegroundColor DarkGray
         if ($tempNotes) { Remove-Item $tempNotes -Force -ErrorAction SilentlyContinue }
         Ok "Dry run completado."
         return
@@ -190,6 +195,13 @@ try {
     if (-not (Test-Path $setup)) { Die "No se encontró el instalador esperado: $setup" }
     $sizeMB = [math]::Round((Get-Item $setup).Length / 1MB, 1)
     Ok "Instalador: $setup ($sizeMB MB)"
+
+    # Lo genera build-installer.ps1. Es lo que la app usa para verificar la descarga mientras los
+    # instaladores se publiquen sin firmar (GitHubUpdateService.VerifyInstallerAsync): si no se sube
+    # como asset, la auto-actualización no puede verificar nada y se niega a instalar.
+    $setupHash = "$setup.sha256"
+    if (-not (Test-Path $setupHash)) { Die "No se encontró el checksum esperado: $setupHash" }
+    Ok "Checksum: $setupHash"
 
     # ── 3. Commit + tag ──────────────────────────────────────────────────────
     # Añade todos los archivos rastreados modificados/eliminados (tracked changes).
@@ -251,7 +263,7 @@ try {
     }
 
     Info "Creando el GitHub Release..."
-    & $gh release create $tag --title "WingetUSoft $tag" --notes-file $notesPath $setup
+    & $gh release create $tag --title "WingetUSoft $tag" --notes-file $notesPath $setup $setupHash
     if ($LASTEXITCODE -ne 0) { Die "gh release create falló (el tag ya está publicado; puedes reintentar el release)." }
 
     if ($tempNotes) { Remove-Item $tempNotes -Force -ErrorAction SilentlyContinue }

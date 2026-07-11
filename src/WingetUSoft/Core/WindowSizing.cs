@@ -41,17 +41,32 @@ public static class WindowSizing
     }
 
     /// <summary>
-    /// Escala un tamaño mínimo de diseño (DIP) a píxeles físicos según el DPI del monitor y lo
-    /// acota al área de trabajo menos el margen (igual que <see cref="ComputeSizeAndCenter"/>), para
-    /// que en pantallas de baja resolución con DPI alto el mínimo no supere el tamaño de la pantalla
-    /// (lo que impediría encoger la ventana o hacer snap a media/cuarto de pantalla).
+    /// Escala un tamaño mínimo de diseño (DIP) a píxeles físicos según el DPI del monitor y lo acota
+    /// tanto al área de trabajo menos el margen (igual que <see cref="ComputeSizeAndCenter"/>) como,
+    /// además, a <b>la mitad del área de trabajo en cada eje</b>.
+    ///
+    /// Ese segundo clamp es lo que hace que el mínimo sea "snap-aware": una celda de snap layout de
+    /// Windows 11 mide la mitad del área de trabajo en un eje (media pantalla) o en ambos ejes (cuarto
+    /// de pantalla). Si el mínimo escalado superase el tamaño de esa celda, <c>OverlappedPresenter</c>
+    /// le impediría a Windows encoger la ventana lo suficiente y el snap fallaría o dejaría la ventana
+    /// más grande que su celda (recortada visualmente contra las vecinas). Acotando cada eje a
+    /// <c>workWidth/2</c> / <c>workHeight/2</c>, el mínimo nunca bloquea ni el snap a media pantalla ni
+    /// el snap a cuarto, en cualquier monitor y a cualquier DPI, sin necesidad de números fijos: en
+    /// monitores grandes el mínimo cómodo se conserva intacto (la mitad del área de trabajo es mucho
+    /// mayor que el mínimo de diseño), y solo se relaja lo justo en pantallas pequeñas.
+    ///
+    /// En la práctica, la mitad del área de trabajo es siempre más restrictiva que "área de trabajo
+    /// menos margen" (el margen son un puñado de DIP, muy por debajo de la mitad de cualquier
+    /// resolución real), así que ese clamp por mitad es el que termina dominando el resultado. Aun así
+    /// se conserva el clamp por margen como red de seguridad para casos extremos: <see cref="Math.Min(int, int)"/>
+    /// ya escoge el más pequeño de los dos sin coste adicional.
     /// </summary>
     public static (int Width, int Height) ScaleMinSize(
         int minWidthDip, int minHeightDip, double scale, int workWidth, int workHeight, int marginDip)
     {
         int margin = (int)Math.Round(marginDip * scale);
-        int w = Math.Min((int)Math.Round(minWidthDip * scale), workWidth - margin);
-        int h = Math.Min((int)Math.Round(minHeightDip * scale), workHeight - margin);
+        int w = Math.Min((int)Math.Round(minWidthDip * scale), Math.Min(workWidth - margin, workWidth / 2));
+        int h = Math.Min((int)Math.Round(minHeightDip * scale), Math.Min(workHeight - margin, workHeight / 2));
         return (w, h);
     }
 }

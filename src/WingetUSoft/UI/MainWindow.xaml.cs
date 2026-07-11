@@ -74,6 +74,7 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _packageInfoCts;
     private CancellationTokenSource? _sizeLoadCts;
     private string? _appUpdateUrl;
+    private string? _appUpdateChecksumUrl;
     private H.NotifyIcon.TaskbarIcon? _trayIcon;
     private readonly Dictionary<string, string> _sizeCache = new(StringComparer.OrdinalIgnoreCase);
     private DispatcherTimer? _searchDebounceTimer;
@@ -1400,6 +1401,7 @@ public sealed partial class MainWindow : Window
         if (info is null) return;
 
         _appUpdateUrl = info.DownloadUrl;
+        _appUpdateChecksumUrl = info.ChecksumUrl;
         infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
         infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
         infoBarUpdate.IsOpen = true;
@@ -1449,7 +1451,8 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            string installerPath = await GitHubUpdateService.DownloadInstallerAsync(_appUpdateUrl, progress);
+            string installerPath = await GitHubUpdateService.DownloadInstallerAsync(
+                _appUpdateUrl, _appUpdateChecksumUrl, progress);
             infoBarUpdate.Message = L.T("update.installingRestart");
             TaskbarProgress.SetIndeterminate(_hWnd);
 
@@ -1490,6 +1493,7 @@ public sealed partial class MainWindow : Window
             else
             {
                 _appUpdateUrl = info.DownloadUrl;
+                _appUpdateChecksumUrl = info.ChecksumUrl;
                 menuBuscarActualizacion.Text = L.T("menu.installVersion", info.Version);
                 infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
                 infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
