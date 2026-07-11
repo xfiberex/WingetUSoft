@@ -319,6 +319,27 @@ reenviados a `build-installer.ps1`).
 
 ## Registro de cambios
 
+### 2026-07-11 — release: v1.4.1
+
+Publicada con `release.ps1 -Version 1.4.1` (PATCH: solo correcciones — snap layouts de Tier B #7 y los
+tres bugs del flujo de actualización; sin funcionalidad nueva). Commit `c6a2b27` ("release: v1.4.1",
+16 archivos), tag `v1.4.1`, push a `origin/main` y GitHub Release publicado:
+https://github.com/xfiberex/WingetUSoft/releases/tag/v1.4.1
+
+**Primera release con dos assets:** el `.exe` y su `.sha256`. Se verificó que el endpoint que consulta
+la app (`/releases/latest`) devuelve ambos, que es la condición para que la auto-actualización pueda
+verificar la descarga sin firma.
+
+**Ojo con el arranque en frío:** la 1.4.1 arregla la auto-actualización, pero **no se arregla hacia
+atrás**. Quien tenga 1.4.0 o anterior sigue con el binario viejo, que exige firma Authenticode y
+rechazará este instalador sin firmar: esos usuarios tienen que actualizar **a mano una última vez**
+desde Releases. De la 1.4.1 en adelante ya se actualiza sola.
+
+**Nota sobre `release.ps1` en PowerShell 5.1:** ejecutarlo redirigiendo la salida (`*>` a un archivo)
+lo **rompe** — PS 5.1 convierte el stderr de `git push` (que es progreso normal, no un error) en un
+`NativeCommandError` terminante, y el script muere entre el push de la rama y el del tag. Ejecutarlo
+sin redirigir la salida.
+
 ### 2026-07-11 — fix: el flujo instalar / actualizar / desinstalar vía GitHub (3 bugs)
 
 Reporte del usuario: al actualizar, la app mostraba **una ventana pidiendo descargar una librería que
