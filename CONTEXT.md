@@ -17,8 +17,10 @@
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
   implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11): mejoras visuales/responsivas +
   accesibilidad + proyecto `WingetUSoft.UiTests` con FlaUI, y cierre de #7 (snap layouts de
-  Windows 11). **Tier C COMPLETADO** (2026-07-11/12): auditoría de UI/UX — los 6 bloques hechos —
-  build 0/0, **131/131 unitarios**, **24/24 UI tests**.
+  Windows 11). **Tier C COMPLETADO** (2026-07-11/12): auditoría de UI/UX — los 6 bloques hechos.
+  **Tier D COMPLETADO** (2026-07-12): cara pública — avisos de terceros y licencia dentro de la app,
+  README de usuario con capturas, script de capturas. Build 0/0, **137/137 unitarios**,
+  **26/26 UI tests**. **Sin publicar todavía** (el último release es v1.6.0; ver §6).
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -126,9 +128,15 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
 ## 3. Estado actual
 
 - ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
+- ✅ **Tier D COMPLETADO (2026-07-12, sin publicar):** cara pública — `THIRD-PARTY-NOTICES.txt` +
+  licencia y avisos **dentro de la app** (`Core/LegalText.cs` + `UI/LegalTextDialog`, menú Ayuda),
+  README reescrito para el usuario final (badges, instalación, modelo de confianza del updater,
+  capturas) y `tools/capture-screenshots.ps1` para regenerarlas. **137/137 unitarios** (131 + 6 de
+  `LegalTextTests`) y **26/26 UI tests** (24 + 2 de los diálogos legales). Ver Registro de cambios.
 - ✅ **Tier C COMPLETADO (2026-07-11/12, v1.5.0 + v1.6.0):** auditoría de UI/UX, los 6 bloques. Ver
   Registro de cambios.
-- ✅ Tests: **131/131** (`dotnet test`) — los 124 previos + **5 de `LogPaletteTests`** (Tier C #4:
+- ✅ Tests: **137/137** (`dotnet test`) — los 131 de Tier C + **6 de `LegalTextTests`** (Tier D). Los 131:
+  los 124 previos + **5 de `LogPaletteTests`** (Tier C #4:
   contraste WCAG AA de cada color del registro en ambos temas) + **2 de descarga en
   `GitHubUpdateServiceTests`** (fix del bloqueo de la auto-actualización). Desglose de los 124: 95
   previos + 17 de `VersionOrderTests` + 12 de `ParsePackageInfoTests` (Tier C #3). Desglose de los 95:
@@ -139,11 +147,12 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
   el que se verifica el instalador descargado). Las Fases 6 y 7 de Tier A no añadieron tests nuevos
   (UI pura + extracción de strings; `LocalizationTests` ya cubre por completitud las claves de `L.Map`
   sin necesitar un test por clave).
-- ✅ **UI tests (FlaUI): 24/24** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto
+- ✅ **UI tests (FlaUI): 26/26** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto
   `WingetUSoft.UiTests` (Tier B #8): ejercen la app real vía UIA3 (ventana dentro de WorkArea, wrap
   de acciones al angostar, **celdas de snap de media y cuarto de pantalla (#7)**, navegación de
   diálogos, cambio de idioma **desde la ventana de Configuración (Tier C #5)**, apertura de ventanas,
-  y **cabeceras ordenables activables por `Invoke` con su estado de orden anunciado (Tier C #6)**).
+  **cabeceras ordenables activables por `Invoke` con su estado de orden anunciado (Tier C #6)**, y
+  **los diálogos de Licencia / Avisos de terceros mostrando el texto embebido de verdad (Tier D)**).
   **`release.ps1` los ejecuta** junto a los unitarios desde v1.6.0: un release no sale si la app real
   no pasa. Necesitan sesión de escritorio interactiva y desatendida (no valen sesión bloqueada ni
   consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación (la app es asInvoker).
@@ -272,7 +281,7 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
   `CloseApplications=yes`. **Único empaquetador del proyecto** (Tier A, decisión explícita).
   `MyAppVersion`/`SourceDir` en `installer.iss` van envueltos en `#ifndef` para poder
   sobrescribirlos vía `/D` desde `build-installer.ps1` sin romper `iscc installer.iss` a mano.
-- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.2.0`).
+- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.6.0`; lo sube `release.ps1`).
 - **Tests:** **xUnit** (migrado desde MSTest en Tier A #0) — no reintroducir MSTest/NUnit/TUnit.
 - **Scripts PowerShell con acentos/`—`:** guardar siempre con **BOM UTF-8**
   (`[System.Text.UTF8Encoding($true)]`, no `Set-Content -Encoding UTF8` a secas si el archivo
@@ -304,15 +313,15 @@ reenviados a `build-installer.ps1`).
 
 ## 6. Pendientes / ideas
 
-- **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO**, 9/9
-  fases (-1 a 8) implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11), 8/8 ítems:
-  build 0/0, 93/93 unitarios + 16/16 UI (`WingetUSoft.UiTests` con FlaUI) y verificación visual del
-  usuario OK. No hay ninguna tier en curso.
-- **Publicar la 1.4.1:** el `.csproj` ya está en **1.4.1** y el instalador está construido y probado en
-  local, pero **sin publicar en GitHub**. Contiene el arreglo de snap layouts (#7) y los tres arreglos
-  del updater (ver Registro de cambios). Publicar con `release.ps1 -Version 1.4.1` — ahora sube dos
-  assets: el `.exe` y su `.sha256` (**imprescindible**: sin el `.sha256`, la app no puede verificar un
-  instalador sin firmar y rechaza la actualización).
+- **Hoja de ruta de características:** [`ROADMAP.md`](ROADMAP.md) — **Tiers A, B, C y D COMPLETADOS**.
+  No hay ninguna tier en curso. El plan de lo que viene (Tier E y las ideas de features, con su encaje
+  de alcance ya evaluado) vive fuera del repo, en `../WingetUSoft-Plan.md` del workspace de comparación.
+- **Publicar la 1.7.0 (siguiente release):** `main` acumula, sobre el tag `v1.6.0`, el commit que hace
+  que `release.ps1` ejecute también los UI tests **y todo el Tier D** (avisos de terceros in-app, README
+  de usuario, capturas). Nada de esto está publicado todavía: sale con `release.ps1 -Version 1.7.0`
+  (MINOR: hay una característica nueva de usuario, los diálogos legales). Recordar que el release sube
+  **dos assets**, el `.exe` y su `.sha256` (**imprescindible**: sin el `.sha256`, la app no puede
+  verificar un instalador sin firmar y rechaza la actualización).
 - Conseguir un certificado de firma de código real (OV/EV). **Ya no bloquea la auto-actualización**
   (desde 2026-07-11 se verifica por SHA-256 cuando no hay firma), pero sigue siendo deseable por dos
   motivos: (a) SmartScreen muestra "editor desconocido" en cada instalación, y (b) una firma es una
@@ -333,6 +342,61 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-12 — feat: Tier D — cara pública (avisos de terceros in-app, README de usuario, capturas)
+
+Nace de comparar WingetUSoft con FormatDiskPro (ver `../WingetUSoft-Plan.md` en el workspace de
+comparación): el trabajo técnico ya estaba hecho — y en verificación del updater, accesibilidad y
+pipeline **por delante** del proyecto hermano —, pero la **presentación** seguía siendo la de un repo
+para compilar, no para instalar. Build 0/0, **137/137 unitarios**, **26/26 UI tests**.
+
+**D3 — La licencia y los avisos de terceros ahora existen, y se leen dentro de la app.** No había
+`THIRD-PARTY-NOTICES.txt` (FormatDiskPro sí lo tiene), y el README **afirmaba en falso** que la licencia
+se podía consultar en *Ayuda → Acerca de*: ese diálogo solo muestra una línea de copyright, no el texto
+de la MIT. Nuevos `THIRD-PARTY-NOTICES.txt` (raíz), `Core/LegalText.cs` y `UI/LegalTextDialog.xaml`
+(ports del patrón de FormatDiskPro), más dos ítems en el menú **Ayuda**: *Licencia* y *Avisos de
+terceros*. Los dos textos van **embebidos como recurso** en el `.exe` vía `.csproj` (`LogicalName`
+`WingetUSoft.LICENSE.txt` / `WingetUSoft.THIRD-PARTY-NOTICES.txt`), no como archivos sueltos junto al
+binario que el usuario pueda borrar.
+- El aviso lista lo que la app **redistribuye de verdad** (los `PackageReference` del `.csproj`): .NET,
+  Windows App SDK y **H.NotifyIcon.WinUI** — MIT, confirmado leyendo el `.nuspec` del paquete en la
+  caché de NuGet, no de memoria. winget se cita aparte y explícitamente **como herramienta externa que
+  no se redistribuye** (la app invoca el `winget` del usuario).
+- **Por qué hay tests:** `LegalText` es defensivo y devuelve `""` si el recurso no está, así que un
+  `LogicalName` mal escrito **no rompería el build** — pintaría "Texto no disponible" y solo se vería
+  abriendo el menú a mano. `LegalTextTests` (6, unitarios) exige que ambos recursos existan y digan lo
+  que deben decir; los 2 UI tests nuevos abren los dos diálogos en la app real y comprueban que el
+  cuerpo **no** es el mensaje de "no disponible".
+
+**D1 — README para quien instala, no solo para quien compila.** Badges (versión/.NET/plataforma/
+licencia), sección **Instalación** que lleva a Releases, y sección de **actualizaciones de la app** con
+el **modelo de confianza** explicado (firma Authenticode → si no, SHA-256 del asset; alcance honesto: no
+protege ante un compromiso de la cuenta de GitHub). Se verificó contra el código antes de escribirlo que
+cada afirmación es cierta: los flags de `release.ps1` (`-SkipUiTests`), la generación del `.sha256` en
+`build-installer.ps1` y qué runtimes descarga de verdad `installer.iss` (VC++ Redist y .NET 10; el
+Windows App Runtime **no**, viaja dentro de la app).
+
+**D2 — Capturas reproducibles, no artesanales.** `tools/capture-screenshots.ps1` lanza el `.exe` real,
+lo conduce por **UI Automation** (fuerza tema e idioma, pulsa *Consultar actualizaciones*, espera a que
+la tabla tenga filas, abre *Configuración*) y guarda los PNG en `docs/screenshots/`. Detalles que costaron
+una iteración cada uno:
+- **Respalda y restaura `%LocalAppData%\WingetUSoft\settings.json`** (mismo problema que resolvió
+  `SettingsBackup` en los UI tests: la app es unpackaged y ese archivo es el de la instalación real del
+  usuario). Y siembra `LastVersionSeen` con la versión del `.exe` para que el diálogo de **Novedades** no
+  salte por encima de la ventana que se quiere fotografiar.
+- Captura con **`DWMWA_EXTENDED_FRAME_BOUNDS`**, no `GetWindowRect` (que incluye el margen invisible de
+  redimensionado del DWM y deja un borde muerto alrededor), y llama a `SetProcessDPIAware()` (sin eso,
+  en un monitor escalado las coordenadas vienen virtualizadas y la captura sale desplazada).
+- La ventana de *Configuración* se agranda al alto del área de trabajo antes de disparar: a su tamaño
+  natural, el pie cortaba una fila por la mitad.
+- Guardado con **BOM UTF-8**, como manda la convención del proyecto para scripts PS 5.1 con acentos.
+
+**D4 — Este documento.** §4 decía que la versión era «hoy 1.2.0» (iba por 1.6.0) y §6 aún listaba
+«Publicar la 1.4.1» como pendiente, con la 1.6.0 ya publicada hace tiempo.
+
+**Pendiente de publicar:** nada del Tier D está en un release. Sale con `release.ps1 -Version 1.7.0`
+(MINOR: los diálogos legales son característica nueva de usuario), que arrastra también el commit
+`68973e6` (los UI tests en el pipeline), huérfano desde el tag v1.6.0.
 
 ### 2026-07-12 — feat: Tier C #4–#6 — **TIER C COMPLETADO** (release v1.6.0)
 

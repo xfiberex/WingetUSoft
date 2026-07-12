@@ -106,6 +106,9 @@ public static class L
 
         ["menu.help"]         = ["Ayuda", "Help", "Ajuda", "Aide", "Aiuto"],
         ["menu.about"]        = ["Acerca de...", "About...", "Sobre...", "À propos...", "Informazioni..."],
+        ["menu.license"]      = ["Licencia", "License", "Licença", "Licence", "Licenza"],
+        ["menu.thirdParty"]   = ["Avisos de terceros", "Third-party notices", "Avisos de terceiros", "Avis de tiers", "Note di terze parti"],
+        ["legal.unavailable"] = ["Texto no disponible.", "Text not available.", "Texto indisponível.", "Texte indisponible.", "Testo non disponibile."],
 
         ["about.title"]         = ["Acerca de WingetUSoft", "About WingetUSoft", "Sobre o WingetUSoft", "À propos de WingetUSoft", "Informazioni su WingetUSoft"],
         ["about.version"]       = ["Versión {0}", "Version {0}", "Versão {0}", "Version {0}", "Versione {0}"],

@@ -183,3 +183,43 @@ además conduciendo la app real por UI Automation. Detalle en [`CONTEXT.md`](CON
    invisible para un lector de pantalla. Que `SortHeaderTests` pueda activarlas por `Invoke` es la
    prueba: es el mismo patrón de UI Automation que usan el teclado y los lectores de pantalla, y sobre
    un `StackPanel` no existe.
+
+---
+
+## 📣 Tier D — Cara pública y publicación
+
+Nace de comparar de nuevo con **FormatDiskPro**, esta vez no en lo técnico sino en lo que ve alguien que
+llega al repo desde fuera. El fondo ya estaba hecho (Tiers A–C; en verificación del updater,
+accesibilidad y pipeline WingetUSoft va **por delante** del proyecto hermano), pero la **presentación**
+seguía siendo la de un repo para compilar: sin badges, sin capturas, sin instrucciones de instalación y
+sin los avisos de terceros que FormatDiskPro sí publica.
+
+| # | Ítem | Dónde | Estado |
+|---|------|-------|--------|
+| 1 | **README orientado al usuario final**: badges, sección *Instalación* (Releases + qué runtimes descarga el instalador + aviso de SmartScreen), sección *Actualizaciones* con el **modelo de confianza** (Authenticode → SHA-256), enlace a esta hoja de ruta | `README.md` | ✅ Implementado y verificado |
+| 2 | **Capturas de pantalla reproducibles**: script que conduce la app real por UI Automation y las regenera (tema claro/oscuro + Configuración), respaldando el `settings.json` del usuario | `tools/capture-screenshots.ps1`, `docs/screenshots/` | ✅ Implementado y verificado |
+| 3 | **Avisos de terceros + licencia dentro de la app**: `THIRD-PARTY-NOTICES.txt`, ambos textos **embebidos** en el `.exe` y visibles en *Ayuda → Licencia* / *Ayuda → Avisos de terceros* | `THIRD-PARTY-NOTICES.txt`, `Core/LegalText.cs`, `UI/LegalTextDialog.xaml`, `UI/MainWindow.xaml` | ✅ Implementado y verificado |
+| 4 | **Refresco de `CONTEXT.md`**: la versión decía «hoy 1.2.0» (real: 1.6.0) y los pendientes aún listaban «Publicar la 1.4.1», ya publicada | `CONTEXT.md` | ✅ Implementado |
+
+→ **Tier D COMPLETADO (2026-07-12).** Build 0/0, **137/137 unitarios** (131 + 6 de `LegalTextTests`) y
+**26/26 UI tests** (24 + 2 de los diálogos legales).
+
+1. **#3 cerró una afirmación falsa, no solo una carencia.** El README decía que la licencia se podía
+   consultar en *Ayuda → Acerca de*; ese diálogo solo muestra **una línea de copyright**, no el texto de
+   la MIT. Ahora sí existe el visor, y el aviso de terceros lista lo que la app **redistribuye de
+   verdad** (los `PackageReference` del `.csproj`: .NET, Windows App SDK y H.NotifyIcon.WinUI — MIT,
+   comprobado en el `.nuspec` del paquete, no de memoria), citando winget aparte como herramienta
+   externa que **no** se redistribuye.
+2. **Los textos van embebidos como recurso, y por eso hay tests.** `LegalText` es defensivo: si el
+   recurso no está, devuelve `""` y el diálogo dice "Texto no disponible" — un `LogicalName` mal escrito
+   **no rompería el build** y el fallo solo se vería abriendo el menú a mano. `LegalTextTests` exige que
+   ambos recursos existan y digan lo que deben; los 2 UI tests nuevos abren los diálogos en la app real
+   y comprueban que el cuerpo **no** es el mensaje de "no disponible".
+3. **#2 no son capturas hechas a mano.** El script fuerza tema e idioma, pulsa *Consultar
+   actualizaciones*, espera a que la tabla tenga filas reales y dispara; respalda y restaura el
+   `settings.json` real del usuario (la app es unpackaged, es el mismo archivo) y siembra
+   `LastVersionSeen` para que el diálogo de Novedades no salte encima de la foto. Captura por
+   `DWMWA_EXTENDED_FRAME_BOUNDS` (no `GetWindowRect`, que arrastra el margen invisible del DWM) y con
+   `SetProcessDPIAware()` (sin eso, en un monitor escalado la captura sale desplazada).
+
+Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md).

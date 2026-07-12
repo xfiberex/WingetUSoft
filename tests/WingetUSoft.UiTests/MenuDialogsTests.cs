@@ -30,4 +30,30 @@ public sealed class MenuDialogsTests(AppFixture fixture)
             DialogHelper.SafeCloseAnyDialog(fixture);
         }
     }
+
+    /// <summary>
+    /// Ayuda -> Licencia / Avisos de terceros muestran los textos legales <b>embebidos</b> en el .exe.
+    /// El assert que importa es que el cuerpo no venga vacío: <see cref="LegalText"/> es defensivo, así
+    /// que un recurso mal embebido no lanzaría — pintaría "Texto no disponible" y el diálogo seguiría
+    /// abriéndose igual. Leer el cuerpo real es lo único que distingue un caso del otro desde la UI.
+    /// </summary>
+    [Theory]
+    [InlineData("menuLicencia")]
+    [InlineData("menuAvisosTerceros")]
+    public void LegalDialog_ShowsEmbeddedTextAndCloses(string menuItemId)
+    {
+        MenuActions.ClickPath(Window, "btnAyuda", menuItemId);
+        var dialog = DialogHelper.WaitForDialog(fixture);
+        try
+        {
+            var body = DialogHelper.WaitForChild(dialog, "BodyText");
+            string text = DialogHelper.ReadText(body);
+            Assert.False(string.IsNullOrWhiteSpace(text));
+            Assert.DoesNotContain("no disponible", text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DialogHelper.SafeCloseAnyDialog(fixture);
+        }
+    }
 }

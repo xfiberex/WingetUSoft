@@ -996,6 +996,8 @@ public sealed partial class MainWindow : Window
         btnAyuda.Content = L.T("menu.help");
         menuBuscarActualizacion.Text = L.T("menu.checkUpdate");
         menuWhatsNew.Text = L.T("menu.whatsnew");
+        menuLicencia.Text = L.T("menu.license");
+        menuAvisosTerceros.Text = L.T("menu.thirdParty");
         menuAcercaDe.Text = L.T("menu.about");
     }
 
@@ -1695,6 +1697,23 @@ public sealed partial class MainWindow : Window
     private async void MenuAcercaDe_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new AboutDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
+        };
+        await dlg.ShowAsync();
+    }
+
+    private async void MenuLicencia_Click(object sender, RoutedEventArgs e) =>
+        await ShowLegalTextAsync(L.T("menu.license"), LegalText.License());
+
+    private async void MenuAvisosTerceros_Click(object sender, RoutedEventArgs e) =>
+        await ShowLegalTextAsync(L.T("menu.thirdParty"), LegalText.ThirdParty());
+
+    /// <summary>Muestra un texto legal embebido (licencia / avisos de terceros) en un diálogo con scroll.</summary>
+    private async Task ShowLegalTextAsync(string title, string body)
+    {
+        var dlg = new LegalTextDialog(title, body)
         {
             XamlRoot = Content.XamlRoot,
             RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,

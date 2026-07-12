@@ -32,6 +32,12 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <!-- Textos legales mostrados dentro de la app (Ayuda -> Licencia / Avisos de terceros). -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="WingetUSoft.LICENSE.txt" />
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.txt" LogicalName="WingetUSoft.THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Include="Assets\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
