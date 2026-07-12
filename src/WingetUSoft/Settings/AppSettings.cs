@@ -21,6 +21,14 @@ public sealed class AppSettings
     public bool SilentMode { get; set; } = true;
     public bool RunUpdatesAsAdministrator { get; set; } = false;
     public List<string> ExcludedIds { get; set; } = [];
+
+    /// <summary>
+    /// Versiones descartadas con "Omitir esta versión": Id del paquete → versión omitida. El paquete
+    /// reaparece solo cuando winget ofrece una versión distinta (ver <see cref="SkippedVersions"/>).
+    /// No confundir con <see cref="ExcludedIds"/>, que excluye el paquete entero y para siempre.
+    /// </summary>
+    public Dictionary<string, string> SkippedVersions { get; set; } = [];
+
     public List<HistoryEntry> History { get; set; } = [];
     public int AutoCheckIntervalMinutes { get; set; } = 0;
 

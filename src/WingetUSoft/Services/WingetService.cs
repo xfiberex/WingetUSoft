@@ -107,6 +107,116 @@ public static class WingetService
         return ParseUpgradeOutput(result.Output);
     }
 
+    /// <summary>
+    /// Busca paquetes en el catálogo de winget. Devuelve lista vacía si no hay coincidencias: winget
+    /// contesta con un texto traducido ("No se encontró ningún paquete…") y **código de salida distinto
+    /// de 0**, así que "sin resultados" no puede tratarse como error — solo lo es si además falló la
+    /// consulta al origen (ahí sí no habría ni tabla ni mensaje que parsear).
+    /// </summary>
+    public static async Task<List<WingetSearchResult>> SearchPackagesAsync(
+        string query,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return [];
+
+        var result = await RunWingetAsync(
+            ["search", "--query", query.Trim(), "--accept-source-agreements", "--disable-interactivity"],
+            cancellationToken);
+
+        var found = WingetSearchParser.Parse(result.Output);
+
+        // Solo se considera error si winget falló Y no imprimió nada aprovechable (origen caído, red,
+        // winget roto). Con resultados vacíos pero salida legible, la respuesta correcta es "no hay nada".
+        if (found.Count == 0 && result.ExitCode != 0 && string.IsNullOrWhiteSpace(result.Output))
+            throw new InvalidOperationException(BuildWingetCommandErrorMessage(
+                "buscar paquetes", result.ExitCode, result.Output, result.Error));
+
+        return found;
+    }
+
+    /// <summary>Instala un paquete del catálogo, con el mismo progreso de descarga que las actualizaciones.</summary>
+    public static Task<UpgradeResult> InstallPackageAsync(
+        string packageId,
+        bool silent,
+        IProgress<WingetProgressInfo>? progress = null,
+        CancellationToken cancellationToken = default,
+        IProgress<string>? logProgress = null) =>
+        RunWingetStreamingAsync(
+            BuildInstallArgumentList(packageId, silent),
+            progress,
+            cancellationToken,
+            logProgress);
+
+    /// <summary>
+    /// Exporta los paquetes instalados al JSON nativo de winget (<c>winget export</c>), el mismo formato
+    /// que consume <see cref="ImportPackagesAsync"/> y el propio CLI.
+    /// </summary>
+    /// <param name="includeVersions">
+    /// Fija la versión exacta de cada paquete. Útil para reproducir un equipo tal cual, pero la
+    /// importación fallará si esa versión concreta ya no está en el catálogo; sin esto se instala la
+    /// última de cada uno.
+    /// </param>
+    public static async Task<UpgradeResult> ExportPackagesAsync(
+        string outputPath,
+        bool includeVersions,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = new List<string>
+        {
+            "export",
+            "--output",
+            outputPath,
+            "--accept-source-agreements",
+            "--disable-interactivity"
+        };
+        if (includeVersions)
+            arguments.Add("--include-versions");
+
+        var result = await RunWingetAsync(arguments, cancellationToken);
+        return new UpgradeResult
+        {
+            Success = result.ExitCode == 0,
+            ExitCode = result.ExitCode,
+            Output = result.Output,
+            ErrorOutput = result.Error
+        };
+    }
+
+    /// <summary>
+    /// Instala los paquetes de un archivo de exportación de winget (<c>winget import</c>), con progreso
+    /// en vivo. <c>--ignore-unavailable</c> evita que un solo paquete que ya no exista en el catálogo
+    /// (o que no esté disponible en este equipo) aborte la importación entera.
+    /// </summary>
+    /// <remarks>
+    /// <b>Importar no es solo instalar lo que falta:</b> comprobado contra winget 1.29.280, un paquete del
+    /// archivo que ya esté instalado se **actualiza** si hay versión más reciente ("Se encontró un paquete
+    /// existente ya instalado. Intentando actualizar..."). Por eso el diálogo de confirmación lo advierte:
+    /// decir "instalará lo que no tengas" sería mentir sobre lo que la operación va a hacer en el equipo.
+    /// </remarks>
+    public static Task<UpgradeResult> ImportPackagesAsync(
+        string importPath,
+        bool silent,
+        IProgress<WingetProgressInfo>? progress = null,
+        CancellationToken cancellationToken = default,
+        IProgress<string>? logProgress = null)
+    {
+        var arguments = new List<string>
+        {
+            "import",
+            "--import-file",
+            importPath,
+            "--accept-source-agreements",
+            "--accept-package-agreements",
+            "--ignore-unavailable",
+            "--disable-interactivity"
+        };
+        if (silent)
+            arguments.Add("--silent");
+
+        return RunWingetStreamingAsync(arguments, progress, cancellationToken, logProgress);
+    }
+
     public static async Task<UpgradeResult> UninstallPackageAsync(
         string packageId,
         bool silent,
@@ -515,6 +625,26 @@ public static class WingetService
         ];
     }
 
+    /// <summary>
+    /// Argumentos de instalación. <c>--exact</c> es deliberado: sin él, winget trata el Id como consulta
+    /// y puede instalar OTRO paquete cuyo Id lo contenga (o abortar por ambigüedad). Instalando desde una
+    /// lista de resultados, el Id ya es exacto y no debe reinterpretarse.
+    /// </summary>
+    private static IReadOnlyList<string> BuildInstallArgumentList(string packageId, bool silent)
+    {
+        string mode = silent ? "--silent" : "--interactive";
+
+        return [
+            "install",
+            "--id",
+            packageId,
+            "--exact",
+            "--accept-source-agreements",
+            "--accept-package-agreements",
+            mode
+        ];
+    }
+
     private static IReadOnlyList<string> BuildElevatedWorkerArguments(
         IReadOnlyList<string> packageIds,
         bool silent,
@@ -719,16 +849,31 @@ public static class WingetService
             TotalCount = totalCount
         });
 
-    private static async Task<UpgradeResult> RunWingetInteractiveAsync(
+    private static Task<UpgradeResult> RunWingetInteractiveAsync(
         string packageId,
         bool silent,
         IProgress<WingetProgressInfo>? progress,
         CancellationToken cancellationToken,
+        IProgress<string>? logProgress) =>
+        RunWingetStreamingAsync(
+            BuildUpgradeArgumentList(packageId, silent),
+            progress,
+            cancellationToken,
+            logProgress);
+
+    /// <summary>
+    /// Ejecuta un comando de winget que descarga e instala (upgrade / install / import), retransmitiendo
+    /// el progreso de descarga y cada línea al registro. Antes esto vivía cableado dentro del flujo de
+    /// upgrade; se generalizó al añadir install/import, que necesitan exactamente el mismo tratamiento.
+    /// </summary>
+    private static async Task<UpgradeResult> RunWingetStreamingAsync(
+        IReadOnlyList<string> arguments,
+        IProgress<WingetProgressInfo>? progress,
+        CancellationToken cancellationToken,
         IProgress<string>? logProgress)
     {
-
         using var process = new Process();
-        process.StartInfo = CreateWingetStartInfo(BuildUpgradeArgumentList(packageId, silent));
+        process.StartInfo = CreateWingetStartInfo(arguments);
 
         process.Start();
 

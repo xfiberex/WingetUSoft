@@ -166,6 +166,23 @@
                                             </MenuFlyoutItem.Icon>
                                         </MenuFlyoutItem>
                                         <MenuFlyoutSeparator />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem x:Name="menuBuscarInstalar" Text="Buscar e instalar programas..." Click="MenuBuscarInstalar_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE721;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Name="menuExportarWinget" Text="Exportar paquetes (winget)..." Click="MenuExportarWinget_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xEDE1;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem x:Name="menuImportarWinget" Text="Importar paquetes (winget)..." Click="MenuImportarWinget_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE896;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
                                         <MenuFlyoutItem x:Name="menuVerHistorial" Text="Ver historial" Click="MenuHistorial_Click">
                                             <MenuFlyoutItem.Icon>
                                                 <FontIcon Glyph="&#xE81C;" />
@@ -416,11 +433,12 @@
                                               Grid.Row="1"
                                               SelectionMode="Single"
                                               SelectionChanged="LvPackages_SelectionChanged"
-                                              RightTapped="LvPackages_RightTapped">
+                                              ContextRequested="LvPackages_ContextRequested">
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="36" Padding="8,0"
-                                                      Opacity="{Binding IsExcluded, Converter={StaticResource BoolToOpacityConverter}}">
+                                                      AutomationProperties.Name="{Binding RowLabel}"
+                                                      Opacity="{Binding IsDimmed, Converter={StaticResource BoolToOpacityConverter}}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="54" />
                                                         <ColumnDefinition Width="*" />
@@ -444,19 +462,20 @@
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                                     <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <!-- Excluido no es un error ni un peligro: es una decisión del
-                                                         usuario. En rojo (como iba hasta v1.5.0) competía con los
-                                                         fallos reales del registro. Gris secundario, que además es
-                                                         coherente con la fila atenuada. -->
+                                                    <!-- Ni excluido ni omitido son errores: son decisiones del usuario.
+                                                         En rojo (como iba hasta v1.5.0) competían con los fallos reales
+                                                         del registro. Gris secundario, coherente con la fila atenuada.
+                                                         El glifo distingue los dos estados: bloqueo (excluido, todo el
+                                                         paquete, permanente) frente a pausa (versión omitida, temporal). -->
                                                     <FontIcon Grid.Column="6"
-                                                              Glyph="&#xE8D8;"
+                                                              Glyph="{Binding StatusGlyph}"
                                                               FontSize="14"
                                                               VerticalAlignment="Center"
                                                               Margin="8,0,0,0"
                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                              AutomationProperties.Name="{Binding ExcludedLabel}"
-                                                              ToolTipService.ToolTip="{Binding ExcludedLabel}"
-                                                              Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                              AutomationProperties.Name="{Binding StatusLabel}"
+                                                              ToolTipService.ToolTip="{Binding StatusLabel}"
+                                                              Visibility="{Binding HasStatusIcon, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ListView.ItemTemplate>

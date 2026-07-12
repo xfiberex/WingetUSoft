@@ -5,15 +5,17 @@
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6)
 ![Licencia](https://img.shields.io/github/license/xfiberex/WingetUSoft?label=licencia&color=green)
 
-Interfaz gráfica (WinUI 3) para gestionar **actualizaciones y desinstalaciones de software** mediante
-**winget** en Windows. Consulta qué programas tienen versión nueva, actualiza los que elijas (uno, varios
-o todos), desinstala lo que ya no usas y exporta la lista — todo desde una sola ventana, sin tocar la
-línea de comandos.
+Interfaz gráfica (WinUI 3) para **gestionar tu software** con **winget** en Windows: busca e instala
+programas nuevos, consulta cuáles tienen versión nueva y actualiza los que elijas (uno, varios o todos),
+desinstala lo que ya no usas, y **exporta o importa tu lista de paquetes** para reinstalarlo todo en otro
+equipo — sin tocar la línea de comandos.
 
 ![WingetUSoft — ventana principal (tema oscuro)](docs/screenshots/main-dark.png)
 
 <details>
-<summary>Más capturas (tema claro y Configuración)</summary>
+<summary>Más capturas (buscar e instalar, tema claro, Configuración)</summary>
+
+![Buscar e instalar programas del catálogo de winget](docs/screenshots/search-dark.png)
 
 ![Ventana principal (tema claro)](docs/screenshots/main-light.png)
 
@@ -50,6 +52,14 @@ descargar e instalar, y tras actualizar aparece una sola vez el diálogo de **No
 
 ## Características
 
+### Instalar software nuevo
+- **Buscar en el catálogo de winget** — *Herramientas → Buscar e instalar programas*: busca por nombre, Id o palabra clave e instala desde una lista de resultados, con progreso y registro en vivo.
+- **Sabe lo que ya tienes** — los resultados que ya están instalados se marcan como tal y no se pueden "instalar" otra vez (para eso está la actualización).
+
+### Exportar e importar tu lista de paquetes
+- **Exportar** — guarda tus programas en el **formato JSON nativo de winget**, opcionalmente con las versiones exactas.
+- **Importar** — reinstala esa lista en otro equipo (o tras formatear). Los paquetes que ya tengas se **actualizan** si hay versión más reciente; los que ya no estén en el catálogo se saltan sin abortar el resto.
+
 ### Actualizaciones
 - **Consulta de actualizaciones** — lista todos los paquetes con versión disponible, con soporte para versiones desconocidas (`<`).
 - **Actualización selectiva** — marca los paquetes con su casilla (o todos de golpe con la casilla de la cabecera / `Ctrl+A`) y actualízalos. El botón muestra cuántos hay marcados y se deshabilita si no hay ninguno. La selección **sobrevive a buscar, ordenar y filtrar**.
@@ -70,9 +80,10 @@ descargar e instalar, y tras actualizar aparece una sola vez el diálogo de **No
 
 ### Gestión y configuración
 Todas las preferencias viven en un solo sitio, la ventana **Configuración**; el menú **Herramientas**
-solo tiene acciones (exportar, historial, desinstalar).
+solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstalar).
 
-- **Lista de exclusiones** — excluye paquetes permanentemente de las actualizaciones automáticas.
+- **Omitir una versión** — descarta *una versión concreta* de un paquete (menú contextual de la fila): la fila se atenúa y los lotes la saltan, pero **el paquete reaparece solo cuando salga una versión nueva**. Winget no sabe hacer esto: sus anclajes (`pin`) congelan el paquete también para las versiones futuras, así que se resuelve en la app.
+- **Lista de exclusiones** — excluye paquetes permanentemente de las actualizaciones automáticas (distinto de omitir: esto es para siempre y para todo el paquete).
 - **Historial** — registra cada actualización con fecha, versiones y resultado (máx. 500 entradas), con búsqueda, filtros y exportación a CSV.
 - **Exportación** — exporta la lista a CSV o TSV con neutralización de fórmulas (seguro para Excel/Calc).
 - **Tema claro / oscuro** — integrado con el sistema de temas de Windows y configurable manualmente.
@@ -83,8 +94,11 @@ solo tiene acciones (exportar, historial, desinstalar).
 - **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`.
 
 ### Accesibilidad
-- **Manejable solo con teclado** — incluidas las cabeceras de la tabla, que son botones enfocables y
-  anuncian por qué columna y en qué dirección está ordenada.
+- **Manejable solo con teclado** — incluidas las cabeceras de la tabla (botones enfocables que anuncian
+  por qué columna y en qué dirección está ordenada) y el **menú contextual de la fila**, que se abre con
+  Shift+F10 o la tecla Menú, no solo con el ratón.
+- **Filas con nombre accesible** — un lector de pantalla anuncia "*programa*, versión instalada X,
+  disponible Y", no el nombre interno del objeto.
 - **Contraste verificado** — los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema
   claro y oscuro, comprobado por tests.
 
@@ -164,14 +178,17 @@ WingetUSoft/
 │   │   ├── ReleaseNotes.cs        # Notas de versión (Markdown → texto plano)
 │   │   ├── Throughput.cs          # ETA de descargas/operaciones largas
 │   │   ├── VersionOrder.cs        # Orden semántico de versiones (1.9 < 1.10, "< x", "Unknown")
+│   │   ├── SkippedVersions.cs     # "Omitir esta versión" (caduca sola al salir una nueva)
+│   │   ├── WingetTable.cs         # Parseo de las tablas de winget (agnóstico al idioma)
+│   │   ├── WingetSearchParser.cs  # Resultados de `winget search`
 │   │   ├── LogPalette.cs          # Colores del registro por tema (contraste WCAG AA verificado)
 │   │   ├── WindowSizing.cs        # Dimensionado/centrado por DPI (puro, testeable)
 │   │   ├── LegalText.cs           # Licencia MIT y avisos de terceros embebidos en el .exe
 │   │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
-│   │   └── Models/                # WingetPackage, WingetPackageInfo, WingetProgressInfo, ...
+│   │   └── Models/                # WingetPackage, WingetSearchResult, WingetProgressInfo, ...
 │   │
 │   ├── Services/               # Operaciones con efectos externos (procesos, red, disco)
-│   │   ├── WingetService.cs       # Ejecución de winget, parsing, elevación
+│   │   ├── WingetService.cs       # winget: upgrade, search, install, export, import, elevación
 │   │   ├── WingetShowLabels.cs    # Etiquetas de `winget show` en los 10 idiomas que winget traduce
 │   │   ├── GitHubUpdateService.cs # Auto-actualización (verificación Authenticode / SHA-256)
 │   │   └── CleanupScanner.cs      # Detección de residuos post-desinstalación
@@ -181,6 +198,7 @@ WingetUSoft/
 │   │
 │   ├── UI/                     # Capa de presentación (WinUI 3)
 │   │   ├── MainWindow.xaml/.cs      # Ventana principal (actualizaciones)
+│   │   ├── SearchWindow.xaml/.cs    # Buscar e instalar programas del catálogo
 │   │   ├── SettingsWindow.xaml/.cs  # Configuración (único hogar de las preferencias)
 │   │   ├── HistoryWindow.xaml/.cs   # Historial con filtros y exportación
 │   │   ├── UninstallWindow.xaml/.cs # Desinstalación

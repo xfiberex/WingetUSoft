@@ -35,15 +35,39 @@ public sealed class PackageViewModel : INotifyPropertyChanged
 
     public bool IsExcluded { get; set; }
 
-    /// <summary>Un paquete excluido nunca se actualiza, así que su casilla se deshabilita: marcarla
-    /// haría que la fila dijera una cosa y el contador del botón otra.</summary>
-    public bool IsSelectable => !IsExcluded;
+    /// <summary>True si el usuario omitió **esta** versión disponible (ver <see cref="SkippedVersions"/>).</summary>
+    public bool IsVersionSkipped { get; set; }
 
-    /// <summary>Etiqueta accesible (localizada) para el icono "Excluido" solo-icono de la fila.</summary>
-    public string ExcludedLabel => L.T("grid.excludedAccessible");
+    /// <summary>Un paquete excluido u omitido nunca se actualiza en lote, así que su casilla se
+    /// deshabilita: marcarla haría que la fila dijera una cosa y el contador del botón otra.</summary>
+    public bool IsSelectable => !IsExcluded && !IsVersionSkipped;
+
+    /// <summary>La fila se atenúa igual en ambos casos: es un paquete que el lote va a saltarse.</summary>
+    public bool IsDimmed => IsExcluded || IsVersionSkipped;
+
+    /// <summary>
+    /// Icono de estado de la fila. Excluido y omitido son cosas distintas y se distinguen a golpe de
+    /// vista: bloqueo (permanente, todo el paquete) frente a pausa (esta versión, temporal). Ninguno es
+    /// rojo — no son errores, son decisiones del usuario (Tier C #4).
+    /// </summary>
+    public string StatusGlyph => IsExcluded ? "" : IsVersionSkipped ? "" : "";
+
+    public bool HasStatusIcon => IsDimmed;
+
+    /// <summary>Etiqueta accesible (localizada) del icono de estado: sin ella, un lector de pantalla no lo anuncia.</summary>
+    public string StatusLabel => IsExcluded
+        ? L.T("grid.excludedAccessible")
+        : IsVersionSkipped ? L.T("grid.skippedAccessible", Available) : "";
 
     /// <summary>Etiqueta accesible de la casilla de la fila: sin ella se anuncia solo como "casilla".</summary>
     public string SelectLabel => L.T("grid.selectAccessible", Name);
+
+    /// <summary>
+    /// Nombre accesible de la fila entera. Sin esto, el <c>ListViewItem</c> hereda el <c>ToString()</c>
+    /// del ViewModel y un lector de pantalla anuncia literalmente "WingetUSoft.PackageViewModel"
+    /// (comprobado en el árbol de automatización de la app real).
+    /// </summary>
+    public string RowLabel => L.T("grid.rowAccessible", Name, Version, Available);
 
     public PackageViewModel(WingetPackage package) => Package = package;
 
@@ -109,6 +133,7 @@ public sealed partial class MainWindow : Window
     private MenuFlyoutItem ctxCopiarId = null!;
     private MenuFlyoutItem ctxBuscarWeb = null!;
     private MenuFlyoutItem ctxExcluir = null!;
+    private MenuFlyoutItem ctxOmitirVersion = null!;
 
     public MainWindow()
     {
@@ -125,6 +150,10 @@ public sealed partial class MainWindow : Window
         ctxBuscarWeb.Click += CtxBuscarWeb_Click;
         ctxExcluir = new MenuFlyoutItem { Text = L.T("ctx.exclude") };
         ctxExcluir.Click += CtxExcluir_Click;
+        // El texto se recalcula al abrir el menú (ver LvPackages_RightTapped): omitir es un interruptor,
+        // y ofrecer "Omitir esta versión" sobre una fila ya omitida sería mentirle al usuario.
+        ctxOmitirVersion = new MenuFlyoutItem { Text = L.T("ctx.skipVersion") };
+        ctxOmitirVersion.Click += CtxOmitirVersion_Click;
         ctxMenuRow = new MenuFlyout();
         ctxMenuRow.Items.Add(ctxActualizar);
         ctxMenuRow.Items.Add(new MenuFlyoutSeparator());
@@ -133,6 +162,7 @@ public sealed partial class MainWindow : Window
         ctxMenuRow.Items.Add(new MenuFlyoutSeparator());
         ctxMenuRow.Items.Add(ctxBuscarWeb);
         ctxMenuRow.Items.Add(new MenuFlyoutSeparator());
+        ctxMenuRow.Items.Add(ctxOmitirVersion);
         ctxMenuRow.Items.Add(ctxExcluir);
 
         // Set up window
@@ -277,6 +307,15 @@ public sealed partial class MainWindow : Window
     private bool IsTextInputFocused() =>
         FocusManager.GetFocusedElement(Content.XamlRoot) is TextBox or PasswordBox or AutoSuggestBox or RichEditBox;
 
+    /// <summary>
+    /// Tema con el que abrir los diálogos. Se lee del contenido (<c>RequestedTheme</c>), no de
+    /// <c>Application.Current</c>: el tema se fuerza por elemento, así que con "Claro" elegido sobre un
+    /// Windows oscuro el tema de la *aplicación* seguiría diciendo "oscuro" (mismo motivo que en
+    /// <c>LogBrush</c>, Tier C #4).
+    /// </summary>
+    private ElementTheme CurrentTheme =>
+        Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default;
+
     private void SetActionButtonsEnabled(bool enabled)
     {
         _actionsEnabled = enabled;
@@ -289,10 +328,18 @@ public sealed partial class MainWindow : Window
 
     // --- Selección por casilla (independiente de la fila resaltada) ---
 
-    /// <summary>Paquetes marcados y no excluidos. Sigue a <see cref="_selectedIds"/>, no a las filas
-    /// visibles: una búsqueda activa oculta filas pero no desmarca lo que el usuario ya eligió.</summary>
+    /// <summary>Paquetes marcados que el lote puede actualizar. Sigue a <see cref="_selectedIds"/>, no a
+    /// las filas visibles: una búsqueda activa oculta filas pero no desmarca lo que el usuario ya eligió.</summary>
     private List<WingetPackage> GetCheckedPackages() =>
-        [.. _packages.Where(p => _selectedIds.Contains(p.Id) && !_settings.ExcludedIds.Contains(p.Id))];
+        [.. _packages.Where(p => _selectedIds.Contains(p.Id) && IsUpgradable(p))];
+
+    /// <summary>
+    /// Un paquete entra en un lote si no está excluido (permanente) ni tiene **esta** versión omitida.
+    /// Es el único sitio donde se decide: lo usan tanto "Actualizar seleccionados" como "Actualizar todo".
+    /// </summary>
+    private bool IsUpgradable(WingetPackage p) =>
+        !_settings.ExcludedIds.Contains(p.Id)
+        && !SkippedVersions.IsSkipped(_settings.SkippedVersions, p.Id, p.Available);
 
     private void OnPackageSelectionChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -466,6 +513,7 @@ public sealed partial class MainWindow : Window
             new PackageViewModel(pkg)
             {
                 IsExcluded = _settings.ExcludedIds.Contains(pkg.Id),
+                IsVersionSkipped = SkippedVersions.IsSkipped(_settings.SkippedVersions, pkg.Id, pkg.Available),
                 IsSelected = _selectedIds.Contains(pkg.Id),   // la marca sobrevive a buscar/ordenar/filtrar
             });
 
@@ -532,6 +580,13 @@ public sealed partial class MainWindow : Window
         {
             _allPackages = await WingetService.GetUpgradablePackagesAsync(includeUnknown, _cts.Token);
             _listState = ListState.Ready;
+
+            // Las omisiones caducan solas: si el paquete ya no aparece (se actualizó por fuera o se
+            // desinstaló) o winget ofrece otra versión, la omisión guardada no significa nada. Sin esta
+            // poda, settings.json acumularía omisiones muertas para siempre.
+            if (SkippedVersions.Prune(_settings.SkippedVersions, _allPackages) > 0)
+                TrySaveSettings(L.T("msg.saveSkippedError"));
+
             UpdateSourceFilter();
             ApplySourceFilter();
             LoadPackagesToGrid();
@@ -908,7 +963,7 @@ public sealed partial class MainWindow : Window
 
     private async void BtnActualizarTodo_Click(object sender, RoutedEventArgs e)
     {
-        var pendientes = _packages.Where(p => !_settings.ExcludedIds.Contains(p.Id)).ToList();
+        var pendientes = _packages.Where(IsUpgradable).ToList();
         if (pendientes.Count == 0)
         {
             await ShowDialogAsync(L.T("info.title"), L.T("msg.noPackagesToUpdate"));
@@ -991,6 +1046,9 @@ public sealed partial class MainWindow : Window
         btnHerramientas.Content = L.T("menu.tools");
         menuExportar.Text = L.T("menu.export");
         menuConfiguracion.Text = L.T("menu.settings");
+        menuBuscarInstalar.Text = L.T("menu.searchInstall");
+        menuExportarWinget.Text = L.T("menu.exportWinget");
+        menuImportarWinget.Text = L.T("menu.importWinget");
         menuVerHistorial.Text = L.T("menu.history");
         menuDesinstalar.Text = L.T("menu.uninstall");
         btnAyuda.Content = L.T("menu.help");
@@ -1071,6 +1129,179 @@ public sealed partial class MainWindow : Window
         var tcs = new TaskCompletionSource();
         uninstallWindow.Closed += (_, _) => tcs.TrySetResult();
         await tcs.Task;
+    }
+
+    private async void MenuBuscarInstalar_Click(object sender, RoutedEventArgs e)
+    {
+        var searchWindow = new SearchWindow(_settings);
+        searchWindow.Activate();
+
+        var tcs = new TaskCompletionSource();
+        searchWindow.Closed += (_, _) => tcs.TrySetResult();
+        await tcs.Task;
+
+        // Instalar software cambia lo que hay en el equipo: la lista de actualizaciones en pantalla
+        // puede haber quedado obsoleta. No se reconsulta sola (winget tarda y el usuario no lo pidió),
+        // pero el estado deja de afirmar un recuento que ya no se puede garantizar.
+        if (searchWindow.InstalledSomething && _listState == ListState.Ready)
+            txtEstado.Text = L.T("status.listMayBeStale");
+    }
+
+    /// <summary>
+    /// Exporta los paquetes instalados al **JSON nativo de winget** (no al CSV/TSV de "Exportar lista",
+    /// que es para leerlo en una hoja de cálculo). Este archivo sirve para reinstalarlo todo en otro
+    /// equipo con *Importar paquetes*, o con `winget import` desde la consola.
+    /// </summary>
+    private async void MenuExportarWinget_Click(object sender, RoutedEventArgs e)
+    {
+        var includeVersions = new CheckBox
+        {
+            Content = L.T("export.includeVersions"),
+            IsChecked = false,
+        };
+        var panel = new StackPanel { Spacing = 12 };
+        panel.Children.Add(new TextBlock { Text = L.T("export.wingetBody"), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(includeVersions);
+        panel.Children.Add(new TextBlock
+        {
+            Text = L.T("export.includeVersionsHint"),
+            TextWrapping = TextWrapping.Wrap,
+            Opacity = 0.75,
+            FontSize = 12,
+        });
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = CurrentTheme,
+            Title = L.T("export.wingetTitle"),
+            Content = panel,
+            PrimaryButtonText = L.T("export.wingetContinue"),
+            CloseButtonText = L.T("btn.cancel"),
+            DefaultButton = ContentDialogButton.Primary,
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            return;
+
+        var picker = new FileSavePicker
+        {
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            SuggestedFileName = $"winget-paquetes_{DateTime.Now:yyyy-MM-dd}",
+        };
+        picker.FileTypeChoices.Add("JSON", [".json"]);
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+
+        SetUIBusy(true);
+        ShowIndeterminateProgress();
+        txtEstado.Text = L.T("status.exportingWinget");
+        AppendLog(L.T("log.exportingWinget", file.Name), LogLineKind.Accent);
+
+        try
+        {
+            var result = await WingetService.ExportPackagesAsync(
+                file.Path,
+                includeVersions.IsChecked == true);
+
+            if (result.Success)
+            {
+                txtEstado.Text = L.T("status.wingetExported", file.Name);
+                AppendLog(L.T("log.exportWingetDone", file.Path), LogLineKind.Success);
+            }
+            else
+            {
+                txtEstado.Text = L.T("status.wingetExportFailed");
+                AppendLog(L.T("log.exportWingetFailed", result.ExitCode), LogLineKind.Error);
+                await ShowDialogAsync(L.T("error.title"), L.T("msg.exportWingetError", result.ExitCode));
+            }
+        }
+        catch (Exception ex)
+        {
+            txtEstado.Text = L.T("status.wingetExportFailed");
+            AppendLog(L.T("error.genericPrefix", ex.Message), LogLineKind.Error);
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
+        }
+        finally
+        {
+            HideProgress();
+            SetUIBusy(false);
+        }
+    }
+
+    /// <summary>
+    /// Instala en este equipo los paquetes de un archivo de exportación de winget. Es la operación más
+    /// destructiva del menú (instala software), así que se confirma nombrando el archivo y advirtiendo
+    /// de que puede tardar y pedir UAC por cada instalador.
+    /// </summary>
+    private async void MenuImportarWinget_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+        picker.FileTypeFilter.Add(".json");
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is null) return;
+
+        if (!await ShowConfirmDialogAsync(L.T("import.confirmTitle"), L.T("import.confirmBody", file.Name)))
+            return;
+
+        _cancelStopsCurrentProcess = true;
+        _cts = new CancellationTokenSource();
+        SetUIBusy(true);
+        ShowIndeterminateProgress();
+        txtEstado.Text = L.T("status.importing");
+        AppendLog(L.T("log.importing", file.Name), LogLineKind.Accent);
+        TaskbarProgress.SetIndeterminate(_hWnd);
+
+        try
+        {
+            var result = await WingetService.ImportPackagesAsync(
+                file.Path,
+                _settings.SilentMode,
+                progress: null,
+                cancellationToken: _cts.Token,
+                logProgress: new Progress<string>(line =>
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                        AppendLog(line.TrimEnd());
+                }));
+
+            // winget import devuelve un código != 0 si ALGÚN paquete no se pudo instalar, aunque el resto
+            // sí. Con --ignore-unavailable eso es lo normal (paquetes que ya no están en el catálogo), así
+            // que no se presenta como fallo total: se dice que terminó y se remite al registro.
+            if (result.Success)
+            {
+                txtEstado.Text = L.T("status.importDone");
+                AppendLog(L.T("log.importDone"), LogLineKind.Success);
+            }
+            else
+            {
+                txtEstado.Text = L.T("status.importPartial");
+                AppendLog(L.T("log.importPartial", result.ExitCode), LogLineKind.Warning);
+                await ShowDialogAsync(L.T("info.title"), L.T("msg.importPartial"));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            txtEstado.Text = L.T("status.importCancelled");
+            AppendLog(L.T("log.importCancelled"), LogLineKind.Warning);
+        }
+        catch (Exception ex)
+        {
+            txtEstado.Text = L.T("status.importFailed");
+            AppendLog(L.T("error.genericPrefix", ex.Message), LogLineKind.Error);
+            await ShowDialogAsync(L.T("error.title"), ex.Message);
+        }
+        finally
+        {
+            TaskbarProgress.Clear(_hWnd);
+            HideProgress();
+            SetUIBusy(false);
+            _cts?.Dispose();
+            _cts = null;
+        }
     }
 
     // --- Sort / Search ---
@@ -1204,15 +1435,42 @@ public sealed partial class MainWindow : Window
             HidePackageInfoPanel();
     }
 
-    private void LvPackages_RightTapped(object sender, RightTappedRoutedEventArgs e)
+    /// <summary>
+    /// Abre el menú contextual de la fila. Se engancha a <c>ContextRequested</c> y no a
+    /// <c>RightTapped</c> (como hasta el Tier E) **a propósito**: `RightTapped` solo lo dispara el ratón,
+    /// así que el menú era inalcanzable con teclado — ni Shift+F10 ni la tecla Menú lo abrían, y con él
+    /// quedaban fuera del alcance de quien no usa ratón *todas* sus acciones (actualizar esta fila,
+    /// copiar, excluir y omitir versión). `ContextRequested` lo dispara WinUI en los dos casos. Se
+    /// descubrió conduciendo la app real, no en una revisión de código.
+    /// </summary>
+    private void LvPackages_ContextRequested(UIElement sender, ContextRequestedEventArgs e)
     {
         var element = e.OriginalSource as FrameworkElement;
-        var row = element?.DataContext as PackageViewModel;
-        if (row is not null)
-        {
-            lvPackages.SelectedItem = row;
-            ctxMenuRow.ShowAt(element!, e.GetPosition(element));
-        }
+
+        // Con teclado, el origen del evento es el ListView (no una celda), así que la fila se toma de la
+        // selección: es justo la que el usuario tiene enfocada.
+        var row = element?.DataContext as PackageViewModel ?? lvPackages.SelectedItem as PackageViewModel;
+        if (row is null) return;
+
+        lvPackages.SelectedItem = row;
+
+        // Omitir/Excluir son interruptores: el ítem debe decir lo que hará al pulsarlo, no el nombre
+        // genérico de la función. Se resuelve aquí, con la fila ya conocida.
+        ctxOmitirVersion.Text = row.IsVersionSkipped
+            ? L.T("ctx.unskipVersion")
+            : L.T("ctx.skipVersion");
+        ctxExcluir.Text = row.IsExcluded ? L.T("ctx.include") : L.T("ctx.exclude");
+
+        // Un paquete excluido ya no se actualiza nunca: omitir una versión suya no significaría nada.
+        ctxOmitirVersion.IsEnabled = !row.IsExcluded;
+
+        // Con ratón hay posición de puntero; con teclado no, y el menú se ancla al contenedor de la fila.
+        if (element is not null && e.TryGetPosition(element, out var position))
+            ctxMenuRow.ShowAt(element, position);
+        else
+            ctxMenuRow.ShowAt((lvPackages.ContainerFromItem(row) as FrameworkElement) ?? lvPackages);
+
+        e.Handled = true;
     }
 
     // --- Context Menu ---
@@ -1271,6 +1529,33 @@ public sealed partial class MainWindow : Window
             return $"https://winget.run/pkg/{publisher}/{name}";
         }
         return $"https://winget.run/search?q={Uri.EscapeDataString(packageId)}";
+    }
+
+    /// <summary>
+    /// Omite (o deja de omitir) la versión disponible **de hoy** para ese paquete: la fila se atenúa y el
+    /// lote la salta, pero el paquete reaparece solo cuando winget ofrezca otra versión. No es lo mismo
+    /// que excluir (permanente, todo el paquete) — ver <see cref="SkippedVersions"/>.
+    /// </summary>
+    private void CtxOmitirVersion_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetSelectedPackage() is not { } pkg) return;
+
+        if (SkippedVersions.IsSkipped(_settings.SkippedVersions, pkg.Id, pkg.Available))
+        {
+            SkippedVersions.Unskip(_settings.SkippedVersions, pkg.Id);
+            txtEstado.Text = L.T("status.versionUnskipped", pkg.Name);
+        }
+        else
+        {
+            SkippedVersions.Skip(_settings.SkippedVersions, pkg.Id, pkg.Available);
+            // Omitir desmarca: si no, la fila quedaría marcada pero con la casilla deshabilitada, y el
+            // contador del botón contaría un paquete que el lote no va a tocar.
+            _selectedIds.Remove(pkg.Id);
+            txtEstado.Text = L.T("status.versionSkipped", pkg.Available, pkg.Name);
+        }
+
+        TrySaveSettings(L.T("msg.saveSkippedError"));
+        LoadPackagesToGrid();
     }
 
     private void CtxExcluir_Click(object? sender, RoutedEventArgs? e)

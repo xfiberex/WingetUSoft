@@ -220,6 +220,63 @@ function Capture-Theme([string]$exePath, [string]$themeName) {
 
         Save-WindowPng $hwnd (Join-Path $OutDir "main-$themeName.png")
 
+        # Ventana "Buscar e instalar" (Tier E): se captura solo en oscuro, con una búsqueda real hecha.
+        if ($themeName -eq 'dark') {
+            try {
+                Expand-Element (Find-ByAutomationId $window 'btnHerramientas')
+                Start-Sleep -Milliseconds 600
+                Invoke-Element (Find-ByAutomationId $window 'menuBuscarInstalar')
+                Start-Sleep -Seconds 2
+
+                $root = [System.Windows.Automation.AutomationElement]::RootElement
+                $pidCond = New-Object System.Windows.Automation.PropertyCondition(
+                    [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+
+                $searchWindow = $null
+                $deadline = (Get-Date).AddSeconds(15)
+                while ((Get-Date) -lt $deadline -and -not $searchWindow) {
+                    foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
+                        if ($w.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
+                            (New-Object System.Windows.Automation.PropertyCondition(
+                                [System.Windows.Automation.AutomationElement]::AutomationIdProperty, 'btnBuscar')))) {
+                            $searchWindow = $w; break
+                        }
+                    }
+                    if (-not $searchWindow) { Start-Sleep -Milliseconds 400 }
+                }
+
+                if ($searchWindow) {
+                    $sHwnd = [IntPtr]$searchWindow.Current.NativeWindowHandle
+                    [void][Win32Capture]::MoveWindow($sHwnd, 90, 30, 1100, 760, $true)
+                    Start-Sleep -Milliseconds 600
+
+                    # Una búsqueda de verdad: una ventana vacía no enseña nada de la característica.
+                    $box = Find-ByAutomationId $searchWindow 'txtBuscar'
+                    $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('7zip')
+                    Invoke-Element (Find-ByAutomationId $searchWindow 'btnBuscar')
+
+                    $list = Find-ByAutomationId $searchWindow 'lvResults'
+                    $itemCond = New-Object System.Windows.Automation.PropertyCondition(
+                        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                        [System.Windows.Automation.ControlType]::ListItem)
+                    $deadline = (Get-Date).AddSeconds(120)
+                    while ((Get-Date) -lt $deadline) {
+                        if ($list.FindAll([System.Windows.Automation.TreeScope]::Descendants, $itemCond).Count -gt 0) { break }
+                        Start-Sleep -Milliseconds 500
+                    }
+                    Start-Sleep -Seconds 2
+
+                    Save-WindowPng $sHwnd (Join-Path $OutDir 'search-dark.png')
+                    $searchWindow.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+                    Start-Sleep -Seconds 1
+                } else {
+                    Write-Warning "  No apareció la ventana de búsqueda; se omite esa captura."
+                }
+            } catch {
+                Write-Warning "  No se pudo capturar la ventana de búsqueda: $($_.Exception.Message)"
+            }
+        }
+
         # Ventana de Configuración: se captura solo en oscuro (basta una muestra de la ventana).
         # Va en try/catch aparte: si la navegación del menú falla, la captura principal (ya guardada)
         # no debe perderse por ello.
