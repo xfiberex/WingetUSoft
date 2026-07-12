@@ -100,14 +100,45 @@ internal static class GitHubUpdateService
         return version;
     }
 
+    /// <summary>Ruta del instalador descargado. Se sobrescribe en cada intento (FileMode.Create).</summary>
+    internal static string DefaultInstallerPath => Path.Combine(Path.GetTempPath(), $"{Repo}_Update.exe");
+
+    /// <param name="destinationPath">Solo para pruebas: si es null se usa <see cref="DefaultInstallerPath"/>.</param>
     public static async Task<string> DownloadInstallerAsync(
         string downloadUrl,
         string? checksumUrl = null,
         IProgress<double>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? destinationPath = null)
     {
-        string tempPath = Path.Combine(Path.GetTempPath(), $"{Repo}_Update.exe");
+        string tempPath = destinationPath ?? DefaultInstallerPath;
 
+        // La descarga va en su propio método a propósito: así su FileStream (abierto con
+        // FileShare.None) queda cerrado ANTES de verificar. Si el handle sigue vivo, tanto
+        // VerifyAuthenticodeSignature como ComputeSha256Async fallan al abrir el archivo con
+        // "lo está usando otro proceso" —el proceso somos nosotros mismos— y el instalador se
+        // rechaza siempre.
+        await DownloadToFileAsync(downloadUrl, tempPath, progress, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await VerifyInstallerAsync(tempPath, checksumUrl, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            TryDeleteRejectedInstaller(tempPath);
+            throw;
+        }
+
+        return tempPath;
+    }
+
+    private static async Task DownloadToFileAsync(
+        string downloadUrl,
+        string destinationPath,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
+    {
         using HttpResponseMessage response = await DownloadHttp
             .GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
@@ -116,7 +147,7 @@ internal static class GitHubUpdateService
         long? totalBytes = response.Content.Headers.ContentLength;
         await using Stream contentStream = await response.Content
             .ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        await using FileStream fileStream = new(tempPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await using FileStream fileStream = new(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
 
         byte[] buffer = new byte[81920];
         long totalRead = 0;
@@ -128,18 +159,20 @@ internal static class GitHubUpdateService
             if (totalBytes > 0)
                 progress?.Report((double)totalRead / totalBytes.Value);
         }
+    }
 
+    /// <summary>
+    /// Borra el instalador que no pasó la verificación. Si el borrado falla, se ignora: el error que
+    /// importa es el que lo rechazó, y el próximo intento sobrescribe el archivo (FileMode.Create).
+    /// </summary>
+    private static void TryDeleteRejectedInstaller(string path)
+    {
         try
         {
-            await VerifyInstallerAsync(tempPath, checksumUrl, cancellationToken).ConfigureAwait(false);
+            File.Delete(path);
         }
-        catch
-        {
-            File.Delete(tempPath);
-            throw;
-        }
-
-        return tempPath;
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     /// <summary>
