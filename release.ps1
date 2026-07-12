@@ -5,7 +5,7 @@
 .DESCRIPTION
     Flujo completo en un paso:
       1. Valida la versión y el árbol de trabajo.
-      2. Ejecuta las pruebas (salvo -SkipTests).
+      2. Ejecuta las pruebas: unitarias + UI tests (salvo -SkipTests / -SkipUiTests).
       3. Actualiza <Version> en el .csproj si cambió.
       4. Compila el instalador (publish framework-dependent + Inno Setup).
       5. Commit del bump de versión + tag anotado vX.Y.Z.
@@ -30,7 +30,13 @@
     Ruta a un archivo Markdown con las notas del release. Si se omite, se genera una plantilla.
 
 .PARAMETER SkipTests
-    Omite la ejecución de pruebas.
+    Omite TODAS las pruebas (unitarias y UI).
+
+.PARAMETER SkipUiTests
+    Omite solo los UI tests, y ejecuta las unitarias. Los UI tests conducen la app real por UI
+    Automation, así que necesitan una sesión de escritorio interactiva y desatendida: no valen una
+    sesión bloqueada, ni una consola sin escritorio (CI, tarea programada, SSH). NO necesitan
+    elevación — la app corre asInvoker.
 
 .PARAMETER AllowDirty
     Permite continuar con cambios sin commitear en el árbol de trabajo.
@@ -42,6 +48,7 @@
     .\release.ps1 -Version 1.3.0
     .\release.ps1 -Version 1.3.0 -DryRun
     .\release.ps1 -Version 1.3.0 -NotesFile notas.md
+    .\release.ps1 -Version 1.3.0 -SkipUiTests      # sin escritorio interactivo disponible
     .\release.ps1 -Version 1.3.0 -CertThumbprint A1B2C3...
 #>
 [CmdletBinding()]
@@ -49,6 +56,7 @@ param(
     [string]$Version,
     [string]$NotesFile,
     [switch]$SkipTests,
+    [switch]$SkipUiTests,
     [switch]$AllowDirty,
     [switch]$DryRun,
     # Firma de código (recomendada: ver nota IMPORTANTE arriba): se reenvían a build-installer.ps1.
@@ -66,11 +74,12 @@ function Warn($m)  { Write-Host "[!] $m" -ForegroundColor Yellow }
 function Die($m)   { Write-Host "[X] $m" -ForegroundColor Red; exit 1 }
 
 # ── Rutas ──────────────────────────────────────────────────────────────────
-$root         = $PSScriptRoot
-$csproj       = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
-$testProject  = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
-$buildScript  = Join-Path $root "src\WingetUSoft\installer\build-installer.ps1"
-$outputDir    = Join-Path $root "src\WingetUSoft\installer\Output"
+$root          = $PSScriptRoot
+$csproj        = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
+$testProject   = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
+$uiTestProject = Join-Path $root "tests\WingetUSoft.UiTests\WingetUSoft.UiTests.csproj"
+$buildScript   = Join-Path $root "src\WingetUSoft\installer\build-installer.ps1"
+$outputDir     = Join-Path $root "src\WingetUSoft\installer\Output"
 
 if (-not (Test-Path $csproj))      { Die "No se encontró el proyecto: $csproj" }
 if (-not (Test-Path $buildScript)) { Die "No se encontró el script de instalador: $buildScript" }
@@ -127,10 +136,29 @@ try {
     if ($SkipTests) {
         Warn "Pruebas omitidas (-SkipTests)."
     } else {
-        Info "Ejecutando pruebas..."
+        Info "Ejecutando pruebas unitarias..."
         & dotnet test $testProject --nologo
-        if ($LASTEXITCODE -ne 0) { Die "Las pruebas fallaron. Release abortado." }
-        Ok "Pruebas correctas."
+        if ($LASTEXITCODE -ne 0) { Die "Las pruebas unitarias fallaron. Release abortado." }
+        Ok "Pruebas unitarias correctas."
+
+        # Los UI tests conducen la app REAL por UI Automation (FlaUI/UIA3): abren ventanas, pulsan
+        # botones y leen el árbol de automatización. Necesitan una sesión de escritorio interactiva y
+        # desatendida -- no valen una sesión bloqueada ni una consola sin escritorio (CI, tarea
+        # programada, SSH); ahí hay que pasar -SkipUiTests. NO necesitan elevación: la app es asInvoker.
+        #
+        # Cubren cosas que las unitarias no pueden ver: que la ventana quepa en la WorkArea y en las
+        # celdas de snap, que el cambio de idioma repinte los controles ya visibles, y que las cabeceras
+        # de la tabla se puedan activar sin ratón. Justo el tipo de regresión que se cuela en un release.
+        if ($SkipUiTests) {
+            Warn "UI tests omitidos (-SkipUiTests): este release NO se ha verificado contra la app real."
+        } elseif (-not (Test-Path $uiTestProject)) {
+            Die "No se encontró el proyecto de UI tests: $uiTestProject  (usa -SkipUiTests si es a propósito)."
+        } else {
+            Info "Ejecutando UI tests (abren la app real: no toques el ratón ni el teclado)..."
+            & dotnet test $uiTestProject --nologo
+            if ($LASTEXITCODE -ne 0) { Die "Los UI tests fallaron. Release abortado." }
+            Ok "UI tests correctos."
+        }
     }
 
     # ── Notas del release ──────────────────────────────────────────────────────

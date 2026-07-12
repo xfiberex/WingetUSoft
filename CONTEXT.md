@@ -144,8 +144,9 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
   de acciones al angostar, **celdas de snap de media y cuarto de pantalla (#7)**, navegación de
   diálogos, cambio de idioma **desde la ventana de Configuración (Tier C #5)**, apertura de ventanas,
   y **cabeceras ordenables activables por `Invoke` con su estado de orden anunciado (Tier C #6)**).
-  **No** los corre `release.ps1` (solo ejecuta el proyecto unitario); necesitan sesión de escritorio
-  interactiva pero **no** elevación (la app es asInvoker).
+  **`release.ps1` los ejecuta** junto a los unitarios desde v1.6.0: un release no sale si la app real
+  no pasa. Necesitan sesión de escritorio interactiva y desatendida (no valen sesión bloqueada ni
+  consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación (la app es asInvoker).
 - ✅ **Tier B COMPLETADO (2026-07-10/11):** build 0/0, 93/93 unitarios + 16/16 UI, y verificación
   visual del usuario OK (wrap de acciones, mínimos por DPI, DataGrid, accesibilidad, snap layouts).
   Ver Registro de cambios.
