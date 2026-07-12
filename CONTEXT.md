@@ -6,20 +6,19 @@
 > _Estado actual_ y añadir una entrada en el _Registro de cambios_. Usar fechas absolutas.
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
-- **Última actualización de este documento:** 2026-07-11
-- **Versión actual:** **1.5.0** — Tier C (#1–#3): auditoría de UI/UX — flujo y feedback, modelo de
-  selección, y tres bugs de datos (orden de versiones como texto, columna "Tam." imposible de
-  rellenar, parser de `winget show` que solo entendía inglés)
-  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.5.0), tag `v1.5.0`,
-  **sin firmar** — ver Pendientes §6). Versión previa: 1.4.1 (fixes del flujo de instalación/
-  actualización vía GitHub).
+- **Última actualización de este documento:** 2026-07-12
+- **Versión actual:** **1.6.0** — cierre del Tier C (#4–#6): el rojo deja de significar cuatro cosas,
+  las preferencias se unifican en *Configuración* (el menú pasa a *Herramientas*, solo acciones) y las
+  cabeceras ordenables pasan a ser botones accesibles. Incluye el **fix de la auto-actualización rota
+  en 1.4.1/1.5.0** (ver §Registro de cambios).
+  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.6.0), tag `v1.6.0`,
+  **sin firmar** — ver Pendientes §6). Versión previa: 1.5.0 (Tier C #1–#3).
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
   implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11): mejoras visuales/responsivas +
   accesibilidad + proyecto `WingetUSoft.UiTests` con FlaUI, y cierre de #7 (snap layouts de
-  Windows 11). **Tier C EN CURSO** (2026-07-11): auditoría de UI/UX — **#1–#3 hechos**, #4–#6
-  pendientes (jerarquía de color, preferencias en dos sitios, accesibilidad de las cabeceras
-  ordenables) — build 0/0, **124/124 unitarios**, **16/16 UI tests**.
+  Windows 11). **Tier C COMPLETADO** (2026-07-11/12): auditoría de UI/UX — los 6 bloques hechos —
+  build 0/0, **131/131 unitarios**, **24/24 UI tests**.
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -46,6 +45,7 @@ WingetUSoft/
 │  │  ├─ ReleaseNotes.cs        Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
 │  │  ├─ Throughput.cs          ETA (tiempo restante) para descargas y operaciones largas
 │  │  ├─ VersionOrder.cs        Orden semántico de versiones (puro, Tier C #3): 1.9 < 1.10, "< x", "Unknown"
+│  │  ├─ LogPalette.cs          Colores del registro por tema + contraste WCAG (puro, Tier C #4)
 │  │  ├─ WindowSizing.cs        Dimensionado/centrado por DPI acotado a WorkArea (puro, Tier B #1/#2)
 │  │  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
 │  │  └─ Models/
@@ -126,24 +126,26 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
 ## 3. Estado actual
 
 - ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
-- ✅ **Tier C — #1–#3 hechos (2026-07-11, v1.5.0):** auditoría de UI/UX. Ver Registro de cambios;
-  **#4–#6 siguen pendientes** (jerarquía de color, preferencias repartidas en dos sitios,
-  accesibilidad de las cabeceras ordenables).
-- ✅ Tests: **124/124** (`dotnet test`) — los 95 previos + **17 de `VersionOrderTests`** y
-  **12 de `ParsePackageInfoTests`** (ambos de Tier C #3). Desglose de los 95: 30 migrados de MSTest
-  (Tier A #0) + 21 de `LocalizationTests`
+- ✅ **Tier C COMPLETADO (2026-07-11/12, v1.5.0 + v1.6.0):** auditoría de UI/UX, los 6 bloques. Ver
+  Registro de cambios.
+- ✅ Tests: **131/131** (`dotnet test`) — los 124 previos + **5 de `LogPaletteTests`** (Tier C #4:
+  contraste WCAG AA de cada color del registro en ambos temas) + **2 de descarga en
+  `GitHubUpdateServiceTests`** (fix del bloqueo de la auto-actualización). Desglose de los 124: 95
+  previos + 17 de `VersionOrderTests` + 12 de `ParsePackageInfoTests` (Tier C #3). Desglose de los 95:
+  30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
   (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
   `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5) + **15 de `WindowSizingTests`
   (Tier B #1/#2, +4 del clamp de snap de #7)** + **2 de `GitHubUpdateServiceTests`** (hash SHA-256 con
   el que se verifica el instalador descargado). Las Fases 6 y 7 de Tier A no añadieron tests nuevos
-  (UI pura + extracción de strings; `LocalizationTests` ya cubre por completitud las **273 claves** de
-  `L.Map` —272 de Tier A + `grid.excludedAccessible` de Tier B #6— sin necesitar un test por clave).
-- ✅ **UI tests (FlaUI): 16/16** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto
+  (UI pura + extracción de strings; `LocalizationTests` ya cubre por completitud las claves de `L.Map`
+  sin necesitar un test por clave).
+- ✅ **UI tests (FlaUI): 24/24** (`dotnet test tests/WingetUSoft.UiTests`) — proyecto
   `WingetUSoft.UiTests` (Tier B #8): ejercen la app real vía UIA3 (ventana dentro de WorkArea, wrap
   de acciones al angostar, **celdas de snap de media y cuarto de pantalla (#7)**, navegación de
-  diálogos, cambio de idioma, apertura de ventanas). **No** los corre `release.ps1` (solo ejecuta el
-  proyecto unitario); necesitan sesión de escritorio interactiva pero **no** elevación (la app es
-  asInvoker).
+  diálogos, cambio de idioma **desde la ventana de Configuración (Tier C #5)**, apertura de ventanas,
+  y **cabeceras ordenables activables por `Invoke` con su estado de orden anunciado (Tier C #6)**).
+  **No** los corre `release.ps1` (solo ejecuta el proyecto unitario); necesitan sesión de escritorio
+  interactiva pero **no** elevación (la app es asInvoker).
 - ✅ **Tier B COMPLETADO (2026-07-10/11):** build 0/0, 93/93 unitarios + 16/16 UI, y verificación
   visual del usuario OK (wrap de acciones, mínimos por DPI, DataGrid, accesibilidad, snap layouts).
   Ver Registro de cambios.
@@ -330,6 +332,86 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-12 — feat: Tier C #4–#6 — **TIER C COMPLETADO** (release v1.6.0)
+
+Cierre de la auditoría de UI/UX. Build 0/0, **131/131 unitarios**, **24/24 UI tests**, y verificación
+conduciendo la app real (menú, ventana de Configuración, consulta con 24 paquetes reales).
+
+**#4 — Jerarquía visual y uso del color.** El rojo hacía cuatro trabajos a la vez. Ahora significa una
+sola cosa: peligro.
+
+- *Cancelar* interrumpe un lote, no destruye nada: deja de ir de rojo y pasa a ser un botón normal. El
+  rojo se queda donde sí hay destrucción (*Desinstalar seleccionado*, *Eliminar seleccionados*).
+- El icono de "excluido" era del **mismo rojo que los errores**, cuando excluir es una decisión del
+  usuario, no un fallo. Pasa a gris secundario, coherente con la fila ya atenuada.
+- **Bug encontrado al mirar los colores del registro:** había UN solo juego de RGB cableado en
+  `AppendLog`, el mismo para claro y para oscuro, y elegido para fondo claro. Sobre la tarjeta oscura,
+  el verde de los aciertos (#387A4D) y el rojo de los fallos (#BA4636) caían muy por debajo del
+  contraste legible: *lo que el usuario va a buscar al registro era justo lo peor de leer en tema
+  oscuro*. Nuevo `Core/LogPalette.cs` con un color por tema (paleta de Windows:
+  SystemFillColorSuccess/Critical/Caution), y `LogPaletteTests` **mide el contraste real de cada
+  combinación contra el fondo de su tarjeta y exige el 4.5:1 de WCAG AA** — un color mal elegido rompe
+  el build. El registro ya escrito se repinta al cambiar de tema (`RecolorLog`); se guarda el tipo de
+  cada línea en paralelo a los `Blocks` porque un `Run` no recuerda de qué tipo era.
+- El color se resuelve con `rtbLog.ActualTheme`, **no** con `Application.Current.RequestedTheme`: el
+  tema se fuerza por elemento (`ApplyTheme`), así que con "Claro" elegido sobre un Windows oscuro el
+  tema de la *aplicación* sigue diciendo "oscuro" y el registro saldría con los colores contrarios.
+
+**#5 — Configuración es el único hogar de las preferencias.** Modo/Tema/Idioma se mudan del menú a la
+ventana de *Configuración*, repartidos en dos tarjetas nuevas (*Apariencia*, *Actualizaciones*). El
+menú se queda solo con acciones y se llama **Herramientas** (`btnOpciones` → `btnHerramientas`).
+Decisión tomada con el usuario frente a la alternativa de duplicar las preferencias en ambos sitios y
+sincronizarlas: una sola fuente de verdad, sin estado espejo que mantener.
+
+- Las claves de localización de esas preferencias se renombran `menu.*` → `pref.*`: ya no las rotula
+  un `MenuFlyout`, las rotula `SettingsWindow`.
+- **Agujero cerrado de paso:** la ventana llamaba a `Save()` e **ignoraba el resultado**, cerrándose
+  igual. Unos cambios que no llegaban al disco se perdían en silencio al reiniciar. Ahora, si falla,
+  avisa con el motivo y **no se cierra**. El idioma solo se aplica al proceso (`L.Set`) *después* de
+  que el guardado haya ido bien.
+
+**#6 — Las cabeceras ordenables son botones de verdad.** Eran `StackPanel` con `Tapped`: fuera del
+orden de tabulación, sordas a Espacio/Intro, y anunciadas por un lector de pantalla como un panel
+cualquiera. **Ordenar la tabla era imposible sin ratón.** Ahora son `Button` (estilo
+`ColumnHeaderButtonStyle`: se ven igual, con foco visible del sistema), y su nombre accesible lleva la
+columna **y la dirección del orden** ("Nombre, orden ascendente"), que hasta ahora solo vivía en el
+triángulo ▲/▼ — invisible para quien no ve. Que `SortHeaderTests` pueda activarlas por `Invoke` **es**
+la prueba del arreglo: `Invoke` es el patrón de UI Automation que usan también el teclado y los
+lectores de pantalla, y sobre un `StackPanel` no existe.
+
+**Trampa evitada en los tests:** `LocalizationTests` comprobaba una clave conocida con
+`L.T("menu.options")`, pero `L.T` devuelve *la propia clave* cuando no la conoce — así que al borrar
+esa clave el test habría seguido pasando en falso. Ahora se comprueba contra `L.Map`.
+
+### 2026-07-12 — fix: la auto-actualización estaba rota desde 1.4.1 (se bloqueaba el archivo a sí misma)
+
+Reportado por el usuario al intentar pasar de 1.4.1 a 1.5.0: *"The process cannot access the file
+'...\WingetUSoft_Update.exe' because it is being used by another process"*. **No era otro proceso: era
+la app bloqueándose su propio archivo.** El mensaje de Windows es genérico y despista.
+
+`DownloadInstallerAsync` declaraba el `FileStream` de la descarga con `await using` **a nivel de
+método** y con `FileShare.None` (acceso exclusivo). En C# ese handle sigue abierto hasta que el método
+*retorna* — pero antes de retornar, el propio método llamaba a `VerifyInstallerAsync`, que abre ese
+mismo archivo para calcular el SHA-256. Windows lo rechazaba. Y el `catch` empeoraba el diagnóstico:
+su `File.Delete` fallaba por lo mismo, lanzando una segunda `IOException` que **sustituía** al error
+original — por eso el instalador de 35 MB se quedaba tirado en `%TEMP%`.
+
+`git log -S VerifyInstallerAsync` lo sitúa en el commit de **v1.4.1**: la auto-actualización de esa
+versión no fallaba "a veces", **fallaba siempre**. `VerifyAuthenticodeSignature` sufría lo mismo (no
+podía abrir el archivo → devolvía `false` en silencio), así que tampoco habría funcionado el día que
+haya certificado.
+
+- **Arreglo:** la descarga se mueve a `DownloadToFileAsync`, de forma que su `FileStream` se cierre al
+  salir del método, **antes** de verificar. El borrado del instalador rechazado pasa a best-effort,
+  para que un fallo al borrar no vuelva a enmascarar el error que sí importa.
+- **Tests:** `GitHubUpdateServiceTests` levanta un servidor HTTP mínimo sobre `TcpListener` (no
+  `HttpListener`: en Windows exige reservar la URL como administrador) y ejercita la descarga completa,
+  camino feliz y checksum que no cuadra. Se comprobó que **los dos fallan contra el código de 1.4.1**.
+  Los tests que había solo cubrían `ComputeSha256Async`, nunca la descarga — por eso el bug pasó.
+- **Consecuencia operativa:** el updater roto vive en la máquina del usuario. **Quien ya esté en 1.4.1
+  o 1.5.0 no puede auto-actualizarse**; tendrá que instalar 1.6.0 a mano una vez. A partir de ahí, la
+  auto-actualización vuelve a funcionar.
 
 ### 2026-07-11 — feat: Tier C #1–#3 — auditoría de UI/UX (3 bloques, 3 bugs de fondo)
 

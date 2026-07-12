@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using WinRT.Interop;
 
 namespace WingetUSoft;
@@ -48,15 +49,32 @@ public sealed partial class SettingsWindow : Window
         txtTitleBar.Text = L.T("settings.title");
         txtHeaderTitle.Text = L.T("settings.title");
         txtHeaderSubtitle.Text = L.T("settings.subtitle");
-        txtAutoCheckTitle.Text = L.T("settings.autoCheckTitle");
+
+        txtAppearanceTitle.Text = L.T("settings.appearanceTitle");
+        txtThemeLabel.Text = L.T("pref.theme");
+        rbTemaSistema.Content = L.T("pref.themeSystem");
+        rbTemaClaro.Content = L.T("pref.themeLight");
+        rbTemaOscuro.Content = L.T("pref.themeDark");
+        cmbIdioma.Header = L.T("pref.lang");
+        itemLangEs.Content = L.T("pref.lang.es");
+        itemLangEn.Content = L.T("pref.lang.en");
+        itemLangPt.Content = L.T("pref.lang.pt");
+        itemLangFr.Content = L.T("pref.lang.fr");
+        itemLangIt.Content = L.T("pref.lang.it");
+
+        txtUpdatesTitle.Text = L.T("settings.updatesTitle");
+        txtUpdateModeLabel.Text = L.T("pref.updateMode");
+        rbModoSilencioso.Content = L.T("pref.silent");
+        rbModoInteractivo.Content = L.T("pref.interactive");
+        chkAdministrador.Content = L.T("settings.runAsAdmin");
         cmbIntervalo.Header = L.T("settings.intervalHeader");
         itemIntervalOff.Content = L.T("settings.intervalOff");
         itemInterval30.Content = L.T("settings.interval30");
         itemInterval60.Content = L.T("settings.interval60");
         itemInterval120.Content = L.T("settings.interval120");
-        txtOptionsTitle.Text = L.T("settings.optionsTitle");
+
+        txtLogTitle.Text = L.T("settings.logTitle");
         chkLogArchivo.Content = L.T("settings.logToFile");
-        chkAdministrador.Content = L.T("settings.runAsAdmin");
         txtLogDirLabel.Text = L.T("settings.logDirLabel");
         txtNotifTrayTitle.Text = L.T("settings.notifTrayTitle");
         txtShowNotifLabel.Text = L.T("settings.showNotifications");
@@ -69,8 +87,34 @@ public sealed partial class SettingsWindow : Window
         btnCancelar.Content = L.T("btn.cancel");
     }
 
+    // El índice del ComboBox de idioma se traduce con un switch explícito, y no con un cast desde
+    // AppLang: atarlos por su valor ordinal haría que reordenar el enum (o los ComboBoxItem) cambiara
+    // el idioma de la app en silencio, sin que nada dejara de compilar.
+    private static AppLang LangFromIndex(int index) => index switch
+    {
+        1 => AppLang.En,
+        2 => AppLang.Pt,
+        3 => AppLang.Fr,
+        4 => AppLang.It,
+        _ => AppLang.Es
+    };
+
+    private static int IndexFromLang(AppLang lang) => lang switch
+    {
+        AppLang.En => 1,
+        AppLang.Pt => 2,
+        AppLang.Fr => 3,
+        AppLang.It => 4,
+        _ => 0
+    };
+
     private void LoadFromSettings()
     {
+        // ThemeMode: 0 = sistema, 1 = claro, 2 = oscuro -- el mismo orden que los RadioButton.
+        rbTema.SelectedIndex = _settings.ThemeMode is 1 or 2 ? _settings.ThemeMode : 0;
+        cmbIdioma.SelectedIndex = IndexFromLang(L.Current);
+        rbModo.SelectedIndex = _settings.SilentMode ? 0 : 1;
+
         cmbIntervalo.SelectedIndex = _settings.AutoCheckIntervalMinutes switch
         {
             30 => 1,
@@ -100,8 +144,14 @@ public sealed partial class SettingsWindow : Window
     private void BtnLimpiar_Click(object sender, RoutedEventArgs e) =>
         _excludedIds.Clear();
 
-    private void BtnGuardar_Click(object sender, RoutedEventArgs e)
+    private async void BtnGuardar_Click(object sender, RoutedEventArgs e)
     {
+        _settings.ThemeMode = rbTema.SelectedIndex is 1 or 2 ? rbTema.SelectedIndex : 0;
+        _settings.SilentMode = rbModo.SelectedIndex != 1;
+
+        AppLang lang = LangFromIndex(cmbIdioma.SelectedIndex);
+        _settings.Language = L.ToCode(lang);
+
         _settings.AutoCheckIntervalMinutes = cmbIntervalo.SelectedIndex switch
         {
             1 => 30,
@@ -114,9 +164,37 @@ public sealed partial class SettingsWindow : Window
         _settings.ShowNotifications = tsShowNotifications.IsOn;
         _settings.MinimizeToTray = tsMinimizeToTray.IsOn;
         _settings.ExcludedIds = [.. _excludedIds];
-        _settings.Save();
+
+        if (!_settings.Save())
+        {
+            // La ventana NO se cierra: cerrarla daría por buenos unos cambios que no llegaron al
+            // disco y que se perderían al reiniciar. El usuario decide si reintenta o cancela.
+            await ShowSaveErrorAsync();
+            return;
+        }
+
+        // Solo con los cambios ya en disco se aplica el idioma al proceso. Quien lo relee para
+        // repintarse es MainWindow al cerrarse esta ventana (MenuConfiguracion_Click), y lee de L.
+        L.Set(lang);
+
         SavedChanges = true;
         Close();
+    }
+
+    private Task ShowSaveErrorAsync()
+    {
+        string detail = string.IsNullOrWhiteSpace(_settings.LastSaveError)
+            ? L.T("msg.saveSettingsError")
+            : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError}";
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            Title = L.T("error.configTitle"),
+            Content = detail,
+            CloseButtonText = L.T("btn.close")
+        };
+        return dialog.ShowAsync().AsTask();
     }
 
     private void BtnCancelar_Click(object sender, RoutedEventArgs e) => Close();

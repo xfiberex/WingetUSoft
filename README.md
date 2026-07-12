@@ -23,12 +23,23 @@ Interfaz gráfica (WinUI 3) para gestionar actualizaciones y desinstalaciones de
 - **Ventana de desinstalación** — lista todos los programas instalados con búsqueda y filtrado, y permite desinstalar cualquier paquete con confirmación previa.
 
 ### Gestión y configuración
+Todas las preferencias viven en un solo sitio, la ventana **Configuración**; el menú **Herramientas**
+solo tiene acciones (exportar, historial, desinstalar).
+
 - **Lista de exclusiones** — excluye paquetes permanentemente de las actualizaciones automáticas.
 - **Historial** — registra cada actualización con fecha, versiones y resultado (máx. 500 entradas).
 - **Exportación** — exporta la lista a CSV o TSV con neutralización de fórmulas (seguro para Excel/Calc).
 - **Tema claro / oscuro** — integrado con el sistema de temas de Windows y configurable manualmente.
+- **Idioma** — español, inglés, portugués, francés e italiano, aplicados en caliente.
+- **Modo de actualización** — silenciosa o interactiva, y opción de ejecutar como administrador.
 - **Auto-comprobación** — comprueba actualizaciones de forma periódica configurable (30 / 60 / 120 min).
 - **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`.
+
+### Accesibilidad
+- **Manejable solo con teclado** — incluidas las cabeceras de la tabla, que son botones enfocables y
+  anuncian por qué columna y en qué dirección está ordenada.
+- **Contraste verificado** — los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema
+  claro y oscuro, comprobado por tests.
 
 ## Requisitos
 

@@ -30,7 +30,7 @@ public sealed class SnapLayoutTests(AppFixture fixture)
     private static readonly string[] ActionButtonIds =
     [
         "btnConsultar", "btnConsultarDesconocidas", "btnActualizarSeleccionados",
-        "btnActualizarTodo", "btnCancelar", "btnOpciones", "btnAyuda"
+        "btnActualizarTodo", "btnCancelar", "btnHerramientas", "btnAyuda"
     ];
 
     // Sombra de ventana/redondeo de la composición de escritorio: unos pocos px de más no significan

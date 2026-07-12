@@ -17,7 +17,7 @@ public sealed class MainWindowTests(AppFixture fixture)
     [InlineData("btnActualizarSeleccionados")]
     [InlineData("btnActualizarTodo")]
     [InlineData("btnCancelar")]
-    [InlineData("btnOpciones")]
+    [InlineData("btnHerramientas")]
     [InlineData("btnAyuda")]
     public void QuickActionButton_IsPresent(string automationId)
     {

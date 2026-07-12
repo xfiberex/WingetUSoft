@@ -148,10 +148,38 @@ bugs de fondo que no se veían desde el layout.
 | 1 | **Flujo y feedback**: resumen único de fallos (fin del modal por paquete dentro del bucle), barra de estado anclada + `ProgressBar` determinada, estados de la tabla (cargando / sin datos / todo al día / sin coincidencias / cancelada / error) | `UI/MainWindow.xaml`+`.cs`, `Localization/` | ✅ Implementado y verificado |
 | 2 | **Modelo de selección**: `_selectedIds` como fuente de verdad (la selección sobrevive a buscar/ordenar/filtrar), casilla tri-estado de "marcar todo", contador en el botón, `Ctrl+A` estándar, casillas deshabilitadas en filas excluidas | `UI/MainWindow.xaml`+`.cs` | ✅ Implementado y verificado |
 | 3 | **Datos que mentían**: orden semántico de versiones (`Core/VersionOrder.cs`), eliminación de la columna "Tam." (winget no emite ese dato) y del `winget show` por paquete que la alimentaba, y parser de `winget show` multi-idioma (`Services/WingetShowLabels.cs`) | `Core/VersionOrder.cs`, `Services/WingetShowLabels.cs`, `Services/WingetService.cs`, `UI/MainWindow.xaml`+`.cs` | ✅ Implementado y verificado |
-| 4 | **Jerarquía visual y uso del color**: el rojo hace hoy cuatro trabajos a la vez (acento del sistema, botón Cancelar, errores del log, icono de excluido); "Cancelar" no es destructivo y no debería vestirse de peligro | `UI/MainWindow.xaml`, `UI/UninstallWindow.xaml` | ⏳ Pendiente |
-| 5 | **Preferencias en dos sitios**: el menú *Opciones* mezcla preferencias (Modo/Tema/Idioma) con acciones (Exportar/Historial/Desinstalar), y el resto de preferencias vive en *Configuración* | `UI/MainWindow.xaml`, `UI/SettingsWindow.xaml` | ⏳ Pendiente |
-| 6 | **Accesibilidad de la tabla**: las cabeceras ordenables son `StackPanel` con `Tapped` — no se pueden enfocar ni activar con el teclado, y un lector de pantalla no las anuncia como botones | `UI/MainWindow.xaml` | ⏳ Pendiente |
+| 4 | **Jerarquía visual y uso del color**: el rojo hace hoy cuatro trabajos a la vez (acento del sistema, botón Cancelar, errores del log, icono de excluido); "Cancelar" no es destructivo y no debería vestirse de peligro | `UI/MainWindow.xaml`, `UI/UninstallWindow.xaml` | ✅ Implementado y verificado |
+| 5 | **Preferencias en dos sitios**: el menú *Opciones* mezcla preferencias (Modo/Tema/Idioma) con acciones (Exportar/Historial/Desinstalar), y el resto de preferencias vive en *Configuración* | `UI/MainWindow.xaml`, `UI/SettingsWindow.xaml` | ✅ Implementado y verificado |
+| 6 | **Accesibilidad de la tabla**: las cabeceras ordenables son `StackPanel` con `Tapped` — no se pueden enfocar ni activar con el teclado, y un lector de pantalla no las anuncia como botones | `UI/MainWindow.xaml` | ✅ Implementado y verificado |
 
 → **Tier C — #1–#3 completados (2026-07-11, release v1.5.0):** build 0/0, **124/124 unitarios**
 (95 + 17 de `VersionOrderTests` + 12 de `ParsePackageInfoTests`) y **16/16 UI tests**. Verificado
 además conduciendo la app real por UI Automation. Detalle en [`CONTEXT.md`](CONTEXT.md).
+
+→ **Tier C COMPLETADO (2026-07-12, release v1.6.0) con el cierre de #4–#6.** Build 0/0,
+**131/131 unitarios** (124 + 5 de `LogPaletteTests`, +2 de descarga en `GitHubUpdateServiceTests`) y
+**24/24 UI tests** (16 + 8 de `SortHeaderTests`/`SettingsTests`). Verificado conduciendo la app real.
+
+1. **#4 — El rojo ya solo significa una cosa: peligro.** *Cancelar* interrumpe un lote, no destruye
+   nada: deja de ir vestido de rojo y pasa a ser un botón normal. El icono de "excluido" era del mismo
+   rojo que los errores, cuando excluir es una decisión del usuario, no un fallo: ahora es gris
+   secundario, coherente con la fila atenuada. El rojo queda para lo que de verdad destruye
+   (*Desinstalar*, *Eliminar*) y para los fallos del registro.
+   Al mirar los colores del registro apareció un **bug de contraste**: había UN solo juego de RGB
+   cableado, el mismo para claro y para oscuro, elegido para fondo claro. Sobre la tarjeta oscura, el
+   verde de los aciertos y el rojo de los fallos —justo lo que se busca en un registro— eran lo peor
+   de leer. Ahora `Core/LogPalette.cs` tiene un color por tema, y `LogPaletteTests` **mide el
+   contraste real de cada combinación y exige el 4.5:1 de WCAG AA**, así que un color mal elegido
+   rompe el build. El registro ya escrito se repinta al cambiar de tema (`RecolorLog`).
+2. **#5 — Configuración es el único hogar de las preferencias.** Modo/Tema/Idioma se mudan del menú a
+   la ventana de *Configuración*, repartidos en *Apariencia* y *Actualizaciones*. El menú se queda
+   solo con acciones y se llama *Herramientas*. Se cerró de paso un agujero: la ventana daba por
+   guardados unos cambios que podían no haber llegado al disco — ahora, si `Save()` falla, avisa y
+   **no se cierra**, en vez de perderlos en silencio.
+3. **#6 — Las cabeceras ordenables son botones de verdad.** Eran `StackPanel` con `Tapped`: fuera del
+   orden de tabulación, sordas a Espacio/Intro y anunciadas como un panel cualquiera. Ordenar la tabla
+   era **imposible sin ratón**. Ahora son `Button` enfocables, y su nombre accesible lleva la columna y
+   la dirección del orden ("Nombre, orden ascendente"), que antes solo estaba en el triángulo ▲/▼ —
+   invisible para un lector de pantalla. Que `SortHeaderTests` pueda activarlas por `Invoke` es la
+   prueba: es el mismo patrón de UI Automation que usan el teclado y los lectores de pantalla, y sobre
+   un `StackPanel` no existe.

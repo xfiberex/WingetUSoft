@@ -13,7 +13,12 @@ public sealed class LocalizationTests
 
     [Fact]
     public void T_KnownKey_ReturnsLocalizedText()
-        => Assert.False(string.IsNullOrWhiteSpace(L.T("menu.options")));
+    {
+        // Ojo al elegir la clave: T() devuelve la propia clave cuando no la conoce, así que una clave
+        // que ya no exista pasaría igualmente el "no está vacío". Se comprueba contra el diccionario.
+        Assert.True(L.Map.ContainsKey("menu.tools"));
+        Assert.Equal(L.Map["menu.tools"][(int)L.Current], L.T("menu.tools"));
+    }
 
     [Fact]
     public void EveryEntry_HasFiveNonEmptyTranslations()

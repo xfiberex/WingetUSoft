@@ -155,21 +155,17 @@ public sealed partial class MainWindow : Window
 
         // Keep caption button colors in sync with the actual (resolved) theme
         if (Content is FrameworkElement contentRoot)
-            contentRoot.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors();
+        {
+            contentRoot.ActualThemeChanged += (_, _) =>
+            {
+                UpdateTitleBarButtonColors();
+                RecolorLog();   // los colores del registro son por tema (ver LogPalette)
+            };
+        }
 
         lvPackages.ItemsSource = _packageViewModels;
 
         _silentMode = _settings.SilentMode;
-        menuSilenciosa.IsChecked = _silentMode;
-        menuInteractiva.IsChecked = !_silentMode;
-
-        // Set initial theme radio check
-        switch (_settings.ThemeMode)
-        {
-            case 1: menuTemaClaro.IsChecked = true; break;
-            case 2: menuTemaOscuro.IsChecked = true; break;
-            default: menuTemaSistema.IsChecked = true; break;
-        }
         ApplyTheme(_settings.ThemeMode);
 
         // Idioma: en el primer arranque (sin settings.json previo) se detecta el del sistema;
@@ -183,7 +179,6 @@ public sealed partial class MainWindow : Window
             _settings.Save(); // silencioso: solo semilla el idioma, sin diálogo de error aquí
         }
         L.Set(L.FromCode(_settings.Language));
-        SetLanguageRadioCheck(L.Current);
         ApplyLocalizedStrings();
 
         UpdateAutoCheckTimer();
@@ -936,69 +931,6 @@ public sealed partial class MainWindow : Window
 
     // --- Menu Handlers ---
 
-    private void MenuSilenciosa_Click(object sender, RoutedEventArgs e)
-    {
-        _silentMode = true;
-        menuSilenciosa.IsChecked = true;
-        menuInteractiva.IsChecked = false;
-        _settings.SilentMode = true;
-        TrySaveSettings(L.T("msg.saveUpdateModeError"));
-    }
-
-    private void MenuInteractiva_Click(object sender, RoutedEventArgs e)
-    {
-        _silentMode = false;
-        menuSilenciosa.IsChecked = false;
-        menuInteractiva.IsChecked = true;
-        _settings.SilentMode = false;
-        TrySaveSettings(L.T("msg.saveUpdateModeError"));
-    }
-
-    private void MenuTemaSistema_Click(object sender, RoutedEventArgs e)
-    {
-        _settings.ThemeMode = 0;
-        TrySaveSettings(L.T("msg.saveThemeError"));
-        ApplyTheme(0);
-    }
-
-    private void MenuTemaClaro_Click(object sender, RoutedEventArgs e)
-    {
-        _settings.ThemeMode = 1;
-        TrySaveSettings(L.T("msg.saveThemeError"));
-        ApplyTheme(1);
-    }
-
-    private void MenuTemaOscuro_Click(object sender, RoutedEventArgs e)
-    {
-        _settings.ThemeMode = 2;
-        TrySaveSettings(L.T("msg.saveThemeError"));
-        ApplyTheme(2);
-    }
-
-    private void MenuIdiomaEs_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Es);
-    private void MenuIdiomaEn_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.En);
-    private void MenuIdiomaPt_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Pt);
-    private void MenuIdiomaFr_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.Fr);
-    private void MenuIdiomaIt_Click(object sender, RoutedEventArgs e) => SetLanguage(AppLang.It);
-
-    private void SetLanguage(AppLang lang)
-    {
-        L.Set(lang);
-        _settings.Language = L.ToCode(lang);
-        TrySaveSettings(L.T("msg.saveLanguageError"));
-        SetLanguageRadioCheck(lang);
-        ApplyLocalizedStrings();
-    }
-
-    private void SetLanguageRadioCheck(AppLang lang)
-    {
-        menuIdiomaEs.IsChecked = lang == AppLang.Es;
-        menuIdiomaEn.IsChecked = lang == AppLang.En;
-        menuIdiomaPt.IsChecked = lang == AppLang.Pt;
-        menuIdiomaFr.IsChecked = lang == AppLang.Fr;
-        menuIdiomaIt.IsChecked = lang == AppLang.It;
-    }
-
     /// <summary>
     /// Aplica el idioma actual (<see cref="L"/>) a los textos del menú principal. El resto de la UI
     /// se extrae por completo en el Tier A #7 (ver ROADMAP.md); por ahora solo cubre este menú.
@@ -1049,26 +981,14 @@ public sealed partial class MainWindow : Window
         colDisponible.Text = L.T("list.colAvailable");
         colFuente.Text = L.T("list.colSource");
         colExcl.Text = L.T("list.colExcluded");
+        UpdateSortIndicators();   // relee el nombre accesible de cada cabecera en el idioma nuevo
         txtLogHeader.Text = L.T("log.header");
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
         UpdateSelectionDetails();
         UpdateSelectionSummary();
         UpdateListState();
 
-        btnOpciones.Content = L.T("menu.options");
-        menuModoActualizacion.Text = L.T("menu.updateMode");
-        menuSilenciosa.Text = L.T("menu.silent");
-        menuInteractiva.Text = L.T("menu.interactive");
-        menuTema.Text = L.T("menu.theme");
-        menuTemaSistema.Text = L.T("menu.themeSystem");
-        menuTemaClaro.Text = L.T("menu.themeLight");
-        menuTemaOscuro.Text = L.T("menu.themeDark");
-        menuIdioma.Text = L.T("menu.lang");
-        menuIdiomaEs.Text = L.T("menu.lang.es");
-        menuIdiomaEn.Text = L.T("menu.lang.en");
-        menuIdiomaPt.Text = L.T("menu.lang.pt");
-        menuIdiomaFr.Text = L.T("menu.lang.fr");
-        menuIdiomaIt.Text = L.T("menu.lang.it");
+        btnHerramientas.Content = L.T("menu.tools");
         menuExportar.Text = L.T("menu.export");
         menuConfiguracion.Text = L.T("menu.settings");
         menuVerHistorial.Text = L.T("menu.history");
@@ -1122,11 +1042,12 @@ public sealed partial class MainWindow : Window
         if (settingsWindow.SavedChanges)
         {
             _silentMode = _settings.SilentMode;
-            menuSilenciosa.IsChecked = _silentMode;
-            menuInteractiva.IsChecked = !_silentMode;
             UpdateAutoCheckTimer();
             LoadPackagesToGrid();
             ApplyTheme(_settings.ThemeMode);
+            // El idioma también se elige aquí desde el Tier C #5. SettingsWindow ya lo fijó en L al
+            // guardar; esta ventana sigue rotulada en el idioma viejo hasta que se relea.
+            ApplyLocalizedStrings();
         }
     }
 
@@ -1152,7 +1073,7 @@ public sealed partial class MainWindow : Window
 
     // --- Sort / Search ---
 
-    private void SortHeader_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+    private void SortHeader_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement el || el.Tag is not string tagStr) return;
         if (!int.TryParse(tagStr, out int col)) return;
@@ -1176,6 +1097,27 @@ public sealed partial class MainWindow : Window
         sortVersion.Text   = SortIndicator(3);
         sortAvailable.Text = SortIndicator(4);
         sortSource.Text    = SortIndicator(5);
+
+        // El triángulo ▲/▼ es la única pista del orden actual, y no la ve quien usa un lector de
+        // pantalla: el estado va también en el nombre accesible del botón, que se relee al cambiarlo.
+        DescribeSortHeader(btnColNombre, colNombre.Text, 1);
+        DescribeSortHeader(btnColId, colId.Text, 2);
+        DescribeSortHeader(btnColVersion, colVersion.Text, 3);
+        DescribeSortHeader(btnColDisponible, colDisponible.Text, 4);
+        DescribeSortHeader(btnColFuente, colFuente.Text, 5);
+    }
+
+    private void DescribeSortHeader(Button header, string columnName, int col)
+    {
+        string state = _sortColumn != col
+            ? L.T("list.sortNone")
+            : _sortDescending ? L.T("list.sortDescending") : L.T("list.sortAscending");
+
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(
+            header, L.T("list.sortHeaderAccessible", columnName, state));
+        // La cabecera se recorta con puntos suspensivos cuando la columna es estrecha: el tooltip es
+        // lo único que devuelve el nombre completo con el ratón.
+        ToolTipService.SetToolTip(header, columnName);
     }
 
     private string SortIndicator(int col)
@@ -1433,11 +1375,17 @@ public sealed partial class MainWindow : Window
 
     // --- Logging ---
 
-    private enum LogLineKind { Normal, Success, Error, Warning, Accent }
+    /// <summary>
+    /// Tipo de cada l\u00ednea ya pintada, en paralelo a <c>rtbLog.Blocks</c> (mismo \u00edndice, se recortan a
+    /// la vez). Un <c>Run</c> no guarda de qu\u00e9 tipo era, y sin eso <see cref="RecolorLog"/> no podr\u00eda
+    /// repintar el registro ya escrito cuando cambia el tema.
+    /// </summary>
+    private readonly List<LogLineKind> _logLineKinds = [];
 
     private void ClearLog()
     {
         rtbLog.Blocks.Clear();
+        _logLineKinds.Clear();
         _logLineCount = 0;
     }
 
@@ -1453,31 +1401,44 @@ public sealed partial class MainWindow : Window
             else if (text.Length > 0 && text[0] == '[') kind = LogLineKind.Accent;
         }
 
-        SolidColorBrush brush = kind switch
-        {
-            LogLineKind.Success => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 56, 122, 77)),
-            LogLineKind.Error => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 186, 70, 54)),
-            LogLineKind.Warning => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 177, 118, 38)),
-            LogLineKind.Accent => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 18, 109, 111)),
-            _ => (SolidColorBrush)Application.Current.Resources["TextFillColorPrimaryBrush"]
-        };
-
         var paragraph = new Paragraph();
-        var run = new Run { Text = text, Foreground = brush };
+        var run = new Run { Text = text, Foreground = LogBrush(kind) };
         paragraph.Inlines.Add(run);
         rtbLog.Blocks.Add(paragraph);
+        _logLineKinds.Add(kind);
         _logLineCount++;
 
         // Trim log if too large
         while (_logLineCount > LogMaxLines && rtbLog.Blocks.Count > 1)
         {
             rtbLog.Blocks.RemoveAt(0);
+            _logLineKinds.RemoveAt(0);
             _logLineCount--;
         }
 
         // Scroll to bottom
         scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
         AppendLogFile(text);
+    }
+
+    /// <summary>
+    /// Color de una línea según el tema REALMENTE en uso. Se mira <c>ActualTheme</c> y no
+    /// <c>Application.Current.RequestedTheme</c> porque el tema de la app se fuerza por elemento
+    /// (<see cref="ApplyTheme"/>): con "Claro" elegido sobre un Windows oscuro, el tema de la
+    /// aplicación sigue diciendo "oscuro" y el registro saldría con los colores del tema contrario.
+    /// </summary>
+    private SolidColorBrush LogBrush(LogLineKind kind) =>
+        new(LogPalette.For(kind, rtbLog.ActualTheme == ElementTheme.Dark));
+
+    /// <summary>Repinta el registro ya escrito cuando cambia el tema; sin esto conservaría los colores del anterior.</summary>
+    private void RecolorLog()
+    {
+        int count = Math.Min(rtbLog.Blocks.Count, _logLineKinds.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (rtbLog.Blocks[i] is Paragraph { Inlines: [Run run, ..] })
+                run.Foreground = LogBrush(_logLineKinds[i]);
+        }
     }
 
     private static string FormatBytes(long bytes)

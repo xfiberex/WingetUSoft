@@ -10,6 +10,22 @@
         <Grid.Resources>
             <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <local:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+
+            <!-- Cabecera ordenable: un Button de verdad, no un StackPanel con Tapped (Tier C #6). Un
+                 StackPanel no entra en el orden de tabulación, no responde a Espacio/Intro y un lector
+                 de pantalla lo anuncia como un panel cualquiera, así que ordenar la tabla era imposible
+                 sin ratón. Se ve igual: fondo transparente y sin borde, con el realce estándar al pasar
+                 el puntero y el foco visible del sistema. -->
+            <Style x:Key="ColumnHeaderButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="8,0" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="CornerRadius" Value="4" />
+            </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -125,62 +141,20 @@
                                     Content="Actualizar todo"
                                     Click="BtnActualizarTodo_Click"
                                     MinWidth="140" Height="36" />
+                            <!-- Cancelar NO es destructivo: interrumpe un lote, no borra nada. Vestirlo de
+                                 rojo (como iba hasta v1.5.0) lo confundía con el peligro real, que en esta
+                                 app son Desinstalar y Eliminar (DangerButtonStyle). Es un botón normal. -->
                             <Button x:Name="btnCancelar"
                                     Content="Cancelar"
                                     Click="BtnCancelar_Click"
                                     IsEnabled="False"
-                                    MinWidth="120" Height="36">
-                                <Button.Resources>
-                                    <ResourceDictionary>
-                                        <ResourceDictionary.ThemeDictionaries>
-                                            <ResourceDictionary x:Key="Light">
-                                                <SolidColorBrush x:Key="ButtonBackground" Color="#FFBA4636" />
-                                                <SolidColorBrush x:Key="ButtonForeground" Color="White" />
-                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFD05040" />
-                                                <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
-                                            </ResourceDictionary>
-                                            <ResourceDictionary x:Key="Dark">
-                                                <SolidColorBrush x:Key="ButtonBackground" Color="#FFD55C4C" />
-                                                <SolidColorBrush x:Key="ButtonForeground" Color="White" />
-                                                <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFE06858" />
-                                                <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
-                                            </ResourceDictionary>
-                                        </ResourceDictionary.ThemeDictionaries>
-                                    </ResourceDictionary>
-                                </Button.Resources>
-                            </Button>
+                                    MinWidth="120" Height="36" />
 
-                            <!-- Menu options -->
-                            <DropDownButton x:Name="btnOpciones" Content="Opciones" Height="36" MinWidth="100">
+                            <!-- Solo ACCIONES. Las preferencias (modo, tema, idioma) se mudaron a la
+                                 ventana de Configuración, donde ya vivía el resto (Tier C #5). -->
+                            <DropDownButton x:Name="btnHerramientas" Content="Herramientas" Height="36" MinWidth="120">
                                 <DropDownButton.Flyout>
                                     <MenuFlyout>
-                                        <MenuFlyoutSubItem x:Name="menuModoActualizacion" Text="Modo de actualización">
-                                            <ToggleMenuFlyoutItem x:Name="menuSilenciosa" Text="Silenciosa"
-                                                                  IsChecked="True" Click="MenuSilenciosa_Click" />
-                                            <ToggleMenuFlyoutItem x:Name="menuInteractiva" Text="Interactiva"
-                                                                  Click="MenuInteractiva_Click" />
-                                        </MenuFlyoutSubItem>
-                                        <MenuFlyoutSubItem x:Name="menuTema" Text="Tema">
-                                            <RadioMenuFlyoutItem x:Name="menuTemaSistema" Text="Sistema (automático)"
-                                                                 GroupName="Tema" IsChecked="True" Click="MenuTemaSistema_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuTemaClaro" Text="Claro"
-                                                                 GroupName="Tema" Click="MenuTemaClaro_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuTemaOscuro" Text="Oscuro"
-                                                                 GroupName="Tema" Click="MenuTemaOscuro_Click" />
-                                        </MenuFlyoutSubItem>
-                                        <MenuFlyoutSubItem x:Name="menuIdioma" Text="Idioma">
-                                            <RadioMenuFlyoutItem x:Name="menuIdiomaEs" Text="Español"
-                                                                 GroupName="Idioma" IsChecked="True" Click="MenuIdiomaEs_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuIdiomaEn" Text="Inglés"
-                                                                 GroupName="Idioma" Click="MenuIdiomaEn_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuIdiomaPt" Text="Portugués"
-                                                                 GroupName="Idioma" Click="MenuIdiomaPt_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuIdiomaFr" Text="Francés"
-                                                                 GroupName="Idioma" Click="MenuIdiomaFr_Click" />
-                                            <RadioMenuFlyoutItem x:Name="menuIdiomaIt" Text="Italiano"
-                                                                 GroupName="Idioma" Click="MenuIdiomaIt_Click" />
-                                        </MenuFlyoutSubItem>
-                                        <MenuFlyoutSeparator />
                                         <MenuFlyoutItem x:Name="menuExportar" Text="Exportar lista..." Click="MenuExportar_Click">
                                             <MenuFlyoutItem.Icon>
                                                 <FontIcon Glyph="&#xEDE1;" />
@@ -378,41 +352,51 @@
                                                   VerticalAlignment="Center"
                                                   Click="ChkSelectAll_Click" />
                                         <!-- Sortable header cells -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
-                                            <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colNombre}" />
-                                            <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="2" Background="Transparent">
-                                            <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colId}" />
-                                            <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="3" Background="Transparent">
-                                            <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colVersion}" />
-                                            <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="4" Background="Transparent">
-                                            <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colDisponible}" />
-                                            <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
-                                            <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colFuente}" />
-                                            <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
+                                        <Button x:Name="btnColNombre" Grid.Column="1" Tag="1"
+                                                Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="btnColId" Grid.Column="2" Tag="2"
+                                                Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="btnColVersion" Grid.Column="3" Tag="3"
+                                                Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="btnColDisponible" Grid.Column="4" Tag="4"
+                                                Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button x:Name="btnColFuente" Grid.Column="5" Tag="5"
+                                                Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                            </StackPanel>
+                                        </Button>
                                         <TextBlock x:Name="colExcl" Grid.Column="6" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
                                                    TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
                                     </Grid>
@@ -449,12 +433,16 @@
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                                     <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <!-- Excluido no es un error ni un peligro: es una decisión del
+                                                         usuario. En rojo (como iba hasta v1.5.0) competía con los
+                                                         fallos reales del registro. Gris secundario, que además es
+                                                         coherente con la fila atenuada. -->
                                                     <FontIcon Grid.Column="6"
                                                               Glyph="&#xE8D8;"
                                                               FontSize="14"
                                                               VerticalAlignment="Center"
                                                               Margin="8,0,0,0"
-                                                              Foreground="#FFBA4636"
+                                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                               AutomationProperties.Name="{Binding ExcludedLabel}"
                                                               ToolTipService.ToolTip="{Binding ExcludedLabel}"
                                                               Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}" />

@@ -8,23 +8,30 @@ namespace WingetUSoft.UiTests;
 /// test deja la app en el estado con el que la encontró (español) para no afectar a otros tests que
 /// dependen de texto en español (<see cref="SettingsBackup"/> ya protege el settings.json real del
 /// usuario aparte de esto).
+///
+/// Desde el Tier C #5 el idioma ya NO se cambia desde el menú: vive en la ventana de Configuración,
+/// junto al resto de preferencias. Por eso estos tests abren la ventana, eligen y guardan.
 /// </summary>
 [Collection(AppCollection.Name)]
 public sealed class SettingsTests(AppFixture fixture)
 {
+    private const int LangSpanish = 0;
+    private const int LangEnglish = 1;
+
     private Window Window => fixture.MainWindow;
 
     /// <summary>
-    /// Cubre Tier B #5 (revisión de longitud de texto por idioma): comprueba que el cambio de idioma
-    /// realmente refresca el texto de los controles ya visibles, no solo el que se renderiza al
-    /// arrancar.
+    /// Cubre Tier B #5 (revisión de longitud de texto por idioma) y el cableado nuevo del Tier C #5:
+    /// que guardar en Configuración repinte de verdad los controles ya visibles de la ventana
+    /// principal, que es el paso que antes hacía el menú y ahora hace <c>MenuConfiguracion_Click</c>.
     /// </summary>
     [Fact]
-    public void LanguageSwitch_UpdatesButtonText_ThenRestoresSpanish()
+    public void LanguageSwitch_FromSettingsWindow_UpdatesButtonText_ThenRestoresSpanish()
     {
         try
         {
-            MenuActions.ClickPath(Window, "btnOpciones", "menuIdioma", "menuIdiomaEn");
+            SelectLanguageAndSave(LangEnglish);
+
             var button = Window.FindFirstDescendant(cf => cf.ByAutomationId("btnConsultar"))?.AsButton();
             Assert.NotNull(button);
             Assert.Equal("Check for updates", button!.Name);
@@ -33,7 +40,7 @@ public sealed class SettingsTests(AppFixture fixture)
         {
             // Siempre se intenta volver a español, incluso si el Assert de arriba falló, para no dejar
             // el idioma cambiado de cara al resto de tests de esta corrida.
-            MenuActions.ClickPath(Window, "btnOpciones", "menuIdioma", "menuIdiomaEs");
+            SelectLanguageAndSave(LangSpanish);
         }
 
         var restoredButton = Window.FindFirstDescendant(cf => cf.ByAutomationId("btnConsultar"))?.AsButton();
@@ -50,21 +57,7 @@ public sealed class SettingsTests(AppFixture fixture)
     [Fact]
     public void SettingsWindow_OpensAndCloses()
     {
-        MenuActions.ClickPath(Window, "btnOpciones", "menuConfiguracion");
-
-        var result = Retry.WhileNull(
-            () => fixture.App.GetAllTopLevelWindows(fixture.Automation)
-                .FirstOrDefault(w =>
-                {
-                    try { return w.FindFirstDescendant(cf => cf.ByAutomationId("btnGuardar")) is not null; }
-                    catch { return false; }
-                }),
-            timeout: TimeSpan.FromSeconds(10),
-            interval: TimeSpan.FromMilliseconds(250),
-            ignoreException: true);
-
-        Assert.True(result.Success && result.Result is not null, "No se abrió la ventana de Configuración a tiempo.");
-        var settingsWindow = result.Result!;
+        var settingsWindow = OpenSettingsWindow();
 
         try
         {
@@ -74,16 +67,76 @@ public sealed class SettingsTests(AppFixture fixture)
         }
         finally
         {
-            Retry.WhileTrue(
-                () => fixture.App.GetAllTopLevelWindows(fixture.Automation)
-                    .Any(w =>
-                    {
-                        try { return w.FindFirstDescendant(cf => cf.ByAutomationId("btnGuardar")) is not null; }
-                        catch { return false; }
-                    }),
-                timeout: TimeSpan.FromSeconds(10),
-                interval: TimeSpan.FromMilliseconds(250),
-                ignoreException: true);
+            WaitUntilSettingsWindowIsGone();
         }
     }
+
+    /// <summary>
+    /// Tier C #5: las preferencias que vivían en el menú (tema, idioma, modo de actualización) tienen
+    /// que estar TODAS en Configuración. Si alguien se deja una por el camino, este test la echa en falta.
+    /// </summary>
+    [Fact]
+    public void SettingsWindow_HostsEveryPreferenceThatUsedToLiveInTheMenu()
+    {
+        var settingsWindow = OpenSettingsWindow();
+
+        try
+        {
+            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("rbTema")));
+            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("cmbIdioma")));
+            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("rbModo")));
+        }
+        finally
+        {
+            settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnCancelar"))?.AsButton()?.Invoke();
+            WaitUntilSettingsWindowIsGone();
+        }
+    }
+
+    private void SelectLanguageAndSave(int languageIndex)
+    {
+        var settingsWindow = OpenSettingsWindow();
+
+        var combo = settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("cmbIdioma"))?.AsComboBox();
+        Assert.NotNull(combo);
+        // Por índice y no por texto: los propios elementos del ComboBox están traducidos, así que su
+        // rótulo depende del idioma en el que esté la app justo ahora.
+        combo!.Select(languageIndex);
+
+        var save = settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnGuardar"))?.AsButton();
+        Assert.NotNull(save);
+        save!.Invoke();
+
+        WaitUntilSettingsWindowIsGone();
+    }
+
+    private Window OpenSettingsWindow()
+    {
+        MenuActions.ClickPath(Window, "btnHerramientas", "menuConfiguracion");
+
+        var result = Retry.WhileNull(
+            () => FindSettingsWindow(),
+            timeout: TimeSpan.FromSeconds(10),
+            interval: TimeSpan.FromMilliseconds(250),
+            ignoreException: true);
+
+        Assert.True(result.Success && result.Result is not null, "No se abrió la ventana de Configuración a tiempo.");
+        return result.Result!;
+    }
+
+    private void WaitUntilSettingsWindowIsGone() =>
+        Retry.WhileTrue(
+            () => FindSettingsWindow() is not null,
+            timeout: TimeSpan.FromSeconds(10),
+            interval: TimeSpan.FromMilliseconds(250),
+            ignoreException: true);
+
+    /// <summary>Se identifica por su botón Guardar: es el único control que solo existe en esa ventana.</summary>
+    private Window? FindSettingsWindow() =>
+        fixture.App.GetAllTopLevelWindows(fixture.Automation)
+            .FirstOrDefault(w =>
+            {
+                try { return w.FindFirstDescendant(cf => cf.ByAutomationId("btnGuardar")) is not null; }
+                catch { return false; }
+            });
 }

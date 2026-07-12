@@ -42,15 +42,55 @@
         <ScrollViewer Grid.Row="2" Margin="20,0,20,16">
             <StackPanel Spacing="16">
 
-                <!-- Auto-check interval -->
+                <!-- Apariencia: tema e idioma. Vivían en el menú "Opciones" de la ventana principal
+                     hasta v1.5.0, partiendo las preferencias entre dos sitios (Tier C #5). -->
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
                         Padding="16,12">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtAutoCheckTitle" Text="Consulta automática"
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="txtAppearanceTitle" Text="Apariencia"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Spacing="6">
+                            <TextBlock x:Name="txtThemeLabel" Text="Tema"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <RadioButtons x:Name="rbTema" MaxColumns="3">
+                                <RadioButton x:Name="rbTemaSistema" Content="Sistema (automático)" />
+                                <RadioButton x:Name="rbTemaClaro" Content="Claro" />
+                                <RadioButton x:Name="rbTemaOscuro" Content="Oscuro" />
+                            </RadioButtons>
+                        </StackPanel>
+                        <ComboBox x:Name="cmbIdioma" Width="280" Header="Idioma">
+                            <ComboBoxItem x:Name="itemLangEs" Content="Español" />
+                            <ComboBoxItem x:Name="itemLangEn" Content="Inglés" />
+                            <ComboBoxItem x:Name="itemLangPt" Content="Portugués" />
+                            <ComboBoxItem x:Name="itemLangFr" Content="Francés" />
+                            <ComboBoxItem x:Name="itemLangIt" Content="Italiano" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- Actualizaciones: cómo se ejecutan (modo, permisos) y cada cuánto se consultan -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="txtUpdatesTitle" Text="Actualizaciones"
+                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <StackPanel Spacing="6">
+                            <TextBlock x:Name="txtUpdateModeLabel" Text="Modo de actualización"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <RadioButtons x:Name="rbModo" MaxColumns="2">
+                                <RadioButton x:Name="rbModoSilencioso" Content="Silenciosa" />
+                                <RadioButton x:Name="rbModoInteractivo" Content="Interactiva" />
+                            </RadioButtons>
+                        </StackPanel>
+                        <CheckBox x:Name="chkAdministrador" Content="Ejecutar actualizaciones como administrador" />
                         <ComboBox x:Name="cmbIntervalo" Width="280"
                                   Header="Intervalo de consulta automática">
                             <ComboBoxItem x:Name="itemIntervalOff" Content="Desactivada" />
@@ -61,17 +101,16 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Options -->
+                <!-- Registro de actividad -->
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
                         CornerRadius="8"
                         Padding="16,12">
                     <StackPanel Spacing="10">
-                        <TextBlock x:Name="txtOptionsTitle" Text="Opciones"
+                        <TextBlock x:Name="txtLogTitle" Text="Registro de actividad"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <CheckBox x:Name="chkLogArchivo" Content="Guardar registro de actividad en archivo" />
-                        <CheckBox x:Name="chkAdministrador" Content="Ejecutar actualizaciones como administrador" />
                         <StackPanel Spacing="4">
                             <TextBlock x:Name="txtLogDirLabel" Text="Directorio de registros:"
                                        Style="{StaticResource CaptionTextBlockStyle}"
