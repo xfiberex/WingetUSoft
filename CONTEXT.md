@@ -7,16 +7,19 @@
 
 - **Repositorio:** https://github.com/xfiberex/WingetUSoft
 - **Última actualización de este documento:** 2026-07-11
-- **Versión actual:** **1.4.0** — Tier B (#1–#6 + #8): UI adaptable por DPI/WorkArea, tamaño mínimo,
-  barra de acciones responsiva (WrapPanel), accesibilidad y proyecto de UI tests con FlaUI
-  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.4.0), tag `v1.4.0`,
-  **sin firmar** — ver Pendientes §6). Versión previa: 1.3.0 (cierre de Tier A). **El arreglo de snap
-  layouts (#7, 2026-07-11) está en `main` sin publicar todavía** — entra en la próxima release.
+- **Versión actual:** **1.5.0** — Tier C (#1–#3): auditoría de UI/UX — flujo y feedback, modelo de
+  selección, y tres bugs de datos (orden de versiones como texto, columna "Tam." imposible de
+  rellenar, parser de `winget show` que solo entendía inglés)
+  ([release en GitHub](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.5.0), tag `v1.5.0`,
+  **sin firmar** — ver Pendientes §6). Versión previa: 1.4.1 (fixes del flujo de instalación/
+  actualización vía GitHub).
 - **Hoja de ruta:** ver [`ROADMAP.md`](ROADMAP.md) — **Tier A COMPLETADO** (2026-07-08/09):
   paridad con FormatDiskPro (proyecto hermano, mismo autor). Las 9 fases (-1 a 8) están
   implementadas y verificadas. **Tier B COMPLETADO** (2026-07-10/11): mejoras visuales/responsivas +
   accesibilidad + proyecto `WingetUSoft.UiTests` con FlaUI, y cierre de #7 (snap layouts de
-  Windows 11) — build 0/0, **93/93 unitarios**, **16/16 UI tests**.
+  Windows 11). **Tier C EN CURSO** (2026-07-11): auditoría de UI/UX — **#1–#3 hechos**, #4–#6
+  pendientes (jerarquía de color, preferencias en dos sitios, accesibilidad de las cabeceras
+  ordenables) — build 0/0, **124/124 unitarios**, **16/16 UI tests**.
 - **Stack:** C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged,
   `net10.0-windows10.0.22621.0`, `TargetPlatformMinVersion=10.0.19041.0`) · **xUnit** (migrado
   desde MSTest en Tier A #0) · Inno Setup 6
@@ -42,6 +45,7 @@ WingetUSoft/
 │  ├─ Core/                     Lógica de negocio pura (sin UI ni efectos externos)
 │  │  ├─ ReleaseNotes.cs        Notas de versión (Markdown de GitHub) → texto plano (diálogo de novedades)
 │  │  ├─ Throughput.cs          ETA (tiempo restante) para descargas y operaciones largas
+│  │  ├─ VersionOrder.cs        Orden semántico de versiones (puro, Tier C #3): 1.9 < 1.10, "< x", "Unknown"
 │  │  ├─ WindowSizing.cs        Dimensionado/centrado por DPI acotado a WorkArea (puro, Tier B #1/#2)
 │  │  ├─ DelimitedTextExporter.cs  Exportación CSV/TSV segura (neutralización de fórmulas)
 │  │  └─ Models/
@@ -54,6 +58,7 @@ WingetUSoft/
 │  │
 │  ├─ Services/                 Operaciones con efectos externos (procesos, red, disco)
 │  │  ├─ WingetService.cs       Ejecución de winget, parsing, elevación (worker + named pipe)
+│  │  ├─ WingetShowLabels.cs    Etiquetas de `winget show` en los 10 idiomas que winget traduce (Tier C #3)
 │  │  ├─ GitHubUpdateService.cs Auto-actualización desde GitHub Releases (verificación Authenticode, changelog)
 │  │  └─ CleanupScanner.cs      Detección de residuos post-desinstalación
 │  │
@@ -121,7 +126,12 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
 ## 3. Estado actual
 
 - ✅ Build: **0 advertencias / 0 errores** (`dotnet build WingetUSoft.slnx`).
-- ✅ Tests: **95/95** (`dotnet test`) — 30 migrados de MSTest (Tier A #0) + 21 de `LocalizationTests`
+- ✅ **Tier C — #1–#3 hechos (2026-07-11, v1.5.0):** auditoría de UI/UX. Ver Registro de cambios;
+  **#4–#6 siguen pendientes** (jerarquía de color, preferencias repartidas en dos sitios,
+  accesibilidad de las cabeceras ordenables).
+- ✅ Tests: **124/124** (`dotnet test`) — los 95 previos + **17 de `VersionOrderTests`** y
+  **12 de `ParsePackageInfoTests`** (ambos de Tier C #3). Desglose de los 95: 30 migrados de MSTest
+  (Tier A #0) + 21 de `LocalizationTests`
   (Tier A #1) + 8 de `ReleaseNotesTests` (Tier A #2) + 5 de `NotifierTests` (Tier A #3) + 6 de
   `ThroughputTests` (Tier A #4) + 8 de `HistoryFilterTests` (Tier A #5) + **15 de `WindowSizingTests`
   (Tier B #1/#2, +4 del clamp de snap de #7)** + **2 de `GitHubUpdateServiceTests`** (hash SHA-256 con
@@ -227,7 +237,9 @@ WinUI/Process/HttpClient); las operaciones con efectos externos (winget, red, di
     modo administrador en `WingetService` (solicitudes de elevación, resultado del lote elevado).
     **Límite deliberado**: se dejaron sin traducir (documentado, no es un olvido) (1) las claves
     de parseo de la salida de `winget` (`"Homepage:"`, `"Description:"`, etc. — deben coincidir
-    literalmente con el CLI, no son texto de UI); (2) los mensajes de protocolo interno del
+    literalmente con el CLI, no son texto de UI) — ⚠️ **esta premisa resultó ser FALSA y era un bug:
+    winget traduce su salida al idioma de Windows. Corregido en Tier C #3 con
+    `Services/WingetShowLabels.cs`**; (2) los mensajes de protocolo interno del
     worker elevado en rutas de error muy profundas (fallos de negociación de la sesión IPC,
     "no debería pasar nunca"); (3) los mensajes de `AppSettings.LastLoadError`/`LastSaveError`,
     porque `AppSettings.Load()` se ejecuta *antes* de que el idioma se determine (el propio
@@ -318,6 +330,88 @@ reenviados a `build-installer.ps1`).
 ---
 
 ## Registro de cambios
+
+### 2026-07-11 — feat: Tier C #1–#3 — auditoría de UI/UX (3 bloques, 3 bugs de fondo)
+
+El usuario pidió una auditoría de UI/UX sobre la app ya funcionando. A diferencia del Tier B, que
+atacaba **layout** (que la ventana quepa), esta ataca **flujo y feedback**. Se ejecutaron los bloques
+1–3; los bloques 4–6 quedan pendientes (ver `ROADMAP.md`).
+
+**Bloque 1 — flujo y feedback.**
+- **Se acabaron los modales encadenados.** `HandleFailedUpgrade` abría un `ContentDialog` *dentro del
+  bucle* de actualización: con 6 paquetes fallidos, el usuario se comía 6 modales y **el lote se
+  quedaba parado esperando clics**. Ahora `RecordFailedUpgrade` solo registra y acumula, y
+  `ShowFailureSummaryAsync` muestra **un único diálogo** al terminar (lista hasta 10 + "y N más", con
+  la nota de seguridad una sola vez). Aplica a las dos rutas, normal y administrador.
+- **El progreso ya no se puede perder de vista.** La barra de estado salió del `ContentScroller` y es
+  una fila fija del `Grid` raíz: antes, con la lista cargada, el texto de progreso (velocidad + ETA) —
+  el único indicador de la app — quedaba **por debajo del pliegue**. Gana además una `ProgressBar`:
+  indeterminada al consultar y en modo administrador, y **determinada** en las actualizaciones, donde
+  avanza también *dentro* de cada paquete usando la fracción descargada.
+- **La tabla explica en qué estado está** (`panelListState`): consultando / sin datos todavía / todo al
+  día / sin coincidencias (nombrando el texto buscado) / cancelada / error. Se dibuja **encima** del
+  `ListView` en vez de sustituirlo, a propósito: colapsarlo lo sacaría del árbol de automatización,
+  donde los lectores de pantalla y el test `PackagesList_IsPresent` lo buscan por `AutomationId`.
+- Arreglada de paso una **captura de variable** en el reporter de progreso: el lambda capturaba la `i`
+  del `for` (una sola variable compartida entre iteraciones), así que un callback despachado con
+  retraso podía pintar el índice del paquete equivocado.
+
+**Bloque 2 — modelo de selección.** Había **dos conceptos de "seleccionado"** compitiendo: la fila
+resaltada (`lvPackages.SelectedItem`, para ver detalles) y la casilla (`IsSelected` del ViewModel, para
+el lote). Y como `LoadPackagesToGrid` reconstruye los ViewModels, **ordenar o buscar borraba las
+casillas**. Ahora la fuente de verdad es `_selectedIds` (por Id): la selección **sobrevive a buscar,
+ordenar y filtrar**. Además: casilla **tri-estado** de "marcar todo" en la cabecera (el clic nunca deja
+el estado indeterminado — se intercepta `Click` en vez de dejar el ciclo por defecto), **contador en el
+botón** ("Actualizar seleccionados (22)") que se deshabilita con 0 marcados (adiós al modal "no hay
+programas seleccionados"), `Ctrl+A` pasa a ser **seleccionar todo** (estándar) en vez de alternar, y las
+casillas de **filas excluidas se deshabilitan** (antes se podían marcar aunque nunca se actualizaran, así
+que el contador mentía). Bug real arreglado: los aceleradores viven en la raíz del contenido y se
+disparaban **con el foco dentro del buscador** — `Ctrl+A` marcaba todos los paquetes en vez de
+seleccionar el texto, y **`Supr` excluía un paquete en vez de borrar un carácter** (`IsTextInputFocused`).
+
+**Bloque 3 — datos que mentían.** Se buscaban dos bugs de orden y aparecieron tres:
+1. **Orden de versiones como texto.** `1.10.0` quedaba antes que `1.9.0` (carácter a carácter, `'1'<'9'`).
+   Nuevo `Core/VersionOrder.cs`: compara segmento a segmento con los tramos numéricos como números, y
+   cubre los casos reales de winget — prefijo `< 13.5.0.359` (cota superior), `Unknown` (al final) y
+   sufijos de preliberación. Aplicado a **Versión** y **Disponible**.
+2. **La columna "Tam." era imposible de rellenar.** `winget show` **no emite ninguna línea de tamaño de
+   instalador** (verificado en la CLI con Git, Docker y GitHub CLI); el parser buscaba `Installer Size:`,
+   un campo que no existe. Y era caro: `StartBackgroundSizeLoadingAsync` lanzaba **un proceso
+   `winget show` por paquete** en **cada reconstrucción de la tabla** — es decir, en cada pulsación del
+   buscador, cada clic de ordenación y cada cambio de filtro — para leer ese campo inexistente. Se
+   eliminan la columna, el cargador, la caché y el campo `InstallerSize` de los dos modelos.
+3. **El panel de detalle estaba roto en todo Windows que no fuera inglés.** `ParsePackageInfo` buscaba
+   `Description:` / `Homepage:` / `Release Notes Url:`, pero **winget traduce las etiquetas de su salida
+   al idioma de Windows** (en español: `Descripción:`, `Página principal:`, `Dirección URL de notas de la
+   versión:`). Resultado: sin descripción y sin enlaces. **Esto invalida la premisa que el propio
+   CONTEXT.md daba por buena en Tier A Fase 7** ("las claves de parseo deben coincidir literalmente con
+   el CLI"). No hay forma de forzar la salida en inglés (`--locale` elige el idioma del *instalador*;
+   comprobado).
+
+   **Cómo se resolvió sin inventar traducciones:** el repo público de winget solo trae `en-us` (el resto
+   viene del pipeline interno de Microsoft), así que se descargó el `.msixbundle` oficial de winget
+   v1.29.280, se extrajeron sus **79 paquetes de idioma** y se volcaron sus `resources.pri` con
+   `makepri`, leyendo las claves `ShowLabelDescription`, `ShowLabelPackageUrl` y
+   `ShowLabelReleaseNotesUrl`. Dos hallazgos que no se habrían acertado a mano:
+   - **winget solo traduce estas etiquetas a 10 idiomas** (de, es, fr, it, ja, ko, pt, ru, zh-hans,
+     zh-hant); en los otros 69 la clave existe **sin candidato** y cae al inglés. Por tanto la tabla de
+     11 juegos cubre el **100 %** de las salidas posibles, no una parte.
+   - **Las etiquetas tienen trampas invisibles**: el francés lleva **espacio duro (U+00A0)** antes de los
+     dos puntos y apóstrofo tipográfico (U+2019), el chino tradicional usa dos puntos de **ancho
+     completo** (U+FF1A), y el **coreano no lleva dos puntos**.
+
+   `Services/WingetShowLabels.cs` se **generó con un script** (no a mano) y se verificó que ninguna de
+   las 30 etiquetas colisiona ni es prefijo de las otras **296** etiquetas `ShowLabel*` de winget — el
+   coreano sin dos puntos era el riesgo real.
+
+**Verificado:** build 0/0, **124/124 unitarios** (95 + 17 de `VersionOrderTests` + 12 de
+`ParsePackageInfoTests`, estos últimos con salida real de winget en español e inglés más 7 idiomas) y
+**16/16 UI tests**. Además se condujo la **app real por UI Automation**: estados vacío/cargando/resultado
+con la barra de estado ya visible; marcar todo → "Actualizar seleccionados (22)" sobre 25 filas (3
+excluidas, con la casilla deshabilitada); búsqueda que **conserva** la selección; orden por Versión con
+`0.4.18+1` antes que `0.15.8` (el orden textual los ponía al revés); y el panel de detalle mostrando por
+primera vez descripción + enlaces **Página web** y **Notas de versión** en esta máquina (Windows en
+español).
 
 ### 2026-07-11 — release: v1.4.1
 

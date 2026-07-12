@@ -6,15 +6,17 @@ Interfaz gráfica (WinUI 3) para gestionar actualizaciones y desinstalaciones de
 
 ### Actualizaciones
 - **Consulta de actualizaciones** — lista todos los paquetes con versión disponible, con soporte para versiones desconocidas (`<`).
-- **Actualización selectiva** — selecciona individualmente los paquetes a actualizar o actualiza todos de una vez.
+- **Actualización selectiva** — marca los paquetes con su casilla (o todos de golpe con la casilla de la cabecera / `Ctrl+A`) y actualízalos. El botón muestra cuántos hay marcados y se deshabilita si no hay ninguno. La selección **sobrevive a buscar, ordenar y filtrar**.
 - **Modo silencioso / interactivo** — compatible con las flags `--silent` e `--interactive` de winget.
 - **Elevación de permisos** — ejecuta lotes elevados mediante un worker interno con comunicación por named pipe, sin scripts temporales en disco. Incluye reporte de progreso de descarga en tiempo real durante la instalación elevada.
+- **Progreso siempre visible** — la barra de estado está anclada al pie de la ventana (fuera de la página desplazable) e incluye una barra de progreso que avanza también *dentro* de cada paquete, según lo descargado.
+- **Resumen único de fallos** — si varios paquetes fallan, se informa en un solo diálogo al terminar el lote, en vez de interrumpirlo con un modal por cada fallo.
 
 ### Exploración y filtrado
 - **Búsqueda en tiempo real** — filtra la lista de paquetes por nombre o ID mientras escribes.
-- **Columnas ordenables** — ordena por nombre, ID, versión instalada, versión disponible, tamaño o fuente haciendo clic en el encabezado.
-- **Columna de tamaño** — muestra el tamaño del instalador de cada paquete, cargado en segundo plano.
-- **Panel de información** — al seleccionar un paquete muestra descripción, tamaño, enlace a la página oficial y enlace a las notas de versión.
+- **Columnas ordenables** — ordena por nombre, ID, versión instalada, versión disponible o fuente haciendo clic en el encabezado. Las versiones se ordenan **numéricamente** (`1.9.0` antes que `1.10.0`), no como texto.
+- **Estados de la tabla** — la tabla dice siempre en qué punto está: consultando, sin datos todavía, todo al día, sin coincidencias con los filtros, o consulta cancelada/fallida.
+- **Panel de información** — al seleccionar un paquete muestra su descripción, un enlace a la página oficial y otro a las notas de versión. Funciona **en cualquier idioma de Windows** (winget traduce las etiquetas de su salida).
 - **Ver en winget.run** — abre la página del paquete en [winget.run](https://winget.run) desde el menú contextual.
 
 ### Desinstalación
@@ -64,6 +66,7 @@ WingetUSoft/
 │   ├── Core/                   # Lógica de negocio pura (sin UI ni efectos externos)
 │   │   ├── ReleaseNotes.cs        # Notas de versión (Markdown → texto plano)
 │   │   ├── Throughput.cs          # ETA de descargas/operaciones largas
+│   │   ├── VersionOrder.cs        # Orden semántico de versiones (1.9 < 1.10, "< x", "Unknown")
 │   │   ├── WindowSizing.cs        # Dimensionado/centrado por DPI (puro, testeable)
 │   │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
 │   │   └── Models/
@@ -76,6 +79,7 @@ WingetUSoft/
 │   │
 │   ├── Services/               # Operaciones con efectos externos (procesos, red, disco)
 │   │   ├── WingetService.cs       # Ejecución de winget, parsing, elevación
+│   │   ├── WingetShowLabels.cs    # Etiquetas de `winget show` en los 10 idiomas que winget traduce
 │   │   ├── GitHubUpdateService.cs # Auto-actualización desde GitHub Releases
 │   │   └── CleanupScanner.cs      # Detección de residuos post-desinstalación
 │   │

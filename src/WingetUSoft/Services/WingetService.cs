@@ -161,7 +161,6 @@ public static class WingetService
         string[] lines = output.Replace("\r", "").Split('\n');
         var descBuilder = new StringBuilder();
         bool inDescription = false;
-        bool inInstaller = false;
 
         foreach (string line in lines)
         {
@@ -186,40 +185,22 @@ public static class WingetService
                 }
             }
 
-            if (trimmed == "Installer:")
+            // Las etiquetas de winget van traducidas al idioma de Windows ("Página principal:" en
+            // español), así que se comparan contra las de todos los idiomas: ver WingetShowLabels.
+            if (TryMatchLabel(trimmed, WingetShowLabels.Homepage, out string homepage))
             {
-                inInstaller = true;
-                continue;
+                if (IsHttpUrl(homepage)) info.Homepage = homepage;
             }
-
-            if (inInstaller && !line.StartsWith(" ") && !line.StartsWith("\t") && !string.IsNullOrWhiteSpace(trimmed))
-                inInstaller = false;
-
-            if (trimmed.StartsWith("Homepage:"))
+            else if (TryMatchLabel(trimmed, WingetShowLabels.ReleaseNotesUrl, out string notesUrl))
             {
-                string val = trimmed["Homepage:".Length..].Trim();
-                if (val.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                    || val.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                    info.Homepage = val;
+                if (IsHttpUrl(notesUrl)) info.ReleaseNotesUrl = notesUrl;
             }
-            else if (trimmed.StartsWith("Release Notes Url:"))
+            else if (TryMatchLabel(trimmed, WingetShowLabels.Description, out string description))
             {
-                string val = trimmed["Release Notes Url:".Length..].Trim();
-                if (val.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                    || val.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                    info.ReleaseNotesUrl = val;
-            }
-            else if (trimmed.StartsWith("Description:"))
-            {
-                string inline = trimmed["Description:".Length..].Trim();
-                if (!string.IsNullOrEmpty(inline))
-                    info.Description = inline;
+                if (!string.IsNullOrEmpty(description))
+                    info.Description = description;   // en una sola línea
                 else
-                    inDescription = true;
-            }
-            else if (inInstaller && trimmed.StartsWith("Installer Size:"))
-            {
-                info.InstallerSize = trimmed["Installer Size:".Length..].Trim();
+                    inDescription = true;             // como bloque indentado debajo
             }
         }
 
@@ -228,6 +209,34 @@ public static class WingetService
 
         return info;
     }
+
+    /// <summary>
+    /// Comprueba si la línea empieza por alguna de las traducciones conocidas de una etiqueta y, si
+    /// es así, devuelve el valor que va detrás.
+    /// </summary>
+    /// <remarks>
+    /// Casi todas las etiquetas ya incluyen los dos puntos ("Homepage:"), pero la coreana no
+    /// ("홈페이지"), así que hay que quitarlos también aquí. El chino tradicional usa los de ancho
+    /// completo (U+FF1A).
+    /// </remarks>
+    private static bool TryMatchLabel(string trimmed, string[] labels, out string value)
+    {
+        foreach (string label in labels)
+        {
+            if (trimmed.StartsWith(label, StringComparison.OrdinalIgnoreCase))
+            {
+                value = trimmed[label.Length..].TrimStart(':', '：').Trim();
+                return true;
+            }
+        }
+
+        value = "";
+        return false;
+    }
+
+    private static bool IsHttpUrl(string value) =>
+        value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+        || value.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
 
     public static async Task<UpgradeBatchResult> UpgradePackagesAsAdministratorAsync(
         IEnumerable<string> packageIds,

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
@@ -19,7 +19,6 @@ namespace WingetUSoft;
 public sealed class PackageViewModel : INotifyPropertyChanged
 {
     private bool _isSelected;
-    private string _installerSize = "";
 
     public WingetPackage Package { get; }
     public string Name => Package.Name;
@@ -34,16 +33,17 @@ public sealed class PackageViewModel : INotifyPropertyChanged
         set { if (_isSelected != value) { _isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); } }
     }
 
-    public string InstallerSize
-    {
-        get => _installerSize;
-        set { if (_installerSize != value) { _installerSize = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InstallerSize))); } }
-    }
-
     public bool IsExcluded { get; set; }
+
+    /// <summary>Un paquete excluido nunca se actualiza, así que su casilla se deshabilita: marcarla
+    /// haría que la fila dijera una cosa y el contador del botón otra.</summary>
+    public bool IsSelectable => !IsExcluded;
 
     /// <summary>Etiqueta accesible (localizada) para el icono "Excluido" solo-icono de la fila.</summary>
     public string ExcludedLabel => L.T("grid.excludedAccessible");
+
+    /// <summary>Etiqueta accesible de la casilla de la fila: sin ella se anuncia solo como "casilla".</summary>
+    public string SelectLabel => L.T("grid.selectAccessible", Name);
 
     public PackageViewModel(WingetPackage package) => Package = package;
 
@@ -53,6 +53,28 @@ public sealed class PackageViewModel : INotifyPropertyChanged
 public sealed partial class MainWindow : Window
 {
     private const int LogMaxLines = 400;
+
+    /// <summary>Estado de la consulta, que decide qué muestra el panel superpuesto a la tabla.</summary>
+    private enum ListState { Initial, Loading, Ready, Cancelled, Error }
+
+    /// <summary>Paquete que falló al actualizar, acumulado para el resumen único del final del lote.</summary>
+    private readonly record struct FailedUpgrade(string Name, string Id, string Reason);
+
+    private ListState _listState = ListState.Initial;
+    private readonly List<FailedUpgrade> _failedUpgrades = [];
+
+    /// <summary>
+    /// Ids marcados con la casilla. Es la fuente de verdad de la selección, no el ViewModel: buscar,
+    /// ordenar o filtrar reconstruye las filas, y antes eso borraba lo que el usuario llevaba marcado.
+    /// No confundir con <c>lvPackages.SelectedItem</c>, que es la fila resaltada para ver detalles.
+    /// </summary>
+    private readonly HashSet<string> _selectedIds = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Evita recontar la selección una vez por fila durante un marcado masivo o una recarga.</summary>
+    private bool _suppressSelectionSync;
+
+    /// <summary>Si las acciones están habilitadas por estado (winget disponible, no ocupado).</summary>
+    private bool _actionsEnabled = true;
 
     private readonly ObservableCollection<PackageViewModel> _packageViewModels = [];
     private List<WingetPackage> _allPackages = [];
@@ -69,14 +91,12 @@ public sealed partial class MainWindow : Window
     private bool _initialized;
     private int _excludedFilter = 0;
     private string _searchFilter = "";
-    private int _sortColumn = 0;   // 0=none 1=Name 2=Id 3=Version 4=Available 5=Size 6=Source
+    private int _sortColumn = 0;   // 0=none 1=Name 2=Id 3=Version 4=Available 5=Source
     private bool _sortDescending = false;
     private CancellationTokenSource? _packageInfoCts;
-    private CancellationTokenSource? _sizeLoadCts;
     private string? _appUpdateUrl;
     private string? _appUpdateChecksumUrl;
     private H.NotifyIcon.TaskbarIcon? _trayIcon;
-    private readonly Dictionary<string, string> _sizeCache = new(StringComparer.OrdinalIgnoreCase);
     private DispatcherTimer? _searchDebounceTimer;
 
     private AppWindow _appWindow = null!;
@@ -213,17 +233,17 @@ public sealed partial class MainWindow : Window
         f5.Invoked += (_, _) => { if (_cts is null) _ = LoadPackagesAsync(_lastIncludeUnknown); };
         Content.KeyboardAccelerators.Add(f5);
 
-        // Ctrl+A - Select all
+        // Ctrl+A - Marcar todo (para desmarcar, la casilla de la cabecera)
         var ctrlA = new KeyboardAccelerator
         {
             Key = Windows.System.VirtualKey.A,
             Modifiers = Windows.System.VirtualKeyModifiers.Control
         };
-        ctrlA.Invoked += (_, _) =>
+        ctrlA.Invoked += (_, args) =>
         {
-            bool allSelected = _packageViewModels.All(p => p.IsSelected);
-            foreach (var vm in _packageViewModels)
-                vm.IsSelected = !allSelected;
+            if (IsTextInputFocused()) return;   // deja que Ctrl+A seleccione el texto del cuadro
+            SetAllVisibleSelected(true);
+            args.Handled = true;
         };
         Content.KeyboardAccelerators.Add(ctrlA);
 
@@ -242,20 +262,94 @@ public sealed partial class MainWindow : Window
 
         // Delete - Exclude
         var del = new KeyboardAccelerator { Key = Windows.System.VirtualKey.Delete };
-        del.Invoked += (_, _) =>
+        del.Invoked += (_, args) =>
         {
+            if (IsTextInputFocused()) return;   // en el buscador, Supr borra caracteres
             if (GetSelectedPackage() is not null)
+            {
                 CtxExcluir_Click(null, null);
+                args.Handled = true;
+            }
         };
         Content.KeyboardAccelerators.Add(del);
     }
 
+    /// <summary>
+    /// Los aceleradores viven en la raíz del contenido, así que se disparan también con el foco dentro
+    /// del buscador: sin esta guarda, Ctrl+A marcaba todos los paquetes en vez de seleccionar el texto,
+    /// y Supr excluía un paquete en vez de borrar un carácter.
+    /// </summary>
+    private bool IsTextInputFocused() =>
+        FocusManager.GetFocusedElement(Content.XamlRoot) is TextBox or PasswordBox or AutoSuggestBox or RichEditBox;
+
     private void SetActionButtonsEnabled(bool enabled)
     {
+        _actionsEnabled = enabled;
         btnConsultar.IsEnabled = enabled;
         btnConsultarDesconocidas.IsEnabled = enabled;
         btnActualizarTodo.IsEnabled = enabled;
-        btnActualizarSeleccionados.IsEnabled = enabled;
+        // "Actualizar seleccionados" depende además de que haya algo marcado.
+        UpdateSelectionSummary();
+    }
+
+    // --- Selección por casilla (independiente de la fila resaltada) ---
+
+    /// <summary>Paquetes marcados y no excluidos. Sigue a <see cref="_selectedIds"/>, no a las filas
+    /// visibles: una búsqueda activa oculta filas pero no desmarca lo que el usuario ya eligió.</summary>
+    private List<WingetPackage> GetCheckedPackages() =>
+        [.. _packages.Where(p => _selectedIds.Contains(p.Id) && !_settings.ExcludedIds.Contains(p.Id))];
+
+    private void OnPackageSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PackageViewModel.IsSelected)) return;
+        if (sender is not PackageViewModel vm) return;
+
+        if (vm.IsSelected) _selectedIds.Add(vm.Id);
+        else _selectedIds.Remove(vm.Id);
+
+        if (!_suppressSelectionSync) UpdateSelectionSummary();
+    }
+
+    /// <summary>Refleja la selección en el botón de actualizar y en la casilla tri-estado de la cabecera.</summary>
+    private void UpdateSelectionSummary()
+    {
+        int checkedCount = GetCheckedPackages().Count;
+
+        btnActualizarSeleccionados.Content = checkedCount == 0
+            ? L.T("btn.updateSelected")
+            : L.T("btn.updateSelectedCount", checkedCount);
+
+        // Deshabilitado sin nada marcado: antes se podía pulsar y la única respuesta era un diálogo
+        // "no hay programas seleccionados".
+        btnActualizarSeleccionados.IsEnabled = _actionsEnabled && checkedCount > 0;
+
+        // Las filas excluidas no cuentan: su casilla está deshabilitada y nunca se actualizan.
+        var selectable = _packageViewModels.Where(v => v.IsSelectable).ToList();
+        int selectableChecked = selectable.Count(v => v.IsSelected);
+
+        chkSelectAll.IsEnabled = selectable.Count > 0 && _actionsEnabled;
+        // Indeterminado (null) = selección parcial. Asignar IsChecked por código no dispara Click,
+        // así que esto no reentra en ChkSelectAll_Click.
+        chkSelectAll.IsChecked = selectable.Count > 0 && selectableChecked == selectable.Count
+            ? true
+            : selectableChecked == 0 ? false : null;
+    }
+
+    private void ChkSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        // Un clic significa "marcar todo" o "desmarcar todo". El ciclo por defecto de un CheckBox
+        // tri-estado dejaría pasar al usuario por el estado indeterminado, que aquí no significa nada.
+        SetAllVisibleSelected(_packageViewModels.Any(v => v.IsSelectable && !v.IsSelected));
+    }
+
+    private void SetAllVisibleSelected(bool selected)
+    {
+        _suppressSelectionSync = true;
+        foreach (var vm in _packageViewModels.Where(v => v.IsSelectable))
+            vm.IsSelected = selected;
+        _suppressSelectionSync = false;
+
+        UpdateSelectionSummary();
     }
 
     private void SetUIBusy(bool busy)
@@ -264,7 +358,98 @@ public sealed partial class MainWindow : Window
         btnCancelar.IsEnabled = busy;
         lvPackages.IsEnabled = !busy;
         progressRing.IsActive = busy;
-        if (!busy) _cancelStopsCurrentProcess = true;
+        if (!busy)
+        {
+            _cancelStopsCurrentProcess = true;
+            HideProgress();
+        }
+    }
+
+    /// <summary>Barra de progreso sin fin: la operación avanza pero no sabemos cuánto falta.</summary>
+    private void ShowIndeterminateProgress()
+    {
+        pbGlobal.IsIndeterminate = true;
+        pbGlobal.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>Barra de progreso 0..<paramref name="total"/>, avanzada con <see cref="SetProgressValue"/>.</summary>
+    private void ShowDeterminateProgress(double total)
+    {
+        pbGlobal.IsIndeterminate = false;
+        pbGlobal.Minimum = 0;
+        pbGlobal.Maximum = total;
+        pbGlobal.Value = 0;
+        pbGlobal.Visibility = Visibility.Visible;
+    }
+
+    private void SetProgressValue(double value) => pbGlobal.Value = Math.Clamp(value, pbGlobal.Minimum, pbGlobal.Maximum);
+
+    private void HideProgress()
+    {
+        pbGlobal.Visibility = Visibility.Collapsed;
+        pbGlobal.IsIndeterminate = false;
+        pbGlobal.Value = 0;
+    }
+
+    /// <summary>
+    /// Sincroniza el panel superpuesto a la tabla con el estado actual: consultando, sin datos aún,
+    /// todo al día, sin coincidencias con los filtros, o consulta cancelada/fallida. Cuando hay filas
+    /// que mostrar el panel se oculta y la tabla queda visible.
+    /// </summary>
+    private void UpdateListState()
+    {
+        switch (_listState)
+        {
+            case ListState.Loading:
+                ShowListState(L.T("list.stateLoadingTitle"), L.T("list.stateLoadingBody"), loading: true);
+                return;
+
+            case ListState.Cancelled:
+                ShowListState(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"), Glyph.Sync);
+                return;
+
+            case ListState.Error:
+                ShowListState(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"), Glyph.Warning);
+                return;
+        }
+
+        if (_packageViewModels.Count > 0)
+        {
+            ringListState.IsActive = false;
+            panelListState.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (_listState == ListState.Initial)
+            ShowListState(L.T("list.stateInitialTitle"), L.T("list.stateInitialBody"), Glyph.Sync);
+        else if (_packages.Count == 0)
+            ShowListState(L.T("list.stateUpToDateTitle"), L.T("list.stateUpToDateBody"), Glyph.CheckMark);
+        else if (_searchFilter.Trim() is { Length: > 0 } search)
+            ShowListState(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchSearch", search), Glyph.Search);
+        else
+            ShowListState(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchFilters"), Glyph.Search);
+    }
+
+    /// <summary>Glifos de Segoe MDL2 Assets usados por el panel de estado de la tabla.</summary>
+    private static class Glyph
+    {
+        public const string Sync = "\uE895";
+        public const string CheckMark = "\uE73E";
+        public const string Search = "\uE721";
+        public const string Warning = "\uE7BA";
+    }
+
+    private void ShowListState(string title, string body, string glyph = "", bool loading = false)
+    {
+        txtListStateTitle.Text = title;
+        txtListStateBody.Text = body;
+
+        ringListState.IsActive = loading;
+        ringListState.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+        iconListState.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
+        if (!loading) iconListState.Glyph = glyph;
+
+        panelListState.Visibility = Visibility.Visible;
     }
 
     private string GetCancelStatusText() => _cancelStopsCurrentProcess
@@ -283,77 +468,67 @@ public sealed partial class MainWindow : Window
                 p.Id.Contains(search, StringComparison.OrdinalIgnoreCase));
 
         IEnumerable<PackageViewModel> viewModels = filtered.Select(pkg =>
-            new PackageViewModel(pkg) { IsExcluded = _settings.ExcludedIds.Contains(pkg.Id) });
+            new PackageViewModel(pkg)
+            {
+                IsExcluded = _settings.ExcludedIds.Contains(pkg.Id),
+                IsSelected = _selectedIds.Contains(pkg.Id),   // la marca sobrevive a buscar/ordenar/filtrar
+            });
 
         if (_excludedFilter == 1) viewModels = viewModels.Where(v => !v.IsExcluded);
         else if (_excludedFilter == 2) viewModels = viewModels.Where(v => v.IsExcluded);
 
         viewModels = ApplySort(viewModels);
 
+        // La suscripción va después de construir el ViewModel: el IsSelected del inicializador de
+        // arriba solo restaura lo que ya está en _selectedIds y no debe recontar nada.
         foreach (var vm in viewModels)
+        {
+            vm.PropertyChanged += OnPackageSelectionChanged;
             _packageViewModels.Add(vm);
+        }
 
         UpdateSelectionDetails();
-        _ = StartBackgroundSizeLoadingAsync([.. _packageViewModels]);
+        UpdateSelectionSummary();
+        UpdateListState();
     }
 
     private IEnumerable<PackageViewModel> ApplySort(IEnumerable<PackageViewModel> items)
     {
+        // Nombre/Id/Fuente son texto y se ordenan como texto. Versión y Disponible NO: compararlas
+        // carácter a carácter pone "1.10.0" antes que "1.9.0". Ver VersionOrder.
         return _sortColumn switch
         {
-            1 => _sortDescending ? items.OrderByDescending(v => v.Name) : items.OrderBy(v => v.Name),
-            2 => _sortDescending ? items.OrderByDescending(v => v.Id) : items.OrderBy(v => v.Id),
-            3 => _sortDescending ? items.OrderByDescending(v => v.Version) : items.OrderBy(v => v.Version),
-            4 => _sortDescending ? items.OrderByDescending(v => v.Available) : items.OrderBy(v => v.Available),
-            5 => _sortDescending ? items.OrderByDescending(v => v.InstallerSize) : items.OrderBy(v => v.InstallerSize),
-            6 => _sortDescending ? items.OrderByDescending(v => v.Source) : items.OrderBy(v => v.Source),
+            1 => Order(v => v.Name, StringComparer.CurrentCultureIgnoreCase),
+            2 => Order(v => v.Id, StringComparer.OrdinalIgnoreCase),
+            3 => Order(v => v.Version, VersionOrder.Comparer!),
+            4 => Order(v => v.Available, VersionOrder.Comparer!),
+            5 => Order(v => v.Source, StringComparer.OrdinalIgnoreCase),
             _ => items
         };
-    }
 
-    private async Task StartBackgroundSizeLoadingAsync(List<PackageViewModel> viewModels)
-    {
-        _sizeLoadCts?.Cancel();
-        _sizeLoadCts = new CancellationTokenSource();
-        var token = _sizeLoadCts.Token;
-
-        using var semaphore = new SemaphoreSlim(2, 2);
-
-        var tasks = viewModels.Select(async vm =>
-        {
-            if (_sizeCache.TryGetValue(vm.Id, out string? cached))
-            {
-                vm.InstallerSize = cached;
-                return;
-            }
-
-            await semaphore.WaitAsync(token);
-            try
-            {
-                var info = await WingetService.GetPackageInfoAsync(vm.Id, token);
-                if (!token.IsCancellationRequested)
-                {
-                    string size = string.IsNullOrEmpty(info.InstallerSize) ? "—" : info.InstallerSize;
-                    _sizeCache[vm.Id] = size;
-                    vm.InstallerSize = size;
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch { vm.InstallerSize = "—"; }
-            finally { semaphore.Release(); }
-        });
-
-        try { await Task.WhenAll(tasks); }
-        catch (OperationCanceledException) { }
+        IEnumerable<PackageViewModel> Order(Func<PackageViewModel, string> key, IComparer<string> comparer) =>
+            _sortDescending
+                ? items.OrderByDescending(key, comparer)
+                : items.OrderBy(key, comparer);
     }
 
     private async Task LoadPackagesAsync(bool includeUnknown)
     {
         _lastIncludeUnknown = includeUnknown;
         _cancelStopsCurrentProcess = true;
-        _sizeCache.Clear();
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
+        ShowIndeterminateProgress();
+
+        // La tabla se vacía al empezar: dejar las filas de la consulta anterior bajo el panel
+        // "Consultando..." sería enseñar datos que ya estamos reemplazando. La selección también se
+        // descarta: la consulta trae una lista nueva y marcar por Id lo que ya no está no significa nada.
+        _listState = ListState.Loading;
+        _selectedIds.Clear();
+        _packageViewModels.Clear();
+        UpdateSelectionSummary();
+        UpdateListState();
+
         txtEstado.Text = includeUnknown
             ? L.T("status.queryingUpdatesUnknown")
             : L.T("status.queryingUpdates");
@@ -361,6 +536,7 @@ public sealed partial class MainWindow : Window
         try
         {
             _allPackages = await WingetService.GetUpgradablePackagesAsync(includeUnknown, _cts.Token);
+            _listState = ListState.Ready;
             UpdateSourceFilter();
             ApplySourceFilter();
             LoadPackagesToGrid();
@@ -376,13 +552,17 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
+            _listState = ListState.Cancelled;
             _packageViewModels.Clear();
             txtEstado.Text = L.T("status.queryCancelled");
             UpdateSelectionDetails();
         }
         catch (Exception ex)
         {
+            _listState = ListState.Error;
+            _packageViewModels.Clear();
             txtEstado.Text = L.T("status.queryError");
+            AppendLog(L.T("error.genericPrefix", ex.Message), LogLineKind.Error);
             await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
@@ -390,32 +570,20 @@ public sealed partial class MainWindow : Window
             _cts.Dispose();
             _cts = null;
             SetUIBusy(false);
+            UpdateListState();
         }
     }
 
-    private async Task UpdatePackagesAsync(bool allPackages)
+    /// <summary>
+    /// Actualiza exactamente los paquetes recibidos. La lista la decide cada punto de entrada (botón
+    /// de seleccionados, "actualizar todo", menú contextual), en vez de deducirla aquí de las filas
+    /// visibles: un filtro o una búsqueda activos no deben cambiar lo que el usuario mandó actualizar.
+    /// </summary>
+    private async Task UpdatePackagesAsync(List<WingetPackage> packagesToUpdate)
     {
-        var packagesToUpdate = new List<WingetPackage>();
+        if (packagesToUpdate.Count == 0) return;
+
         bool runAsAdministrator = _settings.RunUpdatesAsAdministrator;
-
-        if (allPackages)
-        {
-            packagesToUpdate.AddRange(_packages.Where(p => !_settings.ExcludedIds.Contains(p.Id)));
-        }
-        else
-        {
-            foreach (var vm in _packageViewModels)
-            {
-                if (vm.IsSelected && !_settings.ExcludedIds.Contains(vm.Id))
-                    packagesToUpdate.Add(vm.Package);
-            }
-        }
-
-        if (packagesToUpdate.Count == 0)
-        {
-            await ShowDialogAsync(L.T("info.title"), L.T("msg.noPackagesSelected"));
-            return;
-        }
 
         if (runAsAdministrator)
         {
@@ -439,22 +607,34 @@ public sealed partial class MainWindow : Window
         var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         ClearLog();
+        _failedUpgrades.Clear();
 
         try
         {
             if (runAsAdministrator)
             {
+                // El lote elevado corre en un único proceso: winget no nos va reportando en qué
+                // paquete va con precisión suficiente para una barra determinada.
+                ShowIndeterminateProgress();
                 TaskbarProgress.SetIndeterminate(_hWnd);
                 (success, failed, cancelled) = await UpdatePackagesAsAdministratorAsync(packagesToUpdate);
                 historyChanged = success > 0;
             }
             else
             {
+                ShowDeterminateProgress(packagesToUpdate.Count);
+
                 for (int i = 0; i < packagesToUpdate.Count; i++)
                 {
-                    var pkg = packagesToUpdate[i];
-                    txtEstado.Text = L.T("status.updating", i + 1, packagesToUpdate.Count, pkg.Name);
-                    TaskbarProgress.SetValue(_hWnd, i * 100 / packagesToUpdate.Count);
+                    // Copia local: el callback de Progress se despacha en la cola de la UI y puede
+                    // ejecutarse cuando el bucle ya avanzó, así que capturar 'i' daría el índice
+                    // equivocado en el texto de estado y en la barra.
+                    int index = i;
+                    var pkg = packagesToUpdate[index];
+
+                    txtEstado.Text = L.T("status.updating", index + 1, packagesToUpdate.Count, pkg.Name);
+                    SetProgressValue(index);
+                    TaskbarProgress.SetValue(_hWnd, index * 100 / packagesToUpdate.Count);
 
                     IProgress<WingetProgressInfo>? progressReporter = new Progress<WingetProgressInfo>(info =>
                     {
@@ -462,18 +642,22 @@ public sealed partial class MainWindow : Window
                         {
                             UpdateLogDownloadLine(info);
 
+                            // El paquete en curso aporta su fracción descargada, para que la barra
+                            // avance dentro de cada paquete y no solo al saltar de uno al siguiente.
+                            SetProgressValue(index + (double)info.DownloadedBytes / info.TotalBytes);
+
                             string speedText = info.SpeedBytesPerSecond > 0
                                 ? $"  ·  {FormatBytes((long)info.SpeedBytesPerSecond)}/s" : "";
                             string etaText = Throughput.FormatEta(Throughput.Eta(
                                 info.TotalBytes - info.DownloadedBytes, info.SpeedBytesPerSecond)) is { Length: > 0 } e
                                 ? L.T("eta.remaining", e) : "";
-                            txtEstado.Text = L.T("status.updatingProgress", i + 1, packagesToUpdate.Count, pkg.Name) + speedText + etaText;
+                            txtEstado.Text = L.T("status.updatingProgress", index + 1, packagesToUpdate.Count, pkg.Name) + speedText + etaText;
                         }
                     });
 
                     try
                     {
-                        AppendLog($"[{i + 1}/{packagesToUpdate.Count}] Iniciando: {pkg.Name} ({pkg.Id})");
+                        AppendLog($"[{index + 1}/{packagesToUpdate.Count}] Iniciando: {pkg.Name} ({pkg.Id})");
 
                         var result = await WingetService.UpgradePackageAsync(
                             pkg.Id, _silentMode, false, progressReporter, _cts.Token,
@@ -488,7 +672,7 @@ public sealed partial class MainWindow : Window
                         else
                         {
                             failed++;
-                            await HandleFailedUpgrade(pkg, result.GetFailureReason());
+                            RecordFailedUpgrade(pkg, result.GetFailureReason());
                         }
                     }
                     catch (OperationCanceledException)
@@ -502,6 +686,8 @@ public sealed partial class MainWindow : Window
                         cancelled = true;
                         break;
                     }
+
+                    SetProgressValue(index + 1);
                 }
             }
 
@@ -540,6 +726,11 @@ public sealed partial class MainWindow : Window
             _cts = null;
             SetUIBusy(false);
         }
+
+        // Un solo diálogo con todos los fallos, ya terminado el lote. Antes se abría uno por paquete
+        // fallido desde dentro del bucle, lo que detenía el lote hasta que el usuario cerraba cada uno.
+        if (_failedUpgrades.Count > 0)
+            await ShowFailureSummaryAsync();
 
         ShowUpdateNotification(success, failed);
 
@@ -617,7 +808,7 @@ public sealed partial class MainWindow : Window
 
                 failed++;
                 AppendLog(L.T("log.resultUnavailable", i + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
-                await HandleFailedUpgrade(pkg, L.T("msg.noElevatedResult"));
+                RecordFailedUpgrade(pkg, L.T("msg.noElevatedResult"));
                 continue;
             }
 
@@ -632,7 +823,7 @@ public sealed partial class MainWindow : Window
             else
             {
                 failed++;
-                await HandleFailedUpgrade(pkg, item.Result.GetFailureReason());
+                RecordFailedUpgrade(pkg, item.Result.GetFailureReason());
             }
         }
 
@@ -673,11 +864,40 @@ public sealed partial class MainWindow : Window
         });
     }
 
-    private async Task HandleFailedUpgrade(WingetPackage pkg, string reason)
+    /// <summary>
+    /// Anota un fallo en el registro y lo acumula para <see cref="ShowFailureSummaryAsync"/>. No abre
+    /// ningún diálogo: hacerlo aquí bloquearía el lote en mitad del bucle esperando un clic.
+    /// </summary>
+    private void RecordFailedUpgrade(WingetPackage pkg, string reason)
     {
         AppendLog($"  ✖ {pkg.Name}: {reason}", LogLineKind.Error);
-        await ShowDialogAsync(L.T("error.updateTitle"),
-            L.T("error.cannotUpdateBody", pkg.Name, pkg.Id, reason));
+        _failedUpgrades.Add(new FailedUpgrade(pkg.Name, pkg.Id, reason));
+    }
+
+    /// <summary>Diálogo único, al terminar el lote, con todos los paquetes que fallaron y su motivo.</summary>
+    private Task ShowFailureSummaryAsync()
+    {
+        const int maxListed = 10;
+
+        var sb = new StringBuilder();
+        sb.AppendLine(_failedUpgrades.Count == 1
+            ? L.T("error.failedSummarySingle")
+            : L.T("error.failedSummaryHeader", _failedUpgrades.Count));
+        sb.AppendLine();
+
+        foreach (var failure in _failedUpgrades.Take(maxListed))
+        {
+            sb.AppendLine($"  • {failure.Name} ({failure.Id})");
+            sb.AppendLine($"      {failure.Reason}");
+        }
+
+        if (_failedUpgrades.Count > maxListed)
+            sb.AppendLine(L.T("list.andMore", _failedUpgrades.Count - maxListed));
+
+        sb.AppendLine();
+        sb.Append(L.T("error.failedSummaryFooter"));
+
+        return ShowDialogAsync(L.T("error.updateTitle"), sb.ToString());
     }
 
     // --- Button Event Handlers ---
@@ -689,7 +909,7 @@ public sealed partial class MainWindow : Window
         await LoadPackagesAsync(includeUnknown: true);
 
     private async void BtnActualizarSeleccionados_Click(object sender, RoutedEventArgs e) =>
-        await UpdatePackagesAsync(allPackages: false);
+        await UpdatePackagesAsync(GetCheckedPackages());
 
     private async void BtnActualizarTodo_Click(object sender, RoutedEventArgs e)
     {
@@ -704,7 +924,7 @@ public sealed partial class MainWindow : Window
         if (!await ShowConfirmDialogAsync(L.T("confirm.updateTitle"),
                 L.T("confirm.updateBody", pendientes.Count, lista)))
             return;
-        await UpdatePackagesAsync(allPackages: true);
+        await UpdatePackagesAsync(pendientes);
     }
 
     private void BtnCancelar_Click(object sender, RoutedEventArgs e)
@@ -804,8 +1024,8 @@ public sealed partial class MainWindow : Window
         txtAccionesTitle.Text = L.T("actions.title");
         btnConsultar.Content = L.T("btn.checkUpdates");
         btnConsultarDesconocidas.Content = L.T("btn.checkUnknown");
-        btnActualizarSeleccionados.Content = L.T("btn.updateSelected");
         btnActualizarTodo.Content = L.T("btn.updateAll");
+        // btnActualizarSeleccionados lleva el contador: lo rotula UpdateSelectionSummary(), al final.
         btnCancelar.Content = L.T("btn.cancel");
         txtFuenteLabel.Text = L.T("filter.sourceLabel");
         cmbFuenteAllItem.Content = L.T("filter.allSources");
@@ -821,17 +1041,19 @@ public sealed partial class MainWindow : Window
         lnkHomepage.Content = L.T("info.homepage");
         lnkNotasVersion.Content = L.T("info.releaseNotes");
         txtUpdatesHeader.Text = L.T("list.header");
-        colSel.Text = L.T("list.colSelect");
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(chkSelectAll, L.T("grid.selectAllAccessible"));
+        ToolTipService.SetToolTip(chkSelectAll, L.T("grid.selectAllAccessible"));
         colNombre.Text = L.T("list.colName");
         colId.Text = L.T("list.colId");
         colVersion.Text = L.T("list.colVersion");
         colDisponible.Text = L.T("list.colAvailable");
-        colTam.Text = L.T("list.colSize");
         colFuente.Text = L.T("list.colSource");
         colExcl.Text = L.T("list.colExcluded");
         txtLogHeader.Text = L.T("log.header");
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
         UpdateSelectionDetails();
+        UpdateSelectionSummary();
+        UpdateListState();
 
         btnOpciones.Content = L.T("menu.options");
         menuModoActualizacion.Text = L.T("menu.updateMode");
@@ -953,8 +1175,7 @@ public sealed partial class MainWindow : Window
         sortId.Text        = SortIndicator(2);
         sortVersion.Text   = SortIndicator(3);
         sortAvailable.Text = SortIndicator(4);
-        sortSize.Text      = SortIndicator(5);
-        sortSource.Text    = SortIndicator(6);
+        sortSource.Text    = SortIndicator(5);
     }
 
     private string SortIndicator(int col)
@@ -985,7 +1206,6 @@ public sealed partial class MainWindow : Window
 
         panelPackageInfo.Visibility = Visibility.Visible;
         txtInfoDescripcion.Text = L.T("pkg.loading");
-        txtInfoTamano.Text = "";
         lnkHomepage.Visibility = Visibility.Collapsed;
         lnkNotasVersion.Visibility = Visibility.Collapsed;
 
@@ -998,10 +1218,6 @@ public sealed partial class MainWindow : Window
             txtInfoDescripcion.Text = string.IsNullOrEmpty(info.Description)
                 ? pkg.Name
                 : (info.Description.Length > 160 ? info.Description[..160] + "…" : info.Description);
-
-            txtInfoTamano.Text = string.IsNullOrEmpty(info.InstallerSize)
-                ? ""
-                : L.T("pkg.sizeLabel", info.InstallerSize);
 
             if (!string.IsNullOrEmpty(info.Homepage)
                 && Uri.TryCreate(info.Homepage, UriKind.Absolute, out var homeUri)
@@ -1017,13 +1233,6 @@ public sealed partial class MainWindow : Window
             {
                 lnkNotasVersion.NavigateUri = notesUri;
                 lnkNotasVersion.Visibility = Visibility.Visible;
-            }
-
-            // Update the size column for this package in the list
-            if (!string.IsNullOrEmpty(info.InstallerSize))
-            {
-                var vm = _packageViewModels.FirstOrDefault(v => v.Id == pkg.Id);
-                if (vm is not null) vm.InstallerSize = info.InstallerSize;
             }
         }
         catch (OperationCanceledException) { }
@@ -1066,11 +1275,10 @@ public sealed partial class MainWindow : Window
 
     private async void CtxActualizar_Click(object sender, RoutedEventArgs e)
     {
-        if (GetSelectedPackage() is null) return;
-        foreach (var vm in _packageViewModels) vm.IsSelected = false;
-        if (lvPackages.SelectedItem is PackageViewModel selected)
-            selected.IsSelected = true;
-        await UpdatePackagesAsync(allPackages: false);
+        // Actualiza solo la fila del menú contextual, sin tocar las casillas: antes desmarcaba todo
+        // y marcaba esta, así que el usuario perdía la selección que llevaba hecha.
+        if (GetSelectedPackage() is { } pkg)
+            await UpdatePackagesAsync([pkg]);
     }
 
     private void CtxCopiarNombre_Click(object sender, RoutedEventArgs e)
@@ -1125,9 +1333,15 @@ public sealed partial class MainWindow : Window
     {
         if (GetSelectedPackage() is not { } pkg) return;
         if (_settings.ExcludedIds.Contains(pkg.Id))
+        {
             _settings.ExcludedIds.Remove(pkg.Id);
+        }
         else
+        {
             _settings.ExcludedIds.Add(pkg.Id);
+            // Excluir desmarca: si no, la fila quedaría con la casilla marcada pero deshabilitada.
+            _selectedIds.Remove(pkg.Id);
+        }
         TrySaveSettings(L.T("msg.saveExclusionsError"));
         LoadPackagesToGrid();
     }

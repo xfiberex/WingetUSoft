@@ -14,6 +14,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Custom Title Bar -->
@@ -47,7 +48,6 @@
                     <!-- Piso de la zona tabla+log: por debajo de esto el ScrollViewer desplaza la
                          página en vez de seguir encogiendo la tabla hasta hacerla inservible. -->
                     <RowDefinition Height="*" MinHeight="300" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <!-- Header Card -->
@@ -292,10 +292,6 @@
                                            TextWrapping="NoWrap"
                                            VerticalAlignment="Center" />
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <TextBlock x:Name="txtInfoTamano"
-                                               Style="{StaticResource CaptionTextBlockStyle}"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               VerticalAlignment="Center" />
                                     <HyperlinkButton x:Name="lnkHomepage"
                                                      Content="Página web"
                                                      Padding="4,0"
@@ -347,10 +343,10 @@
                                           HorizontalScrollMode="Auto"
                                           VerticalScrollBarVisibility="Disabled"
                                           VerticalScrollMode="Disabled">
-                                <!-- El Grid toma el ancho del viewport del ScrollViewer (piso MinWidth=860)
+                                <!-- El Grid toma el ancho del viewport del ScrollViewer (piso MinWidth=780)
                                      para que la columna "Nombre" (*) rellene cuando la ventana es ancha, y
-                                     solo aparezca scroll horizontal por debajo de 860px. -->
-                                <Grid MinWidth="860"
+                                     solo aparezca scroll horizontal por debajo de 780px. -->
+                                <Grid MinWidth="780"
                                       Width="{Binding ViewportWidth, ElementName=DataGridScroller}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -368,11 +364,19 @@
                                             <ColumnDefinition Width="190" />
                                             <ColumnDefinition Width="100" />
                                             <ColumnDefinition Width="100" />
-                                            <ColumnDefinition Width="80" />
                                             <ColumnDefinition Width="75" />
                                             <ColumnDefinition Width="55" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock x:Name="colSel" Grid.Column="0" Text="Sel." VerticalAlignment="Center" FontWeight="SemiBold" />
+                                        <!-- Marcar/desmarcar todas las filas visibles. Es tri-estado solo para
+                                             poder MOSTRAR una selección parcial; el clic del usuario nunca deja
+                                             el estado indeterminado (ver ChkSelectAll_Click). -->
+                                        <CheckBox x:Name="chkSelectAll"
+                                                  Grid.Column="0"
+                                                  MinWidth="0"
+                                                  IsThreeState="True"
+                                                  IsEnabled="False"
+                                                  VerticalAlignment="Center"
+                                                  Click="ChkSelectAll_Click" />
                                         <!-- Sortable header cells -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Tapped="SortHeader_Tapped" Tag="1" Background="Transparent">
@@ -404,19 +408,12 @@
                                         </StackPanel>
                                         <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Tapped="SortHeader_Tapped" Tag="5" Background="Transparent">
-                                            <TextBlock x:Name="colTam" Text="Tam." FontWeight="SemiBold" VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colTam}" />
-                                            <TextBlock x:Name="sortSize" Text="" FontSize="9" VerticalAlignment="Center"
-                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="3" Margin="8,0,0,0" VerticalAlignment="Center"
-                                                    Tapped="SortHeader_Tapped" Tag="6" Background="Transparent">
                                             <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colFuente}" />
                                             <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
                                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                         </StackPanel>
-                                        <TextBlock x:Name="colExcl" Grid.Column="7" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                                        <TextBlock x:Name="colExcl" Grid.Column="6" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
                                                    TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
                                     </Grid>
 
@@ -435,12 +432,13 @@
                                                         <ColumnDefinition Width="190" />
                                                         <ColumnDefinition Width="100" />
                                                         <ColumnDefinition Width="100" />
-                                                        <ColumnDefinition Width="80" />
                                                         <ColumnDefinition Width="75" />
                                                         <ColumnDefinition Width="55" />
                                                     </Grid.ColumnDefinitions>
                                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                              VerticalAlignment="Center" MinWidth="0" />
+                                                              IsEnabled="{Binding IsSelectable}"
+                                                              VerticalAlignment="Center" MinWidth="0"
+                                                              AutomationProperties.Name="{Binding SelectLabel}" />
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                                     <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
@@ -449,12 +447,9 @@
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                                     <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <TextBlock Grid.Column="5" Text="{Binding InstallerSize}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
-                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                    <TextBlock Grid.Column="6" Text="{Binding Source}" VerticalAlignment="Center"
+                                                    <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
                                                                TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <FontIcon Grid.Column="7"
+                                                    <FontIcon Grid.Column="6"
                                                               Glyph="&#xE8D8;"
                                                               FontSize="14"
                                                               VerticalAlignment="Center"
@@ -467,6 +462,42 @@
                                             </DataTemplate>
                                         </ListView.ItemTemplate>
                                     </ListView>
+
+                                    <!-- Estado de la tabla: cargando, sin datos todavía, todo al día o
+                                         sin coincidencias. Se dibuja ENCIMA del ListView en vez de
+                                         sustituirlo: colapsar el ListView lo sacaría del árbol de
+                                         automatización, donde lectores de pantalla y tests de UI lo
+                                         buscan por AutomationId aunque no tenga filas. -->
+                                    <StackPanel x:Name="panelListState"
+                                                Grid.Row="1"
+                                                Visibility="Collapsed"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                MaxWidth="440"
+                                                Spacing="10"
+                                                Padding="24">
+                                        <ProgressRing x:Name="ringListState"
+                                                      IsActive="False"
+                                                      Visibility="Collapsed"
+                                                      Width="32" Height="32"
+                                                      HorizontalAlignment="Center" />
+                                        <FontIcon x:Name="iconListState"
+                                                  Glyph="&#xE895;"
+                                                  FontSize="28"
+                                                  HorizontalAlignment="Center"
+                                                  Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                        <TextBlock x:Name="txtListStateTitle"
+                                                   Style="{StaticResource BodyStrongTextBlockStyle}"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock x:Name="txtListStateBody"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
                                 </Grid>
                             </ScrollViewer>
                         </Grid>
@@ -504,33 +535,43 @@
                         </Grid>
                     </Border>
                 </Grid>
-
-                <!-- Status Bar -->
-                <Border Grid.Row="4"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,10">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="txtEstado"
-                                   Grid.Column="0"
-                                   Text="Listo."
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center" />
-                        <ProgressRing x:Name="progressRing"
-                                      Grid.Column="1"
-                                      IsActive="False"
-                                      Width="20" Height="20"
-                                      Margin="12,0,0,0" />
-                    </Grid>
-                </Border>
             </Grid>
         </ScrollViewer>
+
+        <!-- Barra de estado: anclada al Grid raíz, fuera del ScrollViewer de la página. Mientras una
+             operación larga corre, este texto (con velocidad y ETA) y la barra de progreso son lo
+             único que el usuario mira; dentro de la página desplazable podían quedar fuera de la
+             vista en ventanas bajas o si el usuario subía el scroll. -->
+        <Border Grid.Row="2"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,10"
+                Margin="16,0,16,16">
+            <StackPanel Spacing="8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="txtEstado"
+                               Grid.Column="0"
+                               Text="Listo."
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <ProgressRing x:Name="progressRing"
+                                  Grid.Column="1"
+                                  IsActive="False"
+                                  Width="20" Height="20"
+                                  Margin="12,0,0,0" />
+                </Grid>
+                <ProgressBar x:Name="pbGlobal"
+                             Visibility="Collapsed"
+                             Minimum="0" Maximum="1"
+                             Value="0" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -133,3 +133,25 @@ a las celdas de media y cuarto de pantalla y comprueban que la ventana encaja, q
 visibles y que la tabla es **alcanzable desplazando** la página. Más captura de ambas celdas.
 
 Detalle del estado y decisiones de esta tier en [`CONTEXT.md`](CONTEXT.md).
+
+---
+
+## 🧭 Tier C — Auditoría de UI/UX
+
+Nace de una auditoría de UI/UX pedida por el usuario sobre la app ya funcionando (2026-07-11). A
+diferencia del Tier B, que atacaba **layout** (que la ventana quepa), este ataca **flujo y feedback**
+(que el usuario entienda qué está pasando y no le mientan los datos). Los bloques 1–3 destaparon tres
+bugs de fondo que no se veían desde el layout.
+
+| # | Bloque | Dónde | Estado |
+|---|--------|-------|--------|
+| 1 | **Flujo y feedback**: resumen único de fallos (fin del modal por paquete dentro del bucle), barra de estado anclada + `ProgressBar` determinada, estados de la tabla (cargando / sin datos / todo al día / sin coincidencias / cancelada / error) | `UI/MainWindow.xaml`+`.cs`, `Localization/` | ✅ Implementado y verificado |
+| 2 | **Modelo de selección**: `_selectedIds` como fuente de verdad (la selección sobrevive a buscar/ordenar/filtrar), casilla tri-estado de "marcar todo", contador en el botón, `Ctrl+A` estándar, casillas deshabilitadas en filas excluidas | `UI/MainWindow.xaml`+`.cs` | ✅ Implementado y verificado |
+| 3 | **Datos que mentían**: orden semántico de versiones (`Core/VersionOrder.cs`), eliminación de la columna "Tam." (winget no emite ese dato) y del `winget show` por paquete que la alimentaba, y parser de `winget show` multi-idioma (`Services/WingetShowLabels.cs`) | `Core/VersionOrder.cs`, `Services/WingetShowLabels.cs`, `Services/WingetService.cs`, `UI/MainWindow.xaml`+`.cs` | ✅ Implementado y verificado |
+| 4 | **Jerarquía visual y uso del color**: el rojo hace hoy cuatro trabajos a la vez (acento del sistema, botón Cancelar, errores del log, icono de excluido); "Cancelar" no es destructivo y no debería vestirse de peligro | `UI/MainWindow.xaml`, `UI/UninstallWindow.xaml` | ⏳ Pendiente |
+| 5 | **Preferencias en dos sitios**: el menú *Opciones* mezcla preferencias (Modo/Tema/Idioma) con acciones (Exportar/Historial/Desinstalar), y el resto de preferencias vive en *Configuración* | `UI/MainWindow.xaml`, `UI/SettingsWindow.xaml` | ⏳ Pendiente |
+| 6 | **Accesibilidad de la tabla**: las cabeceras ordenables son `StackPanel` con `Tapped` — no se pueden enfocar ni activar con el teclado, y un lector de pantalla no las anuncia como botones | `UI/MainWindow.xaml` | ⏳ Pendiente |
+
+→ **Tier C — #1–#3 completados (2026-07-11, release v1.5.0):** build 0/0, **124/124 unitarios**
+(95 + 17 de `VersionOrderTests` + 12 de `ParsePackageInfoTests`) y **16/16 UI tests**. Verificado
+además conduciendo la app real por UI Automation. Detalle en [`CONTEXT.md`](CONTEXT.md).
