@@ -148,6 +148,36 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
+
+                <!-- Estado vacío: se dibuja ENCIMA del ListView (que se vacía) en vez de una fila
+                     falsa. Hasta v1.8.0 el "sin datos" era una fila con Date=MinValue y Success=false,
+                     que se leía como una actualización "Fallido" del 01/01/0001. Cubre los dos casos:
+                     sin historial todavía y filtro/búsqueda sin coincidencias. -->
+                <StackPanel x:Name="panelEmptyState"
+                            Grid.Row="1"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            MaxWidth="420"
+                            Spacing="10"
+                            Padding="24">
+                    <FontIcon x:Name="iconEmptyState"
+                              Glyph="&#xE81C;"
+                              FontSize="28"
+                              HorizontalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <TextBlock x:Name="txtEmptyTitle"
+                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="txtEmptyBody"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap" />
+                </StackPanel>
             </Grid>
         </Border>
 

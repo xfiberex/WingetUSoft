@@ -104,18 +104,14 @@ public sealed partial class HistoryWindow : Window
 
     private void LoadHistory(List<HistoryEntry> history, int totalCount)
     {
+        // Sin historial todavia: estado vacio real (icono + mensaje centrado), nunca una fila falsa.
+        // Hasta v1.8.0 el "sin datos" era una fila con Date=MinValue y Success=false, que se leia como
+        // una actualizacion "Fallido" del 01/01/0001.
         if (totalCount == 0)
         {
             txtSummary.Text = L.T("history.noEntriesYet");
-            lvHistory.ItemsSource = new[]
-            {
-                new HistoryEntryViewModel(new HistoryEntry
-                {
-                    Date = DateTime.MinValue,
-                    PackageName = L.T("history.noEntriesRow"),
-                    Success = false
-                })
-            };
+            lvHistory.ItemsSource = null;
+            SetEmptyState("", L.T("history.noEntriesRow"));
             return;
         }
 
@@ -125,7 +121,27 @@ public sealed partial class HistoryWindow : Window
             ? L.T("history.summaryAll", history.Count, successCount, failedCount)
             : L.T("history.summaryFiltered", history.Count, totalCount, successCount, failedCount);
 
+        // Hay historial pero la busqueda/filtro no deja nada visible: estado "sin coincidencias".
+        if (history.Count == 0)
+        {
+            lvHistory.ItemsSource = null;
+            bool hasSearch = !string.IsNullOrWhiteSpace(_searchFilter);
+            SetEmptyState("", L.T("list.stateNoMatchTitle"),
+                hasSearch ? L.T("list.stateNoMatchSearch", _searchFilter) : L.T("list.stateNoMatchFilters"));
+            return;
+        }
+
+        panelEmptyState.Visibility = Visibility.Collapsed;
         lvHistory.ItemsSource = history.Select(e => new HistoryEntryViewModel(e)).ToList();
+    }
+
+    private void SetEmptyState(string glyph, string title, string body = "")
+    {
+        iconEmptyState.Glyph = glyph;
+        txtEmptyTitle.Text = title;
+        txtEmptyBody.Text = body;
+        txtEmptyBody.Visibility = string.IsNullOrEmpty(body) ? Visibility.Collapsed : Visibility.Visible;
+        panelEmptyState.Visibility = Visibility.Visible;
     }
 
     private void TxtBuscar_TextChanged(object sender, TextChangedEventArgs e)

@@ -143,6 +143,92 @@ function Invoke-Element($element) {
     $pattern.Invoke()
 }
 
+# Busca una ventana hija del proceso (Configuración, Buscar, Historial, Desinstalar...) por un
+# AutomationId que sólo exista en ESA ventana. Excluye la principal por su hwnd para no devolverla.
+function Find-ChildWindow([int]$processId, [string]$probeId, $excludeHwnd, [int]$timeoutSec = 15) {
+    $root = [System.Windows.Automation.AutomationElement]::RootElement
+    $pidCond = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)
+    $probeCond = New-Object System.Windows.Automation.PropertyCondition(
+        [System.Windows.Automation.AutomationElement]::AutomationIdProperty, $probeId)
+    $deadline = (Get-Date).AddSeconds($timeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
+            if ([IntPtr]$w.Current.NativeWindowHandle -eq $excludeHwnd) { continue }
+            if ($w.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $probeCond)) { return $w }
+        }
+        Start-Sleep -Milliseconds 400
+    }
+    return $null
+}
+
+# Cierra una ventana vía WindowPattern (equivale a pulsar la X); tolera que ya no exista.
+function Close-Window($window) {
+    try { $window.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() } catch {}
+}
+
+# Abre un ítem del menú Herramientas que lanza una ventana hija, la reubica/redimensiona y la captura.
+# Si $probeItems se indica, espera a que su ListView (por $listId) tenga esas filas antes de capturar
+# (p. ej. la lista de winget en Desinstalar, que tarda). Va en try/catch: un fallo de una ventana no
+# debe tumbar la captura principal ya guardada.
+function Capture-ChildWindow($mainWindow, [int]$processId, $mainHwnd, [string]$menuBtn, [string]$menuItem,
+                             [string]$probeId, [int]$w, [int]$h, [string]$outName,
+                             [string]$listId, [int]$listTimeoutSec) {
+    try {
+        Expand-Element (Find-ByAutomationId $mainWindow $menuBtn)
+        Start-Sleep -Milliseconds 600
+        Invoke-Element (Find-ByAutomationId $mainWindow $menuItem)
+
+        $child = Find-ChildWindow $processId $probeId $mainHwnd 15
+        if (-not $child) { Write-Warning "  No apareció la ventana '$outName'; se omite."; return }
+
+        $cHwnd = [IntPtr]$child.Current.NativeWindowHandle
+        [void][Win32Capture]::MoveWindow($cHwnd, 90, 30, $w, $h, $true)
+        Start-Sleep -Milliseconds 700
+
+        if ($listId) {
+            $list = Find-ByAutomationId $child $listId
+            $itemCond = New-Object System.Windows.Automation.PropertyCondition(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [System.Windows.Automation.ControlType]::ListItem)
+            $deadline = (Get-Date).AddSeconds($listTimeoutSec)
+            while ((Get-Date) -lt $deadline) {
+                if ($list.FindAll([System.Windows.Automation.TreeScope]::Descendants, $itemCond).Count -gt 0) { break }
+                Start-Sleep -Milliseconds 500
+            }
+            Start-Sleep -Seconds 2
+        }
+
+        Save-WindowPng $cHwnd (Join-Path $OutDir $outName)
+        Close-Window $child
+        Start-Sleep -Seconds 1
+    } catch {
+        Write-Warning "  No se pudo capturar '$outName': $($_.Exception.Message)"
+    }
+}
+
+# Abre un ContentDialog del menú Ayuda (Acerca de / Novedades / Licencia). El diálogo se dibuja DENTRO
+# de la ventana principal (XamlRoot) con una capa de atenuación, así que se captura el rect de la
+# ventana principal. Se espera a un elemento propio del diálogo y se cierra con Escape.
+function Capture-Dialog($mainWindow, $mainHwnd, [string]$menuItem, [string]$probeId, [string]$outName) {
+    try {
+        Expand-Element (Find-ByAutomationId $mainWindow 'btnAyuda')
+        Start-Sleep -Milliseconds 600
+        Invoke-Element (Find-ByAutomationId $mainWindow $menuItem)
+        [void](Find-ByAutomationId $mainWindow $probeId 15)   # diálogo ya renderizado
+        Start-Sleep -Milliseconds 900
+
+        Save-WindowPng $mainHwnd (Join-Path $OutDir $outName)
+
+        [void][Win32Capture]::SetForegroundWindow($mainHwnd)
+        Start-Sleep -Milliseconds 200
+        [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+        Start-Sleep -Milliseconds 700
+    } catch {
+        Write-Warning "  No se pudo capturar el diálogo '$outName': $($_.Exception.Message)"
+    }
+}
+
 # Un DropDownButton (Herramientas/Ayuda) expone ExpandCollapse, no Invoke — igual que en MenuActions
 # de los UI tests. Sus ítems de MenuFlyout cuelgan del árbol de la propia ventana (XamlRoot), así que
 # se buscan como descendientes de $window, no del escritorio.
@@ -220,102 +306,121 @@ function Capture-Theme([string]$exePath, [string]$themeName) {
 
         Save-WindowPng $hwnd (Join-Path $OutDir "main-$themeName.png")
 
-        # Ventana "Buscar e instalar" (Tier E): se captura solo en oscuro, con una búsqueda real hecha.
-        if ($themeName -eq 'dark') {
-            try {
-                Expand-Element (Find-ByAutomationId $window 'btnHerramientas')
+        # Ventana "Buscar e instalar" (Tier E): con una búsqueda real hecha. Se captura en ambos temas.
+        try {
+            Expand-Element (Find-ByAutomationId $window 'btnHerramientas')
+            Start-Sleep -Milliseconds 600
+            Invoke-Element (Find-ByAutomationId $window 'menuBuscarInstalar')
+            Start-Sleep -Seconds 2
+
+            $root = [System.Windows.Automation.AutomationElement]::RootElement
+            $pidCond = New-Object System.Windows.Automation.PropertyCondition(
+                [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+
+            $searchWindow = $null
+            $deadline = (Get-Date).AddSeconds(15)
+            while ((Get-Date) -lt $deadline -and -not $searchWindow) {
+                foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
+                    if ($w.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
+                        (New-Object System.Windows.Automation.PropertyCondition(
+                            [System.Windows.Automation.AutomationElement]::AutomationIdProperty, 'btnBuscar')))) {
+                        $searchWindow = $w; break
+                    }
+                }
+                if (-not $searchWindow) { Start-Sleep -Milliseconds 400 }
+            }
+
+            if ($searchWindow) {
+                $sHwnd = [IntPtr]$searchWindow.Current.NativeWindowHandle
+                [void][Win32Capture]::MoveWindow($sHwnd, 90, 30, 1100, 760, $true)
                 Start-Sleep -Milliseconds 600
-                Invoke-Element (Find-ByAutomationId $window 'menuBuscarInstalar')
+
+                # Una búsqueda de verdad: una ventana vacía no enseña nada de la característica.
+                $box = Find-ByAutomationId $searchWindow 'txtBuscar'
+                $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('7zip')
+                Invoke-Element (Find-ByAutomationId $searchWindow 'btnBuscar')
+
+                $list = Find-ByAutomationId $searchWindow 'lvResults'
+                $itemCond = New-Object System.Windows.Automation.PropertyCondition(
+                    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                    [System.Windows.Automation.ControlType]::ListItem)
+                $deadline = (Get-Date).AddSeconds(120)
+                while ((Get-Date) -lt $deadline) {
+                    if ($list.FindAll([System.Windows.Automation.TreeScope]::Descendants, $itemCond).Count -gt 0) { break }
+                    Start-Sleep -Milliseconds 500
+                }
                 Start-Sleep -Seconds 2
 
-                $root = [System.Windows.Automation.AutomationElement]::RootElement
-                $pidCond = New-Object System.Windows.Automation.PropertyCondition(
-                    [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
-
-                $searchWindow = $null
-                $deadline = (Get-Date).AddSeconds(15)
-                while ((Get-Date) -lt $deadline -and -not $searchWindow) {
-                    foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
-                        if ($w.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
-                            (New-Object System.Windows.Automation.PropertyCondition(
-                                [System.Windows.Automation.AutomationElement]::AutomationIdProperty, 'btnBuscar')))) {
-                            $searchWindow = $w; break
-                        }
-                    }
-                    if (-not $searchWindow) { Start-Sleep -Milliseconds 400 }
-                }
-
-                if ($searchWindow) {
-                    $sHwnd = [IntPtr]$searchWindow.Current.NativeWindowHandle
-                    [void][Win32Capture]::MoveWindow($sHwnd, 90, 30, 1100, 760, $true)
-                    Start-Sleep -Milliseconds 600
-
-                    # Una búsqueda de verdad: una ventana vacía no enseña nada de la característica.
-                    $box = Find-ByAutomationId $searchWindow 'txtBuscar'
-                    $box.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('7zip')
-                    Invoke-Element (Find-ByAutomationId $searchWindow 'btnBuscar')
-
-                    $list = Find-ByAutomationId $searchWindow 'lvResults'
-                    $itemCond = New-Object System.Windows.Automation.PropertyCondition(
-                        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
-                        [System.Windows.Automation.ControlType]::ListItem)
-                    $deadline = (Get-Date).AddSeconds(120)
-                    while ((Get-Date) -lt $deadline) {
-                        if ($list.FindAll([System.Windows.Automation.TreeScope]::Descendants, $itemCond).Count -gt 0) { break }
-                        Start-Sleep -Milliseconds 500
-                    }
-                    Start-Sleep -Seconds 2
-
-                    Save-WindowPng $sHwnd (Join-Path $OutDir 'search-dark.png')
-                    $searchWindow.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
-                    Start-Sleep -Seconds 1
-                } else {
-                    Write-Warning "  No apareció la ventana de búsqueda; se omite esa captura."
-                }
-            } catch {
-                Write-Warning "  No se pudo capturar la ventana de búsqueda: $($_.Exception.Message)"
+                Save-WindowPng $sHwnd (Join-Path $OutDir "search-$themeName.png")
+                $searchWindow.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+                Start-Sleep -Seconds 1
+            } else {
+                Write-Warning "  No apareció la ventana de búsqueda; se omite esa captura."
             }
+        } catch {
+            Write-Warning "  No se pudo capturar la ventana de búsqueda: $($_.Exception.Message)"
         }
 
-        # Ventana de Configuración: se captura solo en oscuro (basta una muestra de la ventana).
-        # Va en try/catch aparte: si la navegación del menú falla, la captura principal (ya guardada)
-        # no debe perderse por ello.
-        if ($themeName -eq 'dark') {
-            try {
-                Expand-Element (Find-ByAutomationId $window 'btnHerramientas')
-                Start-Sleep -Milliseconds 600
-                Invoke-Element (Find-ByAutomationId $window 'menuConfiguracion')
-                Start-Sleep -Seconds 2
+        # Ventana de Configuración (ambos temas). Va en try/catch aparte: si la navegación del menú
+        # falla, la captura principal (ya guardada) no debe perderse por ello.
+        try {
+            Expand-Element (Find-ByAutomationId $window 'btnHerramientas')
+            Start-Sleep -Milliseconds 600
+            Invoke-Element (Find-ByAutomationId $window 'menuConfiguracion')
+            Start-Sleep -Seconds 2
 
-                $root = [System.Windows.Automation.AutomationElement]::RootElement
-                $cond = New-Object System.Windows.Automation.PropertyCondition(
-                    [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+            $root = [System.Windows.Automation.AutomationElement]::RootElement
+            $cond = New-Object System.Windows.Automation.PropertyCondition(
+                [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
 
-                $settingsWindow = $null
-                $deadline = (Get-Date).AddSeconds(15)
-                while ((Get-Date) -lt $deadline -and -not $settingsWindow) {
-                    foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $cond)) {
-                        if ([IntPtr]$w.Current.NativeWindowHandle -ne $hwnd) { $settingsWindow = $w; break }
-                    }
-                    if (-not $settingsWindow) { Start-Sleep -Milliseconds 400 }
+            $settingsWindow = $null
+            $deadline = (Get-Date).AddSeconds(15)
+            while ((Get-Date) -lt $deadline -and -not $settingsWindow) {
+                foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $cond)) {
+                    if ([IntPtr]$w.Current.NativeWindowHandle -ne $hwnd) { $settingsWindow = $w; break }
                 }
-                if ($settingsWindow) {
-                    # La ventana abre a su tamaño natural y las tarjetas quedan recortadas por el pie
-                    # (la página es desplazable). Se agranda antes de capturar para que se vean enteras.
-                    # Se agranda hasta casi el alto del área de trabajo (sin invadir la barra de tareas:
-                    # la captura es de pantalla, y la barra se dibujaría encima del pie de la ventana).
-                    $sHwnd = [IntPtr]$settingsWindow.Current.NativeWindowHandle
-                    $work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
-                    [void][Win32Capture]::MoveWindow($sHwnd, 120, 4, 820, ($work.Height - 8), $true)
-                    Start-Sleep -Milliseconds 800
-                    Save-WindowPng $sHwnd (Join-Path $OutDir 'settings-dark.png')
-                } else {
-                    Write-Warning "  No apareció la ventana de Configuración; se omite esa captura."
-                }
-            } catch {
-                Write-Warning "  No se pudo capturar la ventana de Configuración: $($_.Exception.Message)"
+                if (-not $settingsWindow) { Start-Sleep -Milliseconds 400 }
             }
+            if ($settingsWindow) {
+                # La ventana abre a su tamaño natural y las tarjetas quedan recortadas por el pie
+                # (la página es desplazable). Se agranda antes de capturar para que se vean enteras.
+                # Se agranda hasta casi el alto del área de trabajo (sin invadir la barra de tareas:
+                # la captura es de pantalla, y la barra se dibujaría encima del pie de la ventana).
+                $sHwnd = [IntPtr]$settingsWindow.Current.NativeWindowHandle
+                $work = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+                [void][Win32Capture]::MoveWindow($sHwnd, 120, 4, 820, ($work.Height - 8), $true)
+                Start-Sleep -Milliseconds 800
+                Save-WindowPng $sHwnd (Join-Path $OutDir "settings-$themeName.png")
+            } else {
+                Write-Warning "  No apareció la ventana de Configuración; se omite esa captura."
+            }
+        } catch {
+            Write-Warning "  No se pudo capturar la ventana de Configuración: $($_.Exception.Message)"
         }
+
+        # Resto de superficies (ambos temas): diálogos de Ayuda (Acerca de / Novedades / Licencia) y
+        # las ventanas Historial y Desinstalar. Van al final porque algunas dejan ventanas encima.
+        # Configuración quedó abierta encima de la principal; ciérrala (y cualquier otra hija) para
+        # no tapar el rect de la principal que capturan los diálogos.
+        $root = [System.Windows.Automation.AutomationElement]::RootElement
+        $pidCond = New-Object System.Windows.Automation.PropertyCondition(
+            [System.Windows.Automation.AutomationElement]::ProcessIdProperty, $proc.Id)
+        foreach ($w in $root.FindAll([System.Windows.Automation.TreeScope]::Children, $pidCond)) {
+            if ([IntPtr]$w.Current.NativeWindowHandle -ne $hwnd) { Close-Window $w }
+        }
+        Start-Sleep -Milliseconds 700
+
+        # Reasegura tamaño/posición de la principal antes de capturar los diálogos que la usan de lienzo.
+        [void][Win32Capture]::MoveWindow($hwnd, 60, 40, $Width, $Height, $true)
+        Start-Sleep -Milliseconds 500
+
+        Capture-Dialog $window $hwnd 'menuAcercaDe' 'VersionText' "about-$themeName.png"
+        Capture-Dialog $window $hwnd 'menuWhatsNew' 'VersionText' "whatsnew-$themeName.png"
+        Capture-Dialog $window $hwnd 'menuLicencia' 'BodyText'    "license-$themeName.png"
+
+        # Ventanas hijas independientes. Desinstalar auto-carga la lista de winget (read-only) al abrir.
+        Capture-ChildWindow $window $proc.Id $hwnd 'btnHerramientas' 'menuVerHistorial' 'lvHistory'   1180 720 "history-$themeName.png"   '' 0
+        Capture-ChildWindow $window $proc.Id $hwnd 'btnHerramientas' 'menuDesinstalar'  'btnUninstall' 1180 760 "uninstall-$themeName.png" 'lvPackages' 120
     } finally {
         if (-not $proc.HasExited) {
             [void]$proc.CloseMainWindow()

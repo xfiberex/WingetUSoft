@@ -35,7 +35,7 @@
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="20,14"
+                    Padding="20,16"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="txtHeaderTitle" Text="Limpieza de residuos tras la desinstalación"
@@ -107,12 +107,13 @@
                 </StackPanel>
             </Border>
 
-            <!-- Main split: List + Log -->
+            <!-- Main split: List + Log. La lista pesa 3* frente a 1* del log: "Actividad" suele estar
+                 vacía salvo durante la limpieza, y no debe robar sitio a la lista de residuos. -->
             <Grid Grid.Row="2" Margin="0,0,0,8">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="2*" />
+                    <RowDefinition Height="3*" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" MinHeight="100" />
+                    <RowDefinition Height="*" MinHeight="90" />
                 </Grid.RowDefinitions>
 
                 <!-- Residuals List Card -->
