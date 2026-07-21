@@ -170,7 +170,12 @@ public sealed partial class MainWindow : Window
         _hWnd = hWnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+        _appWindow.SetIcon(iconPath);
+        // El mismo icono, dentro de la barra de titulo personalizada: al extender el contenido sobre
+        // la barra (ExtendsContentIntoTitleBar) Windows deja de dibujar el icono del sistema, asi que
+        // hay que pintarlo a mano o la ventana queda con titulo pero sin marca.
+        TitleBarIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(iconPath));
         WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600);
 
         // Set title bar
@@ -236,7 +241,7 @@ public sealed partial class MainWindow : Window
                 _appVersionStr = appVer is not null
                     ? $"v{appVer.Major}.{appVer.Minor}.{appVer.Build}"
                     : "v1.1.0";
-                Title = $"{L.T("app.titleBase")}  [{_appVersionStr}]";
+                Title = L.T("app.titleBase");
                 TitleTextBlock.Text = Title;
                 txtEstado.Text = L.T("status.readyToStart");
                 UpdateSelectionDetails();
@@ -253,6 +258,11 @@ public sealed partial class MainWindow : Window
 
     private void AddKeyboardAccelerators()
     {
+        // Por defecto WinUI muestra un tooltip con la tecla del atajo (ese "F5" flotante al detener el
+        // puntero). Los atajos ya se listan en la barra superior, asi que el globito solo estorba: lo
+        // ocultamos para todos los aceleradores enganchados a Content.
+        Content.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+
         // F5 - Refresh
         var f5 = new KeyboardAccelerator { Key = Windows.System.VirtualKey.F5 };
         f5.Invoked += (_, _) => { if (_cts is null) _ = LoadPackagesAsync(_lastIncludeUnknown); };
@@ -994,7 +1004,7 @@ public sealed partial class MainWindow : Window
     {
         if (!string.IsNullOrEmpty(_appVersionStr))
         {
-            Title = $"{L.T("app.titleBase")}  [{_appVersionStr}]";
+            Title = L.T("app.titleBase");
             TitleTextBlock.Text = Title;
         }
 

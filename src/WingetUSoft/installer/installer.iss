@@ -2,7 +2,7 @@
 ;   /DMyAppVersion=X.Y.Z   versión a estampar (por defecto: ver #define abajo)
 ;   /DSourceDir=<ruta>     carpeta de publicación de .NET (por defecto: ..\publish)
 #define MyAppName "WingetUSoft"
-#define MyAppPublisher "xfiberex"
+#define MyAppPublisher "Ricky Angel Jiménez Bueno"
 #define MyAppExeName "WingetUSoft.exe"
 #define MyAppURL "https://github.com/xfiberex/WingetUSoft"
 #define MyAppUpdatesURL "https://github.com/xfiberex/WingetUSoft/releases"
