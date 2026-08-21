@@ -100,18 +100,53 @@ internal static class GitHubUpdateService
         return version;
     }
 
-    /// <summary>Ruta del instalador descargado. Se sobrescribe en cada intento (FileMode.Create).</summary>
-    internal static string DefaultInstallerPath => Path.Combine(Path.GetTempPath(), $"{Repo}_Update.exe");
+    /// <summary>
+    /// Prefijo de los directorios de descarga. Cada intento estrena uno con un GUID detrás: la ruta
+    /// fija anterior (<c>%TEMP%\WingetUSoft_Update.exe</c>) era adivinable por cualquiera.
+    /// </summary>
+    private const string InstallerDirectoryPrefix = Repo + "_Update_";
 
-    /// <param name="destinationPath">Solo para pruebas: si es null se usa <see cref="DefaultInstallerPath"/>.</param>
-    public static async Task<string> DownloadInstallerAsync(
+    /// <summary>Crea un directorio nuevo, vacío y de nombre impredecible dentro de <c>%TEMP%</c>.</summary>
+    private static string CreateInstallerDirectory()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"{InstallerDirectoryPrefix}{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
+    /// <summary>
+    /// Borra los directorios de descargas anteriores. Como la app se cierra justo después de lanzar el
+    /// instalador, nadie llega a limpiar lo suyo: quien limpia es el intento siguiente.
+    /// </summary>
+    private static void TryCleanStaleInstallerDirectories()
+    {
+        try
+        {
+            foreach (string directory in Directory.EnumerateDirectories(
+                         Path.GetTempPath(), InstallerDirectoryPrefix + "*"))
+            {
+                try { Directory.Delete(directory, recursive: true); }
+                catch (IOException) { }                    // en uso: el instalador sigue corriendo
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+        catch (DirectoryNotFoundException) { }
+    }
+
+    /// <param name="destinationPath">Solo para pruebas: si es null se estrena un directorio aleatorio.</param>
+    public static async Task<VerifiedInstaller> DownloadInstallerAsync(
         string downloadUrl,
         string? checksumUrl = null,
         IProgress<double>? progress = null,
         CancellationToken cancellationToken = default,
         string? destinationPath = null)
     {
-        string tempPath = destinationPath ?? DefaultInstallerPath;
+        // La limpieza va ANTES de crear el directorio nuevo: al revés se llevaba por delante el
+        // que se acababa de crear, porque su nombre también casa con el patrón.
+        if (destinationPath is null)
+            TryCleanStaleInstallerDirectories();
+
+        string tempPath = destinationPath ?? Path.Combine(CreateInstallerDirectory(), $"{Repo}-Setup.exe");
 
         // La descarga va en su propio método a propósito: así su FileStream (abierto con
         // FileShare.None) queda cerrado ANTES de verificar. Si el handle sigue vivo, tanto
@@ -120,17 +155,23 @@ internal static class GitHubUpdateService
         // rechaza siempre.
         await DownloadToFileAsync(downloadUrl, tempPath, progress, cancellationToken).ConfigureAwait(false);
 
+        // El archivo se retiene ANTES de verificarlo y no se suelta hasta después de lanzarlo: es lo
+        // que impide que nos cambien el binario entre la comprobación y la ejecución (ver
+        // VerifiedInstaller). FileShare.Read, no None: verificar y ejecutar necesitan poder leerlo.
+        FileStream lease = new(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
         try
         {
             await VerifyInstallerAsync(tempPath, checksumUrl, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
+            lease.Dispose();
             TryDeleteRejectedInstaller(tempPath);
             throw;
         }
 
-        return tempPath;
+        return new VerifiedInstaller(tempPath, lease);
     }
 
     private static async Task DownloadToFileAsync(

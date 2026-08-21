@@ -142,8 +142,10 @@ src\WingetUSoft\installer\build-installer.ps1
 ```
 
 Publica la app (framework-dependent, win-x64), compila el instalador en `installer\Output\` y genera su
-`.sha256`. Con certificado, `-CertThumbprint <huella>` (o `-CertFile` / `-CertPassword`) firma además el
-ejecutable y el instalador; el `.sha256` se calcula **después** de firmar.
+`.sha256`. Con certificado, `-CertThumbprint <huella>` firma además el ejecutable y el instalador; el
+`.sha256` se calcula **después** de firmar. Desde un `.pfx`, `-CertFile cert.pfx -CertPassword (Read-Host -AsSecureString)`:
+el certificado se importa al almacén del usuario y se firma por huella, para que la contraseña no pase
+por la línea de comandos de `signtool` —legible por cualquier usuario de la máquina mientras firma—.
 
 ### Publicar una versión
 

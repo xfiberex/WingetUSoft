@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.3** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.3), sin firmar) |
-| **En `main`, sin publicar** | **T1-07 a T1-10** (accesibilidad) y **T1-15 a T1-17** (i18n): con esto el Tier T1 queda al 73 % |
+| **En `main`, sin publicar** | **T0 y T1 de la auditoría, completos** (24 de 70 tareas): accesibilidad, i18n, clasificación de fallos por código, TOCTOU del instalador, registro de fallos y firma |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -208,6 +208,69 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T1 completado: los cuatro de fondo (T1-02, T1-11, T1-12, T1-18, sin publicar)
+
+Cuarto corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **24 de 70** tareas. **T0 y T1 cerrados
+enteros.** Build 0/0, **223/223 unitarios**, **27/27 UI tests**.
+
+**1. Clasificar fallos por código, no por texto (T1-02) — y dos códigos que estaban cambiados.**
+La cadena de `if` de `GetFailureReason` clasificaba por texto y solo reconocía español e inglés: en un
+Windows en francés, italiano, alemán o portugués **no casaba ninguna rama** y todo caía al «última línea
+con sentido», es decir, el usuario veía la línea cruda de winget. Es la misma trampa que el proyecto ya
+documentó en `WingetTable` y resolvió en `WingetShowLabels` — winget traduce su salida — aplicada aquí
+por tercera vez. Ahora hay una tabla de 12 códigos que se comprueba **primero**, contra el `ExitCode`
+del proceso y contra el texto, y el reconocimiento por palabras queda de último recurso.
+
+> **Lo que apareció al verificar contra la fuente:** dos asignaciones estaban mal, y la auditoría las
+> daba por buenas (su criterio de aceptación pedía literalmente la incorrecta). Según la tabla oficial
+> de `winget-cli`, **`0x8A150011` es «el hash del instalador no coincide con el manifiesto»**, no «no
+> hay actualización aplicable» — la app presentaba **un fallo de integridad como un tranquilizador «ya
+> estás al día»**, que es justo la confusión más cara de las posibles. Y `0x8A150014` es «no se
+> encontró el paquete», no «ningún instalador aplicable». Los códigos correctos son `0x8A15002B` y
+> `0x8A150010`. Hay un test que fija las dos.
+
+**2. La ventana TOCTOU del instalador (T1-11).** El instalador se descargaba a una ruta fija y
+predecible (`%TEMP%\WingetUSoft_Update.exe`), se cerraba el `FileStream` —obligatorio desde el arreglo
+de la v1.4.1—, se verificaba, y `Process.Start` ocurría después **sin nada que impidiera sustituirlo
+entre medias**. Como el instalador es `PrivilegesRequired=admin`, quien colara ahí su binario obtendría
+administrador a través de un UAC que el usuario reconoce como legítimo. Dos defensas, y hacen falta las
+dos: cada descarga estrena un subdirectorio de nombre aleatorio, y el archivo se retiene con
+`FileShare.Read` desde antes de verificar hasta después de lanzar (nuevo `VerifiedInstaller`, que el
+consumidor toma con `using`).
+
+> **El riesgo de repetir la v1.4.1** era evidente: allí un `FileShare` demasiado restrictivo dejó la
+> auto-actualización muerta. Que `FileShare.Read` permita **ejecutar** el archivo retenido es una
+> promesa de la plataforma, no del código, así que hay un test que la comprueba de verdad: retiene un
+> ejecutable real y lo lanza.
+>
+> Y el primer test escrito **encontró un bug de la propia implementación**: la limpieza de directorios
+> viejos corría después de crear el nuevo y, como su nombre casa con el mismo patrón, se lo llevaba por
+> delante.
+
+**3. Excepciones tragadas en silencio (T1-12).** El manejador hacía tres cosas mal a la vez: escribía
+`crash.log` con `File.WriteAllText` —así que **la segunda excepción borraba la evidencia de la
+primera**, cuando en una cadena de fallos la primera suele ser la causa y el resto el eco—, no ponía
+fecha, y marcaba `Handled = true` incondicionalmente, dejando la app viva en un estado desconocido sin
+avisar a nadie. Nuevo `Core/CrashLog.cs`: añade con fecha, recorta por tamaño, y solo se traga los
+tipos de los que se sabe volver; el resto se anota, se avisa con un `MessageBox` de Win32 (síncrono, no
+necesita `XamlRoot` ni un despachador vivo) y se deja caer. En `Program.Main` el aviso se omite si la
+invocación es la del worker elevado: ahí no hay nadie mirando y un diálogo colgaría el proceso.
+
+**4. La contraseña del `.pfx` en la línea de comandos (T1-18).** `build-installer.ps1` pasaba
+`/p $CertPassword` a `signtool`: mientras firma, **cualquier usuario de la máquina puede leer sus
+argumentos** (`Get-CimInstance Win32_Process`), y ahí va la clave privada del certificado de firma.
+Además el parámetro era `[string]`, así que quedaba en el historial de PowerShell. Ahora es
+`[SecureString]`, el `.pfx` se importa al almacén del usuario **dentro de este proceso** y se firma
+siempre por huella; el certificado se retira al terminar, también si algo falla a mitad (`trap`).
+
+**Un patrón nuevo, distinto al de los cortes anteriores.** Aquí no fue «la corrección que se aplicó a
+una ventana y no a las demás»: fueron **tres premisas que nadie había ido a verificar contra la
+fuente** — qué significan de verdad los códigos de winget, si `FileShare.Read` deja ejecutar, y quién
+puede leer los argumentos de un proceso ajeno. Las tres se resolvieron mirando la fuente o escribiendo
+el test que las prueba, no razonando sobre ellas.
 
 ---
 

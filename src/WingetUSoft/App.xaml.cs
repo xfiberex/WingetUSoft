@@ -9,19 +9,21 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        // Un fallo no controlado se anota SIEMPRE (añadiendo, con fecha) y solo se traga si es de un
+        // tipo del que se sabe volver. Tragárselos todos dejaba la app viva en un estado desconocido
+        // y sin avisar a nadie; ver CrashLog.
         UnhandledException += (s, e) =>
         {
-            try
+            CrashLog.Write("App.UnhandledException", e.Exception);
+
+            if (CrashLog.IsRecoverable(e.Exception))
             {
-                string crashDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "WingetUSoft");
-                Directory.CreateDirectory(crashDir);
-                File.WriteAllText(Path.Combine(crashDir, "crash.log"),
-                    $"UnhandledException: {e.Exception}");
+                e.Handled = true;
+                return;
             }
-            catch { }
-            e.Handled = true;
+
+            CrashLog.Notify();
+            e.Handled = false;
         };
     }
 

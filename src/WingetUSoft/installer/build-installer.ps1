@@ -27,7 +27,12 @@
     Ruta a un archivo .pfx para firmar (alternativa a -CertThumbprint).
 
 .PARAMETER CertPassword
-    Contraseña del .pfx (si la tiene).
+    Contraseña del .pfx, como **SecureString** (si la tiene). El .pfx se importa al almacén del
+    usuario dentro de este proceso y se firma por huella, así que la contraseña nunca aparece en la
+    línea de comandos de ningún proceso hijo —donde cualquier usuario de la máquina podría leerla—
+    ni queda en el historial de PowerShell. El certificado se retira del almacén al terminar.
+
+    Ejemplo: -CertPassword (Read-Host "Contraseña del .pfx" -AsSecureString)
 
 .PARAMETER TimestampUrl
     Servidor de sellado de tiempo RFC3161 (por defecto el de DigiCert).
@@ -36,7 +41,7 @@
     .\build-installer.ps1
     .\build-installer.ps1 -Version 1.3.0
     .\build-installer.ps1 -Version 1.3.0 -CertThumbprint A1B2C3...
-    .\build-installer.ps1 -Version 1.3.0 -CertFile cert.pfx -CertPassword ****
+    .\build-installer.ps1 -Version 1.3.0 -CertFile cert.pfx -CertPassword (Read-Host -AsSecureString)
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +50,7 @@ param(
     [string]$Runtime       = "win-x64",
     [string]$CertThumbprint,
     [string]$CertFile,
-    [string]$CertPassword,
+    [SecureString]$CertPassword,
     [string]$TimestampUrl  = "http://timestamp.digicert.com"
 )
 
@@ -87,11 +92,63 @@ function Find-SignTool {
     return $null
 }
 
+# Certificado importado por este script (si se usó -CertFile): se retira al terminar.
+$importedThumbprint = $null
+
+<#
+.SYNOPSIS
+    Importa un .pfx al almacén del usuario y devuelve su huella.
+.DESCRIPTION
+    La contraseña NUNCA llega a la línea de comandos de un proceso hijo. Antes se pasaba a signtool
+    como "/p $CertPassword": mientras signtool corre, cualquier usuario de la máquina puede leer sus
+    argumentos (Get-CimInstance Win32_Process, Process Explorer, un ETW trace), y ahí va la clave
+    privada del certificado de firma. La importación ocurre dentro de este mismo proceso de
+    PowerShell, y a partir de ahi se firma por huella, que no es secreta.
+#>
+function Import-SigningCertificate([string]$pfxPath, [SecureString]$password) {
+    if (-not (Test-Path $pfxPath)) { throw "No se encontró el .pfx: $pfxPath" }
+
+    if (Get-Command Import-PfxCertificate -ErrorAction SilentlyContinue) {
+        $params = @{ FilePath = $pfxPath; CertStoreLocation = "Cert:\CurrentUser\My" }
+        if ($password) { $params.Password = $password }
+        return (Import-PfxCertificate @params).Thumbprint
+    }
+
+    # Sin el módulo PKI: misma operacion con las clases de .NET, que tambien aceptan SecureString.
+    $flags = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::PersistKeySet -bor
+             [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::UserKeySet
+    $cert  = if ($password) {
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($pfxPath, $password, $flags)
+    } else {
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($pfxPath, "", $flags)
+    }
+
+    $store = [System.Security.Cryptography.X509Certificates.X509Store]::new("My", "CurrentUser")
+    $store.Open("ReadWrite")
+    try { $store.Add($cert) } finally { $store.Close() }
+    return $cert.Thumbprint
+}
+
+<# Retira del almacén el certificado que importó este script: se metió solo para firmar. #>
+function Remove-SigningCertificate([string]$thumbprint) {
+    if (-not $thumbprint) { return }
+    try {
+        $path = "Cert:\CurrentUser\My\$thumbprint"
+        if (Test-Path $path) { Remove-Item $path -Force -ErrorAction Stop }
+    } catch {
+        Write-Warning "No se pudo retirar del almacén el certificado importado ($thumbprint): $($_.Exception.Message)"
+    }
+}
+
 function Invoke-Sign([string[]]$files) {
     if (-not $signEnabled) { return }
-    $base = @("sign", "/fd", "SHA256", "/tr", $TimestampUrl, "/td", "SHA256")
-    if ($CertThumbprint)  { $base += @("/sha1", $CertThumbprint) }
-    elseif ($CertFile)    { $base += @("/f", $CertFile); if ($CertPassword) { $base += @("/p", $CertPassword) } }
+
+    # Siempre por huella: es el único modo de firma que no pone ningun secreto en la línea de
+    # comandos. Con -CertFile la huella es la del certificado recién importado.
+    $thumbprint = if ($CertThumbprint) { $CertThumbprint } else { $importedThumbprint }
+    if (-not $thumbprint) { throw "No hay huella de certificado con la que firmar." }
+
+    $base = @("sign", "/fd", "SHA256", "/tr", $TimestampUrl, "/td", "SHA256", "/sha1", $thumbprint)
     foreach ($f in $files) {
         if (-not (Test-Path $f)) { continue }
         Write-Host "==> Firmando: $f" -ForegroundColor Cyan
@@ -100,9 +157,16 @@ function Invoke-Sign([string[]]$files) {
     }
 }
 
+# Si algo falla a mitad, el certificado importado no puede quedarse en el almacén del usuario.
+trap { Remove-SigningCertificate $importedThumbprint; break }
+
 if ($signEnabled) {
     $signtool = Find-SignTool
     if (-not $signtool) { throw "Se pidió firmar pero no se encontró signtool.exe. Instala el Windows SDK o añádelo al PATH." }
+    if ($CertFile) {
+        $importedThumbprint = Import-SigningCertificate $CertFile $CertPassword
+        Write-Host "==> Certificado importado al almacén del usuario (huella: $importedThumbprint)" -ForegroundColor Cyan
+    }
     Write-Host "==> Firma de código habilitada (signtool: $signtool)" -ForegroundColor Cyan
 } else {
     Write-Warning "Firma de código DESHABILITADA (sin -CertThumbprint/-CertFile). El instalador NO estará firmado, así que SmartScreen mostrará 'editor desconocido'. La auto-actualización SÍ funciona igualmente: al no haber firma, la app verifica la descarga contra el .sha256 que se genera aquí y que release.ps1 sube como asset del release (GitHubUpdateService.VerifyInstallerAsync). Firmar sigue siendo lo deseable: es una garantía más fuerte que el hash."
@@ -187,3 +251,7 @@ if (Test-Path $setup) {
 } else {
     Write-Warning "ISCC terminó pero no se encontró el instalador esperado en $setup"
 }
+
+# El certificado se importó solo para firmar: fuera del almacén.
+Remove-SigningCertificate $importedThumbprint
+

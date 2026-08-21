@@ -188,6 +188,10 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
+**Progreso (2026-08-21): 24 de 70.** ✅ **T0 y T1 completos** (2 + 22). Siguiente frente: **T2**, por
+bloques temáticos — rendimiento (T2-01 a T2-03, T2-21, T2-23), refactorización (T2-04 a T2-07),
+responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
+
 ---
 
 ## 🔴 Tier T0 — Crítico / Bloqueante
@@ -263,7 +267,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-02] Clasificar los fallos por código de salida, no por texto traducido**
+- [x] **[T1-02] Clasificar los fallos por código de salida, no por texto traducido**
   - **Área:** Código / i18n
   - **Ubicación:** `src/WingetUSoft/Core/Models/UpgradeResult.cs:17-44`
   - **Qué hacer:** la cadena de `if` solo reconoce español e inglés, contradiciendo la lección que el propio
@@ -271,12 +275,18 @@ decisión explícita.
     **traduce su salida** al idioma de Windows. En un Windows en FR/IT/DE/PT ninguna rama casa y todo cae al
     *fallback* de «última línea con sentido». Reordenar para que los códigos hexadecimales de winget
     (independientes del idioma) se comprueben primero, y dejar el texto solo como último recurso.
-  - **Criterio de aceptación:** un `ErrorOutput` con solo el código `0x8A150011` (sin texto) devuelve
-    `reason.noApplicableUpdate`; existe un test por cada código soportado.
+  - **Criterio de aceptación:** un `ErrorOutput` con solo el código de winget (sin texto) devuelve el
+    motivo correcto; existe un test por cada código soportado (12 en total).
+  - **Corrección sobre el enunciado:** el criterio original decía que `0x8A150011` debía devolver
+    `reason.noApplicableUpdate`, que es lo que hacía el código — y **es incorrecto**. Según la tabla
+    oficial de `winget-cli` (`doc/windows/package-manager/winget/returnCodes.md`), `0x8A150011` es
+    *«el hash del instalador no coincide con el manifiesto»* y «no hay actualización aplicable» es
+    `0x8A15002B`. Igual con `0x8A150014`, que es *«no se encontró el paquete»* y no «ningún instalador
+    aplicable» (`0x8A150010`). Se implementa la asignación correcta y hay un test que la fija.
   - **Esfuerzo:** medio
   - **Depende de:** T1-01
 
-- [ ] **[T1-12] Dejar de tragar en silencio todas las excepciones no controladas**
+- [x] **[T1-12] Dejar de tragar en silencio todas las excepciones no controladas**
   - **Área:** Código / observabilidad
   - **Ubicación:** `src/WingetUSoft/App.xaml.cs:12-25` (y el `catch` equivalente en `src/WingetUSoft/Program.cs:25-36`)
   - **Qué hacer:** el manejador hace `e.Handled = true` incondicional y escribe `crash.log` con
@@ -383,7 +393,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-11] Cerrar la ventana TOCTOU entre verificar y ejecutar el instalador**
+- [x] **[T1-11] Cerrar la ventana TOCTOU entre verificar y ejecutar el instalador**
   - **Área:** Seguridad
   - **Ubicación:** `src/WingetUSoft/Services/GitHubUpdateService.cs:104,121-133` → `src/WingetUSoft/UI/MainWindow.xaml.cs:1931`
   - **Qué hacer:** el instalador se descarga a una ruta **fija y predecible**
@@ -399,7 +409,7 @@ decisión explícita.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[T1-18] Sacar la contraseña del `.pfx` de la línea de comandos**
+- [x] **[T1-18] Sacar la contraseña del `.pfx` de la línea de comandos**
   - **Área:** Seguridad / DevOps
   - **Ubicación:** `src/WingetUSoft/installer/build-installer.ps1:90-101` (parámetro en `:48`)
   - **Qué hacer:** el bloque que añade `/p $CertPassword` pone la contraseña de la clave privada de firma en

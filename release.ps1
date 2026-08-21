@@ -62,7 +62,9 @@ param(
     # Firma de código (recomendada: ver nota IMPORTANTE arriba): se reenvían a build-installer.ps1.
     [string]$CertThumbprint,
     [string]$CertFile,
-    [string]$CertPassword,
+    # SecureString: la contraseña del .pfx no puede acabar en la línea de comandos de signtool
+    # ni en el historial de PowerShell (ver build-installer.ps1, que la consume).
+    [SecureString]$CertPassword,
     [string]$TimestampUrl
 )
 

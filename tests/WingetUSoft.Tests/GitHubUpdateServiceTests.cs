@@ -90,12 +90,13 @@ public sealed class GitHubUpdateServiceTests
         string destination = ScratchInstallerPath();
         try
         {
-            string path = await GitHubUpdateService.DownloadInstallerAsync(
+            using VerifiedInstaller verified = await GitHubUpdateService.DownloadInstallerAsync(
                 server.UrlFor("/setup.exe"), server.UrlFor("/setup.exe.sha256"),
                 destinationPath: destination);
 
-            Assert.Equal(destination, path);
-            Assert.Equal(installer, await File.ReadAllBytesAsync(path));
+            Assert.Equal(destination, verified.Path);
+            // Se puede leer con el instalador retenido: la retención es FileShare.Read, no None.
+            Assert.Equal(installer, await File.ReadAllBytesAsync(verified.Path));
         }
         finally
         {
@@ -210,4 +211,148 @@ public sealed class GitHubUpdateServiceTests
             _cts.Dispose();
         }
     }
+
+    // ── Ventana TOCTOU del instalador (T1-11) ──────────────────────────────
+    //
+    // El instalador se ejecuta con PrivilegesRequired=admin. Entre verificarlo y lanzarlo no puede
+    // haber ni un instante en el que otro proceso pueda cambiarlo por el suyo: ese cambio le daría
+    // administrador a través de un UAC que el usuario reconoce como legítimo.
+
+    /// <summary>Dos descargas seguidas no pueden compartir ruta: la fija era adivinable.</summary>
+    [Fact]
+    public async Task DownloadInstallerAsync_UsesAnUnpredictablePathEveryTime()
+    {
+        byte[] installer = [1, 2, 3, 4];
+        string hash = Convert.ToHexString(SHA256.HashData(installer));
+
+        using var server = new LocalHttpServer(new Dictionary<string, byte[]>
+        {
+            ["/setup.exe"] = installer,
+            ["/setup.exe.sha256"] = Encoding.UTF8.GetBytes(hash)
+        });
+
+        using VerifiedInstaller first = await GitHubUpdateService.DownloadInstallerAsync(
+            server.UrlFor("/setup.exe"), server.UrlFor("/setup.exe.sha256"));
+        using VerifiedInstaller second = await GitHubUpdateService.DownloadInstallerAsync(
+            server.UrlFor("/setup.exe"), server.UrlFor("/setup.exe.sha256"));
+
+        try
+        {
+            Assert.NotEqual(first.Path, second.Path);
+            Assert.NotEqual(
+                Path.GetDirectoryName(first.Path),
+                Path.GetDirectoryName(second.Path));
+
+            // Y cada una en un directorio recién creado dentro de %TEMP%, no suelta en %TEMP%.
+            foreach (string path in new[] { first.Path, second.Path })
+            {
+                string? directory = Path.GetDirectoryName(path);
+                Assert.NotNull(directory);
+                Assert.StartsWith(
+                    Path.GetFullPath(Path.GetTempPath()),
+                    Path.GetFullPath(directory),
+                    StringComparison.OrdinalIgnoreCase);
+                Assert.Single(Directory.GetFiles(directory));
+            }
+        }
+        finally
+        {
+            CleanUp(first, second);
+        }
+    }
+
+    /// <summary>
+    /// Mientras la app tiene el instalador verificado, nadie puede escribirlo ni borrarlo — y en cuanto
+    /// lo suelta, sí. Sin esta retención, la ruta aleatoria solo estrecha la ventana; no la cierra.
+    /// </summary>
+    [Fact]
+    public async Task DownloadInstallerAsync_HoldsTheFile_SoNobodyCanSwapItBeforeItRuns()
+    {
+        byte[] installer = [1, 2, 3, 4];
+        string hash = Convert.ToHexString(SHA256.HashData(installer));
+
+        using var server = new LocalHttpServer(new Dictionary<string, byte[]>
+        {
+            ["/setup.exe"] = installer,
+            ["/setup.exe.sha256"] = Encoding.UTF8.GetBytes(hash)
+        });
+
+        VerifiedInstaller verified = await GitHubUpdateService.DownloadInstallerAsync(
+            server.UrlFor("/setup.exe"), server.UrlFor("/setup.exe.sha256"));
+
+        try
+        {
+            Assert.Throws<IOException>(() => File.OpenWrite(verified.Path));
+            Assert.Throws<IOException>(() => File.Delete(verified.Path));
+
+            // Pero leerlo sí se puede: verificar y ejecutar lo necesitan.
+            Assert.Equal(installer, File.ReadAllBytes(verified.Path));
+
+            verified.Dispose();
+
+            // Soltado el instalador, el archivo vuelve a ser un archivo normal.
+            File.Delete(verified.Path);
+            Assert.False(File.Exists(verified.Path));
+        }
+        finally
+        {
+            verified.Dispose();
+            CleanUp(verified);
+        }
+    }
+
+    /// <summary>
+    /// La retención no puede impedir **ejecutar** el archivo, o la auto-actualización quedaría muerta.
+    /// </summary>
+    /// <remarks>
+    /// Es justo el modo de fallo de la v1.4.1, con otro disfraz: allí el <c>FileStream</c> de la
+    /// descarga (<c>FileShare.None</c>) impedía verificar. Aquí se retiene con <c>FileShare.Read</c>,
+    /// que sobre el papel deja leer y ejecutar — pero eso es una promesa de la plataforma, no del
+    /// código, así que se comprueba de verdad: se retiene un ejecutable real y se lanza.
+    /// </remarks>
+    [Fact]
+    public void FileShareRead_StillAllowsExecutingTheHeldFile()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"wus_exec_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        string executable = Path.Combine(directory, "probe.exe");
+        File.Copy(Path.Combine(Environment.SystemDirectory, "where.exe"), executable);
+
+        try
+        {
+            using var lease = new FileStream(executable, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable)
+            {
+                Arguments = "/?",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+
+            Assert.NotNull(process);
+            Assert.True(process.WaitForExit(15000), "el proceso retenido no llegó a terminar");
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>Suelta y borra lo que dejaron las pruebas de descarga con ruta aleatoria.</summary>
+    private static void CleanUp(params VerifiedInstaller[] installers)
+    {
+        foreach (VerifiedInstaller installer in installers)
+        {
+            installer.Dispose();
+            try
+            {
+                string? directory = Path.GetDirectoryName(installer.Path);
+                if (directory is not null && Directory.Exists(directory))
+                    Directory.Delete(directory, recursive: true);
+            }
+            catch (IOException) { }
+        }
+    }
+
 }

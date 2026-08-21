@@ -177,6 +177,88 @@ public class WingetServiceTests
         Assert.Contains("red", result.GetFailureReason());
     }
 
+    /// <summary>
+    /// Un código de winget, **sin nada de texto**, tiene que bastar para clasificar el fallo.
+    /// </summary>
+    /// <remarks>
+    /// Es el escenario de cualquier Windows que no esté en español o inglés: winget traduce su salida,
+    /// así que el texto no dice nada que la app sepa leer, pero el código es el mismo en todas partes.
+    /// Antes de T1-02 todos estos casos caían en el «última línea con sentido» y el usuario veía la
+    /// línea cruda de winget.
+    /// </remarks>
+    [Theory]
+    [InlineData("0x8A15002B", "reason.noApplicableUpdate")]
+    [InlineData("0x8A150010", "reason.noApplicableInstaller")]
+    [InlineData("0x8A150011", "reason.hashMismatch")]
+    [InlineData("0x8A150019", "reason.needsAdmin")]
+    [InlineData("0x8A15003A", "reason.blocked")]
+    [InlineData("0x8A15010F", "reason.blocked")]
+    [InlineData("0x8A150101", "reason.currentlyRunning")]
+    [InlineData("0x8A150102", "reason.currentlyRunning")]
+    [InlineData("0x8A150014", "reason.notFound")]
+    [InlineData("0x8A150008", "reason.networkError")]
+    [InlineData("0x8A150086", "reason.networkError")]
+    [InlineData("0x8A150107", "reason.networkError")]
+    public void GetFailureReason_WingetErrorCode_ClassifiesWithoutAnyText(string code, string expectedKey)
+    {
+        var result = new UpgradeResult
+        {
+            Success = false,
+            ExitCode = 1,
+            ErrorOutput = code
+        };
+
+        Assert.Equal(L.T(expectedKey), result.GetFailureReason());
+    }
+
+    /// <summary>El código también llega como código de salida del proceso, sin aparecer en el texto.</summary>
+    [Fact]
+    public void GetFailureReason_WingetErrorCodeAsExitCode_ClassifiesWithoutAnyText()
+    {
+        var result = new UpgradeResult
+        {
+            Success = false,
+            ExitCode = unchecked((int)0x8A15002B),
+            Output = "",
+            ErrorOutput = ""
+        };
+
+        Assert.Equal(L.T("reason.noApplicableUpdate"), result.GetFailureReason());
+    }
+
+    /// <summary>
+    /// <c>0x8A150011</c> es «el hash del instalador no coincide con el manifiesto», no «no hay
+    /// actualización aplicable»: la tabla de la app lo tenía cambiado y presentaba un fallo de
+    /// integridad —el caso que más importa distinguir— como un tranquilizador «ya estás al día».
+    /// Igual con <c>0x8A150014</c>, que es «no se encontró el paquete», no «ningún instalador aplicable».
+    /// </summary>
+    [Fact]
+    public void GetFailureReason_MisassignedCodes_MapToTheirRealMeaning()
+    {
+        var hashMismatch = new UpgradeResult { Success = false, ExitCode = 1, ErrorOutput = "0x8A150011" };
+        Assert.Equal(L.T("reason.hashMismatch"), hashMismatch.GetFailureReason());
+        Assert.NotEqual(L.T("reason.noApplicableUpdate"), hashMismatch.GetFailureReason());
+
+        var notFound = new UpgradeResult { Success = false, ExitCode = 1, ErrorOutput = "0x8A150014" };
+        Assert.Equal(L.T("reason.notFound"), notFound.GetFailureReason());
+        Assert.NotEqual(L.T("reason.noApplicableInstaller"), notFound.GetFailureReason());
+    }
+
+    /// <summary>El código gana al texto: winget imprime ambos y el código es el dato fiable.</summary>
+    [Fact]
+    public void GetFailureReason_CodeWins_OverTranslatedText()
+    {
+        var result = new UpgradeResult
+        {
+            Success = false,
+            ExitCode = 1,
+            // Texto en un idioma que la app no sabe leer, con el código al final: así es la salida real.
+            ErrorOutput = "Impossible de trouver un programme d'installation applicable 0x8A150010"
+        };
+
+        Assert.Equal(L.T("reason.noApplicableInstaller"), result.GetFailureReason());
+    }
+
     [Fact]
     public void GetFailureReason_Success_ReturnsEmpty()
     {

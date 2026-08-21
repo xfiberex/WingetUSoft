@@ -1927,12 +1927,15 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            string installerPath = await GitHubUpdateService.DownloadInstallerAsync(
+            // El "using" mantiene retenido el instalador verificado hasta después de lanzarlo:
+            // soltarlo antes reabriría la ventana en la que se le puede sustituir el binario a un
+            // proceso que va a pedir administrador (ver VerifiedInstaller).
+            using VerifiedInstaller installer = await GitHubUpdateService.DownloadInstallerAsync(
                 _appUpdateUrl, _appUpdateChecksumUrl, progress);
             infoBarUpdate.Message = L.T("update.installingRestart");
             TaskbarProgress.SetIndeterminate(_hWnd);
 
-            Process.Start(new ProcessStartInfo(installerPath)
+            Process.Start(new ProcessStartInfo(installer.Path)
             {
                 Arguments = "/VERYSILENT /NORESTART /autoinstall=1",
                 UseShellExecute = true

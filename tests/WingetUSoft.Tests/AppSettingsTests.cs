@@ -3,6 +3,7 @@ using Xunit;
 
 namespace WingetUSoft.Tests;
 
+[Collection(DataDirectoryCollection.Name)]
 public class AppSettingsTests : IDisposable
 {
     private readonly string _testDataDirectory;

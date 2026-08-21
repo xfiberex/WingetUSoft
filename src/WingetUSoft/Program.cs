@@ -24,15 +24,15 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            try
-            {
-                string crashDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "WingetUSoft");
-                Directory.CreateDirectory(crashDir);
-                File.WriteAllText(Path.Combine(crashDir, "crash.log"), ex.ToString());
-            }
-            catch { }
+            // Mismo tratamiento que en App.UnhandledException: se añade al historial, no se pisa.
+            // Aquí no hay recuperación posible — el proceso ya viene de vuelta de Main —, así que
+            // siempre se avisa antes de salir con código 1.
+            CrashLog.Write("Program.Main", ex);
+
+            // El worker elevado corre sin interfaz y sin nadie mirando: un MessageBox ahí no lo
+            // vería el usuario y dejaría el proceso colgado esperando un clic que no llega.
+            if (!WingetService.IsElevatedWorkerInvocation(args))
+                CrashLog.Notify();
             return 1;
         }
     }
