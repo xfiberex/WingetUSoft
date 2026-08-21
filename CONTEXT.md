@@ -11,10 +11,10 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.7.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.7.0), sin firmar) |
-| **En `main`, sin publicar** | **Tier E** (buscar/instalar, exportar/importar, omitir versión) → sale con la **1.8.0** |
+| **Versión publicada** | **1.8.3** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.3), sin firmar) |
+| **En `main`, sin publicar** | nada: la 1.8.3 cierra el primer bloque de la auditoría (T0 completo + 8 de T1) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-07-12 |
+| **Última actualización** | 2026-08-21 |
 
 ---
 
@@ -86,10 +86,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **162/162** |
+| **Tests unitarios** | **196/196** |
 | **UI tests (FlaUI)** | **27/27** — los corre `release.ps1`: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**; ninguno en curso |
-| **Publicado** | hasta la **v1.7.0** (Tier D). El **Tier E** está en `main`, pendiente de la 1.8.0 |
+| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **11 de 70** |
+| **Publicado** | hasta la **v1.8.3**. `main` y el ultimo tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
 
@@ -99,7 +99,7 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **B** | Layout: DPI/WorkArea, tamaño mínimo, barra responsiva, snap layouts + proyecto de UI tests (FlaUI) | 1.4.0/1.4.1 |
 | **C** | Auditoría UI/UX: flujo y feedback, modelo de selección, datos que mentían, color, preferencias unificadas, accesibilidad de la tabla | 1.5.0/1.6.0 |
 | **D** | Cara pública: licencia y avisos de terceros **in-app**, README de usuario con capturas, script de capturas | 1.7.0 |
-| **E** | ⚠️ **Cambio de alcance**: buscar e instalar software, exportar/importar paquetes, omitir versión | *(sin publicar)* |
+| **E** | ⚠️ **Cambio de alcance**: buscar e instalar software, exportar/importar paquetes, omitir versión | 1.8.0 |
 
 **Los UI tests** necesitan **sesión de escritorio interactiva y desatendida** (no vale sesión bloqueada ni
 consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app corre `asInvoker`.
@@ -135,7 +135,7 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 - **Instalador (Inno Setup):** `AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}` — **no cambiar nunca**
   (permite actualización in-place). `PrivilegesRequired=admin`, `CloseApplications=yes`. **Único
   empaquetador**: nada de MSIX/ClickOnce.
-- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.7.0`); `release.ps1` sube
+- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.8.3`); `release.ps1` sube
   `<Version>`, `<AssemblyVersion>` y `<FileVersion>` a la vez — la app y el updater leen `AssemblyVersion`.
 - **Scripts PowerShell con acentos o `—`: guardar siempre con BOM UTF-8.** Windows PowerShell 5.1 asume
   el codepage ANSI para `.ps1` sin BOM y el tokenizer se rompe ("Falta el paréntesis de cierre"). Mismo
@@ -167,9 +167,10 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 
 ## 6. Pendientes / ideas
 
-- **Publicar la 1.8.0:** `main` acumula todo el **Tier E** sobre el tag `v1.7.0` (MINOR: características
-  nuevas de usuario). Recordar: el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la
-  app no puede verificar un instalador sin firmar y **rechaza la actualización**.
+- **Seguir el plan de auditoría** de [`ROADMAP.md`](ROADMAP.md) Parte II. Lo siguiente es **T1-02**:
+  clasificar los fallos de winget por código de salida y no por texto, que winget traduce al idioma de
+  Windows. Recordar en cada corte: el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`,
+  la app no puede verificar un instalador sin firmar y **rechaza la actualización**.
 - **Certificado de firma de código (OV/EV) — descartado por ahora.** Consecuencia asumida: SmartScreen
   dice "editor desconocido" en cada instalación, y la verificación se apoya en el SHA-256 (detecta
   manipulación en tránsito, no un compromiso de la cuenta de GitHub). El pipeline ya lo soporta si algún
@@ -197,13 +198,58 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 
 | Fecha | Versión | Qué |
 |---|---|---|
-| 2026-07-12 | *(sin publicar)* | **Tier E** — buscar/instalar, exportar/importar, omitir versión (⚠️ cambio de alcance) |
+| 2026-08-21 | **1.8.3** | **Auditoría T0 + T1** — recorrido de rutas en la limpieza, guardado atómico de la configuración, contraste WCAG AA en las 4 ventanas, botones de diálogo localizados |
+| 2026-07-21 | **1.8.2** | Icono en la barra de título y título simplificado; titular de copyright con nombre legal (app, LICENSE e instalador) |
+| 2026-07-20 | **1.8.1** | Estado vacío real en Historial, pulido de layout en 4 ventanas y capturas de pantalla para el README |
+| 2026-07-12 | **1.8.0** | **Tier E** — buscar/instalar, exportar/importar, omitir versión (⚠️ cambio de alcance) |
 | 2026-07-12 | **1.7.0** | **Tier D** — licencia y avisos de terceros in-app, README de usuario, capturas |
 | 2026-07-12 | **1.6.0** | **Tier C #4–#6** + fix de la auto-actualización rota desde 1.4.1 |
 | 2026-07-11 | **1.5.0** | **Tier C #1–#3** — flujo/feedback, selección, datos que mentían |
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T0 + T1: seguridad, integridad y accesibilidad (release v1.8.3)
+
+Primer corte del plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: **11 de 70** tareas.
+Build 0/0, **196/196 unitarios**, **27/27 UI tests**.
+
+**1. Recorrido de rutas en el escaneo de residuos (T0-01).** `CleanupScanner` construía rutas candidatas
+con `Path.Combine(baseDir, nombreDelPaquete)`. `Path.Combine` **no normaliza `..` y descarta el primer
+argumento si el segundo está enraizado**: un paquete llamado `C:\Windows` hacía que el escáner ofreciera
+`C:\Windows` como residuo borrable, con borrado recursivo detrás del botón. Ahora todo candidato pasa por
+`TryCombineInside`, que normaliza con `GetFullPath` y exige que el resultado quede **dentro** del
+directorio base. El nombre del paquete lo elige el manifiesto de winget, no el usuario, así que la entrada
+no es de confianza.
+
+**2. Guardado no atómico de `settings.json` (T0-02).** `Save()` escribía directamente sobre el archivo
+final: una interrupción a mitad dejaba un JSON truncado y **toda la configuración perdida**. Ahora escribe
+a `.tmp` y publica con `File.Replace` (atómico en NTFS), dejando `.bak` como copia previa.
+
+**3. Contraste ilegible en dos de las cuatro ventanas (T1-04/05).** El Tier C #4 retiró de `MainWindow`
+unos RGB cableados que no llegaban al 4,5:1 de WCAG AA sobre la tarjeta oscura (medían 2,74:1 el verde y
+2,71:1 el rojo)… y dejó las mismas constantes en `CleanupWindow` y `UninstallWindow`, justo las que
+informan de qué archivos se borraron y cuáles fallaron. Ambas usan ya `LogPalette`. El README afirmaba que
+el contraste estaba «comprobado por tests» cuando era cierto en la mitad de las ventanas.
+
+**4. Botones de diálogo en español en los cinco idiomas (T1-03).** `WindowDialogHelper` cableaba
+«Aceptar», «Sí» y «No», y lo usan las cuatro ventanas: en francés el usuario confirmaba un borrado
+pulsando «Sí», y «No» ni siquiera es palabra francesa. La causa de raíz está en la firma: un valor por
+defecto de parámetro debe ser constante en tiempo de compilación, así que `L.T(...)` **no compila** ahí.
+Los defaults pasan a `null` y se resuelven en el cuerpo.
+
+**5. «red» dentro de «required» (T1-01).** La clasificación de fallos buscaba términos con `Contains`, así
+que cualquier error que mencionara `requi‑red`, `sha‑red`, `expi‑red`, `configu‑red` o `registe‑red` se le
+presentaba al usuario como **«Error de red»**, mandándolo a revisar su conexión por un archivo que falta.
+Ahora exige límite de palabra.
+
+**La lección que se repite.** Cuatro de estos cinco hallazgos son *la misma corrección aplicada a una
+ventana y no a las demás*. Por eso el corte incluye dos tests que leen el código fuente en vez de medir
+comportamiento: uno exige que toda ventana con registro tome sus colores de `LogPalette`, y otro que
+ningún texto de botón de diálogo sea un literal. Los tests de contraste y de claves ya existían y pasaban
+en verde mientras los bugs estaban vivos, porque solo cubrían a quien usara la pieza correcta.
 
 ---
 

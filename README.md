@@ -26,7 +26,7 @@ equipo — sin tocar la línea de comandos.
 ## Instalación
 
 Descarga el instalador más reciente desde la página de **[Releases](https://github.com/xfiberex/WingetUSoft/releases)**
-(`WingetUSoft-x.y.z-setup.exe`) y ejecútalo.
+(`WingetUSoft-Setup-x.y.z.exe`) y ejecútalo.
 
 El instalador comprueba las dependencias y **descarga solo lo que falte** en tu equipo (VC++ Redist y
 .NET 10 Desktop Runtime); en un Windows al día no descarga nada. La app se instala **sin privilegios de

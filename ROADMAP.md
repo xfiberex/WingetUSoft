@@ -482,7 +482,7 @@ decisión explícita.
 
 ### Documentación desfasada
 
-- [ ] **[T1-19] Poner `CONTEXT.md` §3, §4 y §6 al día (1.8.2)**
+- [x] **[T1-19] Poner `CONTEXT.md` §3, §4 y §6 al día (1.8.2)**
   - **Área:** Documentación
   - **Ubicación:** `CONTEXT.md:14-15`, `:92`, `:102`, `:138`, `:170`
   - **Qué hacer:** el documento que el propio proyecto designa para que «el contexto viaje entre equipos»
@@ -495,7 +495,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-20] Añadir las entradas de changelog de 1.8.0, 1.8.1 y 1.8.2**
+- [x] **[T1-20] Añadir las entradas de changelog de 1.8.0, 1.8.1 y 1.8.2**
   - **Área:** Documentación
   - **Ubicación:** `CONTEXT.md:196-210` (tabla del Registro de cambios y secciones fechadas)
   - **Qué hacer:** la última entrada es «*(sin publicar)* — Tier E». Faltan las tres versiones publicadas
@@ -516,7 +516,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** T1-04, T1-05, T1-06
 
-- [ ] **[T1-22] Corregir el nombre del instalador en el README**
+- [x] **[T1-22] Corregir el nombre del instalador en el README**
   - **Área:** Documentación
   - **Ubicación:** `README.md:29`
   - **Qué hacer:** dice `WingetUSoft-x.y.z-setup.exe`; el nombre real es `WingetUSoft-Setup-x.y.z.exe`
@@ -1023,27 +1023,30 @@ decisión explícita.
 | Tier | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | T0 — Crítico | 2 | **2** | 0 | **100 %** |
-| T1 — Alta | 22 | 8 | 14 | 36 % |
+| T1 — Alta | 22 | 11 | 11 | 50 % |
 | T2 — Sustancial | 23 | 1 | 22 | 4 % |
 | T3 — Pulido | 17 | 0 | 17 | 0 % |
 | T4 — Futuro | 6 | 0 | 6 | 0 % |
-| **Total** | **70** | **11** | **59** | **16 %** |
+| **Total** | **70** | **14** | **56** | **20 %** |
 
 ### Registro de tareas completadas
 
 | Fecha | ID | Tarea | Verificado con | Commit | Versión |
 |---|---|---|---|---|---|
-| 2026-08-20 | T0-01 | Contención de rutas en `CleanupScanner` | 173/173 unitarios · 5 tests nuevos fallan al revertir la corrección | `7c7ef5c` | *(sin publicar)* |
-| 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | `7c7ef5c` | *(sin publicar)* |
-| 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | `7c7ef5c` | *(sin publicar)* |
-| 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | `7c7ef5c` | *(sin publicar)* |
-| 2026-08-20 | T2-06 | `LogLineKind` unificado en una sola declaración | build limpio; las 2 copias privadas eliminadas | `191ec8a` | *(sin publicar)* |
-| 2026-08-20 | T1-04 | `CleanupWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | *(sin publicar)* |
-| 2026-08-20 | T1-05 | `UninstallWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | *(sin publicar)* |
-| 2026-08-20 | T1-06 | Guard test anti-RGB cableado en registros | `EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette` | `191ec8a` | *(sin publicar)* |
-| 2026-08-20 | T1-21 | Afirmación WCAG del README ya cierta y acotada | `README.md:102-105` nombra las 4 ventanas | `191ec8a` | *(sin publicar)* |
-| 2026-08-21 | T1-03 | Botones de diálogo localizados (`btn.accept/yes/no`) | 196/196 · el guard test falla al recablear los literales | *(sin commitear)* | *(sin publicar)* |
-| 2026-08-21 | T1-01 | Coincidencia por palabra completa en la clasificación de fallos | 196/196 · 5 tests nuevos fallan al volver a `Contains` | *(sin commitear)* | *(sin publicar)* |
+| 2026-08-20 | T0-01 | Contención de rutas en `CleanupScanner` | 173/173 unitarios · 5 tests nuevos fallan al revertir la corrección | `7c7ef5c` | 1.8.3 |
+| 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | `7c7ef5c` | 1.8.3 |
+| 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | `7c7ef5c` | 1.8.3 |
+| 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | `7c7ef5c` | 1.8.3 |
+| 2026-08-20 | T2-06 | `LogLineKind` unificado en una sola declaración | build limpio; las 2 copias privadas eliminadas | `191ec8a` | 1.8.3 |
+| 2026-08-20 | T1-04 | `CleanupWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | 1.8.3 |
+| 2026-08-20 | T1-05 | `UninstallWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | 1.8.3 |
+| 2026-08-20 | T1-06 | Guard test anti-RGB cableado en registros | `EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette` | `191ec8a` | 1.8.3 |
+| 2026-08-20 | T1-21 | Afirmación WCAG del README ya cierta y acotada | `README.md:102-105` nombra las 4 ventanas | `191ec8a` | 1.8.3 |
+| 2026-08-21 | T1-03 | Botones de diálogo localizados (`btn.accept/yes/no`) | 196/196 · el guard test falla al recablear los literales | `146c044` | 1.8.3 |
+| 2026-08-21 | T1-01 | Coincidencia por palabra completa en la clasificación de fallos | 196/196 · 5 tests nuevos fallan al volver a `Contains` | `146c044` | 1.8.3 |
+| 2026-08-21 | T1-22 | Nombre real del instalador en el README | `README.md:28` coincide con `OutputBaseFilename` del `.iss` | *(en el corte)* | 1.8.3 |
+| 2026-08-21 | T1-19 | `CONTEXT.md` §1, §3, §5 y §6 al día | ninguna referencia a 1.7.0 describe el estado actual | *(en el corte)* | 1.8.3 |
+| 2026-08-21 | T1-20 | Changelog de 1.8.0, 1.8.1, 1.8.2 y 1.8.3 | la tabla llega hasta la 1.8.3, cada versión con fecha | *(en el corte)* | 1.8.3 |
 
 ### Línea base de la auditoría (2026-08-20)
 
@@ -1058,7 +1061,7 @@ Para poder comparar al cerrar tareas:
 | Claves de localización | 363 × 5 idiomas al auditar · **366 tras T1-03** | conteo sobre `Localization.cs` |
 | LOC C# (src + tests) | 10 360 | `wc -l` excluyendo `bin`/`obj`/`publish` |
 | Tamaño del `publish` | 142 MB | `du -sh src/WingetUSoft/publish` |
-| Tamaño del instalador | 35,8 MB | `WingetUSoft-Setup-1.8.2.exe` |
+| Tamaño del instalador | 35,8 MB | `WingetUSoft-Setup-1.8.2.exe` (línea base; la 1.8.3 se corta desde aquí) |
 | Contraste del registro (tema oscuro) | ~~2,74:1 éxito · 2,71:1 error en 2 de 4 ventanas~~ → **≥ 4,5:1 en las 4** (T1-04/05) | fórmula WCAG 2.x; ahora medido por `LogPaletteTests` |
 | `AutomationProperties.LiveSetting` | 0 usos | `grep -rn` sobre `src/` |
 | `AutomationProperties.LabeledBy` | 0 usos | `grep -rn` sobre `src/` |
