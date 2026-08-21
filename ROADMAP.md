@@ -195,7 +195,7 @@ decisión explícita.
 > Se atiende **antes que cualquier otra cosa**. Ambas tareas son de esfuerzo bajo y sin dependencias:
 > se pueden cerrar las dos en una sola sesión.
 
-- [ ] **[T0-01] Validar que toda ruta candidata de limpieza quede dentro de su directorio base**
+- [x] **[T0-01] Validar que toda ruta candidata de limpieza quede dentro de su directorio base**
   - **Área:** Seguridad
   - **Ubicación:** `src/WingetUSoft/Services/CleanupScanner.cs:50-82` (consumida por `src/WingetUSoft/UI/CleanupWindow.xaml.cs:166`)
   - **Qué hacer:** `GetCandidatePaths` compone rutas con `Path.Combine(baseDir, term)` donde `term` sale de
@@ -220,7 +220,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T0-02] Escritura atómica de `settings.json`**
+- [x] **[T0-02] Escritura atómica de `settings.json`**
   - **Área:** Seguridad / integridad de datos
   - **Ubicación:** `src/WingetUSoft/Settings/AppSettings.cs:100-116`
   - **Qué hacer:** `Save()` usa `File.WriteAllText` sobre el archivo definitivo, que trunca antes de escribir.
@@ -458,7 +458,7 @@ decisión explícita.
 
 ### Pruebas de respaldo
 
-- [ ] **[T1-13] Tests de contención de rutas para `CleanupScanner`**
+- [x] **[T1-13] Tests de contención de rutas para `CleanupScanner`**
   - **Área:** QA
   - **Ubicación:** `tests/WingetUSoft.Tests/CleanupScannerTests.cs`
   - **Qué hacer:** los 6 tests actuales cubren deduplicación, cancelación y que nada venga preseleccionado,
@@ -469,7 +469,7 @@ decisión explícita.
   - **Esfuerzo:** medio
   - **Depende de:** T0-01
 
-- [ ] **[T1-14] Tests de atomicidad de `AppSettings.Save()`**
+- [x] **[T1-14] Tests de atomicidad de `AppSettings.Save()`**
   - **Área:** QA
   - **Ubicación:** `tests/WingetUSoft.Tests/AppSettingsTests.cs`
   - **Qué hacer:** usar `AppSettings.DataDirectoryPath` (ya existe con ese propósito) para apuntar a un
@@ -1022,18 +1022,21 @@ decisión explícita.
 
 | Tier | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
-| T0 — Crítico | 2 | 0 | 2 | 0 % |
-| T1 — Alta | 22 | 0 | 22 | 0 % |
+| T0 — Crítico | 2 | **2** | 0 | **100 %** |
+| T1 — Alta | 22 | 2 | 20 | 9 % |
 | T2 — Sustancial | 23 | 0 | 23 | 0 % |
 | T3 — Pulido | 17 | 0 | 17 | 0 % |
 | T4 — Futuro | 6 | 0 | 6 | 0 % |
-| **Total** | **70** | **0** | **70** | **0 %** |
+| **Total** | **70** | **4** | **66** | **6 %** |
 
 ### Registro de tareas completadas
 
 | Fecha | ID | Tarea | Verificado con | Versión |
 |---|---|---|---|---|
-| — | — | *(sin entradas todavía)* | — | — |
+| 2026-08-20 | T0-01 | Contención de rutas en `CleanupScanner` | 173/173 unitarios · 5 tests nuevos fallan al revertir la corrección | *(sin publicar)* |
+| 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | *(sin publicar)* |
+| 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | *(sin publicar)* |
+| 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | *(sin publicar)* |
 
 ### Línea base de la auditoría (2026-08-20)
 
@@ -1041,7 +1044,7 @@ Para poder comparar al cerrar tareas:
 
 | Métrica | Valor | Cómo se obtuvo |
 |---|---|---|
-| Tests unitarios | 162 / 162 correctas (260 ms) | `dotnet test tests/WingetUSoft.Tests/…` |
+| Tests unitarios | 162 / 162 correctas (260 ms) · **173 / 173 tras T0** | `dotnet test tests/WingetUSoft.Tests/…` |
 | Tests de UI | 16 métodos (13 `[Fact]` + 3 `[Theory]`) | conteo estático — **no ejecutados** en la auditoría |
 | Dependencias vulnerables | 0 | `dotnet list package --vulnerable --include-transitive` |
 | Paquetes con versión superior | 6 | `dotnet list package --outdated` |
@@ -1062,8 +1065,11 @@ hasta dónde llega la evidencia:
 - **UI tests (FlaUI):** no ejecutados — requieren sesión de escritorio interactiva y desatendida.
 - **Rendimiento medido:** sin *profiler*. Arranque, memoria y tiempo hasta la primera fila sin medir.
 - **Responsividad real (T2-11):** derivada de los anchos declarados en XAML, no de ejecutar la app.
-- **Explotabilidad de T0-01:** análisis estático sobre el contrato documentado de `Path.Combine`; no se
-  construyó una entrada ARP maliciosa que lo demostrase end-to-end.
+- ~~**Explotabilidad de T0-01:**~~ **resuelto el 2026-08-20.** Ya no es hipótesis: el test
+  `ScanAsync_NameEscapesTheBaseDirectory_ProducesNoCandidate` demuestra que, sin la corrección, un
+  paquete llamado `C:\Windows` hacía que el escáner ofreciera **`C:\Windows`** como residuo
+  eliminable. Lo que sigue sin comprobarse es el eslabón previo: que un instalador real escriba un
+  `DisplayName` así en Agregar o quitar programas.
 - **Lector de pantalla real (T1-07, T1-08, T1-09):** análisis del árbol de automatización por código, sin
   sesión de escucha con Narrador o NVDA.
 - **Contraste fuera del registro:** solo se midieron `LogPalette` y los RGB cableados; el resto sale de

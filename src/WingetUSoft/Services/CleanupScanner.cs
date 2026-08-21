@@ -64,7 +64,10 @@ public static class CleanupScanner
         {
             if (string.IsNullOrEmpty(baseDir)) continue;
             foreach (string term in terms)
-                yield return System.IO.Path.Combine(baseDir, term);
+            {
+                if (TryCombineInside(baseDir, term) is { } candidate)
+                    yield return candidate;
+            }
         }
 
         // Two-level: {baseDir}\{publisher}\{appName}
@@ -76,9 +79,95 @@ public static class CleanupScanner
             foreach (string baseDir in new[] { pf, pf86, roaming, local, progData })
             {
                 if (string.IsNullOrEmpty(baseDir)) continue;
-                yield return System.IO.Path.Combine(baseDir, parts[0], parts[1]);
+                if (TryCombineInside(baseDir, parts[0], parts[1]) is { } candidate)
+                    yield return candidate;
             }
         }
+    }
+
+    // ---- Path safety --------------------------------------------------------
+
+    /// <summary>
+    /// Caracteres que no pueden formar parte del nombre de una carpeta en Windows. Incluye los dos
+    /// separadores de ruta y los dos puntos de unidad, que son justo los que permitirían salirse del
+    /// directorio base.
+    /// </summary>
+    private static readonly char[] ForbiddenTermChars =
+        [.. System.IO.Path.GetInvalidFileNameChars(), '/', '\\', ':'];
+
+    /// <summary>
+    /// Acepta un término solo si puede ser, literalmente, el nombre de una carpeta.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El nombre y el Id de un paquete no son datos de confianza.</b> Los paquetes llegan de
+    /// <c>winget list</c>, que incluye las entradas de Agregar o quitar programas: su
+    /// <c>DisplayName</c> lo escribe el instalador de cualquier tercero, no un catálogo curado.
+    /// </para>
+    /// <para>
+    /// Y lo que se hace después con estas rutas es <c>Directory.Delete(recursive: true)</c>
+    /// (ver <c>UI/CleanupWindow</c>), así que componerlas sin validar era un borrado fuera de ámbito
+    /// esperando a ocurrir: <c>Path.Combine</c> <b>no</b> normaliza <c>..</c> y <b>descarta</b> el
+    /// directorio base si el segundo argumento ya trae raíz propia
+    /// (<c>Path.Combine(@"C:\a", @"D:\Windows")</c> devuelve <c>D:\Windows</c>).
+    /// </para>
+    /// <para>
+    /// Rechazar no cuesta nada: un nombre con estos caracteres no puede coincidir con una carpeta
+    /// real, así que no se pierde ni un candidato legítimo.
+    /// </para>
+    /// </remarks>
+    private static bool IsSafeTerm(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+            return false;
+
+        if (term.IndexOfAny(ForbiddenTermChars) >= 0)
+            return false;
+
+        // "." y ".." son navegación, no nombres; un término compuesto solo de puntos tampoco nombra nada.
+        return term.Trim().Trim('.').Length > 0;
+    }
+
+    /// <summary>
+    /// Compone un candidato bajo <paramref name="baseDir"/> y lo devuelve solo si, ya normalizado,
+    /// sigue estando por debajo. Devuelve <c>null</c> si algún segmento no es válido o si la ruta se
+    /// sale.
+    /// </summary>
+    /// <remarks>
+    /// Segunda barrera tras <see cref="IsSafeTerm"/>, a propósito: la normalización de Windows
+    /// (puntos y espacios finales, nombres de dispositivo reservados) puede mover una ruta que
+    /// carácter a carácter parecía inofensiva. Comparar los <c>GetFullPath</c> es lo único que
+    /// responde a la pregunta que de verdad importa: ¿esto sigue estando dentro?
+    /// </remarks>
+    private static string? TryCombineInside(string baseDir, params string[] segments)
+    {
+        if (string.IsNullOrEmpty(baseDir))
+            return null;
+
+        foreach (string segment in segments)
+        {
+            if (!IsSafeTerm(segment))
+                return null;
+        }
+
+        try
+        {
+            string root = System.IO.Path.GetFullPath(baseDir);
+            string prefix = root.EndsWith(System.IO.Path.DirectorySeparatorChar)
+                ? root
+                : root + System.IO.Path.DirectorySeparatorChar;
+
+            string candidate = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine([baseDir, .. segments]));
+
+            return candidate.Length > prefix.Length
+                && candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    ? candidate
+                    : null;
+        }
+        catch (ArgumentException)      { return null; }
+        catch (PathTooLongException)   { return null; }
+        catch (NotSupportedException)  { return null; }
     }
 
     private static IReadOnlyList<string> GetSearchTerms(WingetPackage package)

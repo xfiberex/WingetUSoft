@@ -97,6 +97,30 @@ public sealed class AppSettings
         }
     }
 
+    /// <summary>Ruta temporal sobre la que se escribe antes de sustituir el archivo definitivo.</summary>
+    private static string TempSettingsFilePath => SettingsFilePath + ".tmp";
+
+    /// <summary>Copia que <see cref="File.Replace(string, string, string)"/> deja del archivo anterior.</summary>
+    private static string BackupSettingsFilePath => SettingsFilePath + ".bak";
+
+    /// <summary>
+    /// Persiste la configuración de forma **atómica**: se escribe en un temporal del mismo volumen y
+    /// solo después se sustituye el archivo definitivo.
+    /// </summary>
+    /// <remarks>
+    /// Hasta aquí se hacía un <c>File.WriteAllText</c> directo sobre <c>settings.json</c>, que trunca
+    /// el archivo antes de escribirlo: cualquier interrupción a mitad (corte de luz, cierre forzado,
+    /// disco lleno) dejaba un JSON parcial. Y a un JSON parcial <see cref="Load"/> responde haciendo
+    /// copia y **restaurando los valores por defecto**, así que el usuario perdía de golpe el historial
+    /// (hasta <see cref="MaxHistoryEntries"/> entradas), la lista de exclusiones, las versiones
+    /// omitidas, el idioma y el tema. La ventana era real: se guarda en cada exclusión, cada omisión,
+    /// cada actualización con éxito y en el propio arranque.
+    ///
+    /// Con <see cref="File.Replace(string, string, string)"/> —atómico en NTFS— el archivo definitivo
+    /// es siempre uno completo: o el anterior, o el nuevo. Además deja gratis una copia del anterior
+    /// en <c>settings.json.bak</c>.
+    /// </remarks>
+    /// <returns><c>true</c> si los ajustes quedaron en disco; si no, <see cref="LastSaveError"/> explica por qué.</returns>
     public bool Save()
     {
         LastSaveError = null;
@@ -104,7 +128,13 @@ public sealed class AppSettings
         try
         {
             Directory.CreateDirectory(DataDirectoryPath);
-            File.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(this, JsonOptions));
+            File.WriteAllText(TempSettingsFilePath, JsonSerializer.Serialize(this, JsonOptions));
+
+            if (File.Exists(SettingsFilePath))
+                File.Replace(TempSettingsFilePath, SettingsFilePath, BackupSettingsFilePath, ignoreMetadataErrors: true);
+            else
+                File.Move(TempSettingsFilePath, SettingsFilePath, overwrite: true);
+
             return true;
         }
         catch (Exception ex)
@@ -112,6 +142,25 @@ public sealed class AppSettings
             LastSaveError = $"No se pudo guardar la configuración en '{SettingsFilePath}': {ex.Message}";
             Trace.TraceError(LastSaveError);
             return false;
+        }
+        finally
+        {
+            // Tras un guardado correcto el temporal ya no existe (lo consumió Replace/Move). Si algo
+            // falló, sí queda, y dejarlo ahí solo confundiría: el archivo bueno es settings.json.
+            TryDeleteLeftoverTempFile();
+        }
+    }
+
+    private static void TryDeleteLeftoverTempFile()
+    {
+        try
+        {
+            if (File.Exists(TempSettingsFilePath))
+                File.Delete(TempSettingsFilePath);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"No se pudo borrar el archivo temporal de configuración: {ex.Message}");
         }
     }
 
