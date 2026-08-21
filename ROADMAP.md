@@ -346,7 +346,12 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     el `RichTextBlock` emitir el evento con
     `FrameworkElementAutomationPeer.FromElement(txtEstado)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged)`.
   - **Criterio de aceptación:** con el Narrador activo, iniciar una consulta anuncia el cambio de estado sin
-    que el foco esté en la barra. *(Verificación manual: no es automatizable con FlaUI.)*
+    que el foco esté en la barra.
+  - **Verificado (2026-08-21):** ~~no automatizable~~ — **sí lo es en su mayor parte**. Lo que no se puede
+    automatizar es *oír* al Narrador; lo que falla en la práctica es que las propiedades de UI Automation
+    no estén, y eso un cliente UIA lo ve igual que un lector de pantalla. `AccessibilityTests`
+    (UI tests) comprueba el `LiveSetting=Polite` y **se suscribe a `LiveRegionChanged`** para exigir que
+    el evento se emita de verdad al cambiar el texto. Queda como manual solo *cómo suena* el anuncio.
   - **Desviación al implementarlo:** el `RichTextBlock` del registro **no** se convierte en región activa.
     Una región activa se anuncia leyendo *todo* su contenido, y el registro llega a 400 líneas: cada línea
     nueva releería el bloque entero. En su lugar el registro recibe un **nombre accesible**
@@ -365,6 +370,9 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     texto al `Header` del propio control.
   - **Criterio de aceptación:** en Accessibility Insights, ambos interruptores exponen un `Name` no vacío que
     coincide con su etiqueta visible en los 5 idiomas.
+  - **Verificado (2026-08-21):** automatizado en `AccessibilityTests` — abre Configuración y exige que el
+    `Name` de cada interruptor sea **igual** al de su etiqueta visible, que es lo que garantiza que siga
+    al idioma sin claves nuevas.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -377,6 +385,9 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     `CleanupItemViewModel` las mismas dos propiedades, con claves nuevas en `Localization.cs`.
   - **Criterio de aceptación:** cada fila se anuncia con ruta, tipo y tamaño; la casilla se anuncia como
     «Seleccionar *ruta* para eliminar». `LocalizationTests` sigue en verde (5 traducciones por clave nueva).
+  - **Verificado (2026-08-21):** en `CleanupItemLabelsTests` (unitario) y **no** en los UI tests, porque
+    `CleanupWindow` no es alcanzable conduciendo la app: solo se abre desde `UninstallWindow` tras
+    desinstalar un programa de verdad, y ningún test desinstala nada del equipo.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 

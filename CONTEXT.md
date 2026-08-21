@@ -11,8 +11,8 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.8.3** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.3), sin firmar) |
-| **En `main`, sin publicar** | **T0 y T1 de la auditoría, completos** (24 de 70 tareas): accesibilidad, i18n, clasificación de fallos por código, TOCTOU del instalador, registro de fallos y firma |
+| **Versión publicada** | **1.8.4** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.4), sin firmar) |
+| **En `main`, sin publicar** | tests de accesibilidad contra la app real (verifican T1-07/08/09, que la v1.8.4 publicó sin verificar) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -198,6 +198,7 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-08-21 | **1.8.4** | **Auditoría T1 completo** — TOCTOU del instalador, registro de fallos que no se pisa, fallos clasificados por código, accesibilidad e i18n |
 | 2026-08-21 | **1.8.3** | **Auditoría T0 + T1** — recorrido de rutas en la limpieza, guardado atómico de la configuración, contraste WCAG AA en las 4 ventanas, botones de diálogo localizados |
 | 2026-07-21 | **1.8.2** | Icono en la barra de título y título simplificado; titular de copyright con nombre legal (app, LICENSE e instalador) |
 | 2026-07-20 | **1.8.1** | Estado vacío real en Historial, pulido de layout en 4 ventanas y capturas de pantalla para el README |
@@ -208,6 +209,43 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — La verificación de accesibilidad que la auditoría daba por manual (sin publicar)
+
+La v1.8.4 salió con los criterios de aceptación de **T1-07, T1-08 y T1-09 sin verificar**: la auditoría
+los marcaba como «verificación manual, no automatizable con FlaUI». Lo eran solo en parte.
+
+**La distinción que faltaba.** Lo que no se puede automatizar es **oír** al Narrador. Pero lo que falla
+en la práctica no es cómo suena el anuncio: es que las **propiedades de UI Automation no estén ahí** —
+que la barra no sea región activa, que no emita el evento, que un control no tenga nombre—. Y eso un
+cliente UIA como FlaUI lo ve exactamente igual que lo vería un lector de pantalla. Cinco tests nuevos
+en `tests/WingetUSoft.UiTests/AccessibilityTests.cs`:
+
+- **`LiveSetting = Polite`** en la barra de estado (T1-07).
+- **El evento `LiveRegionChanged` se emite de verdad** al cambiar el texto (T1-07). Es la mitad que de
+  verdad importa: marcar el elemento no anuncia nada por sí solo. El test se suscribe al evento y
+  provoca el cambio por la vía más barata que no invoca a winget — cambiar el idioma, que hace que
+  `ApplyLocalizedStrings` repinte la barra («Listo.» → «Ready.»).
+- **El registro tiene nombre accesible** (T1-07).
+- **Los interruptores de Configuración se llaman como su etiqueta visible** (T1-08), comparando ambos
+  `Name`: es lo que garantiza que el nombre siga al idioma sin claves nuevas.
+
+**`CleanupWindow` (T1-09) se queda fuera de los UI tests, y no por comodidad:** no es alcanzable
+conduciendo la app. Solo se abre desde `UninstallWindow` **después de desinstalar un programa de
+verdad**, y ningún test desinstala nada del equipo. Se cubre la composición de las etiquetas en un
+unitario (`CleanupItemLabelsTests`), que es donde estaba el fallo.
+
+> **Los tests se probaron contra el bug.** Este proyecto ya se llevó dos sustos con suites en verde
+> mientras el fallo estaba vivo (los tests de contraste y los de claves, ambos en el corte del 1.8.3),
+> así que no basta con que pasen. Se revirtieron a mano las tres piezas —`TrackStatusText` comentado y
+> el `LabeledBy` de un interruptor retirado— y se comprobó que fallan **exactamente los tres tests
+> correspondientes**, mientras los dos que tocan piezas intactas siguen en verde. Después se restauró
+> el código y se confirmó el verde completo.
+
+**Lo que sigue siendo manual**, y así queda escrito en el ROADMAP: cómo suena el anuncio, si llega en
+buen momento y si el texto se entiende de oído. Eso no lo cubre ningún test.
 
 ---
 
