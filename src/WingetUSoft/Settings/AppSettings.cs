@@ -53,11 +53,16 @@ public sealed class AppSettings
     /// <summary>Última versión de la app cuyas novedades ya se mostraron (diálogo "Novedades…"). Null = nunca se mostró.</summary>
     public string? LastVersionSeen { get; set; }
 
+    /// <summary>
+    /// Error de carga pendiente de mostrar, **sin traducir**: <see cref="Load"/> corre antes de que se
+    /// fije el idioma (es uno de los ajustes que lee), así que el texto se resuelve al presentarlo.
+    /// </summary>
     [JsonIgnore]
-    public string? LastLoadError { get; private set; }
+    public DeferredMessage? LastLoadError { get; private set; }
 
+    /// <summary>Error del último <see cref="Save"/>, sin traducir (ver <see cref="LastLoadError"/>).</summary>
     [JsonIgnore]
-    public string? LastSaveError { get; private set; }
+    public DeferredMessage? LastSaveError { get; private set; }
 
     /// <summary>True si estos ajustes se cargaron desde un settings.json ya existente (uso previo de la app), no desde los valores por defecto.</summary>
     [JsonIgnore]
@@ -85,7 +90,7 @@ public sealed class AppSettings
 
             TryBackupUnreadableSettingsFile();
             return CreateDefaultsWithLoadError(
-                $"El archivo de configuración '{SettingsFilePath}' es inválido o está vacío. Se usarán los valores predeterminados.");
+                new DeferredMessage("settings.invalidFile", SettingsFilePath));
         }
         catch (Exception ex)
         {
@@ -93,7 +98,7 @@ public sealed class AppSettings
                 TryBackupUnreadableSettingsFile();
 
             return CreateDefaultsWithLoadError(
-                $"No se pudo cargar la configuración desde '{SettingsFilePath}': {ex.Message}");
+                new DeferredMessage("settings.loadFailed", SettingsFilePath, ex.Message));
         }
     }
 
@@ -139,8 +144,8 @@ public sealed class AppSettings
         }
         catch (Exception ex)
         {
-            LastSaveError = $"No se pudo guardar la configuración en '{SettingsFilePath}': {ex.Message}";
-            Trace.TraceError(LastSaveError);
+            LastSaveError = new DeferredMessage("settings.saveFailed", SettingsFilePath, ex.Message);
+            Trace.TraceError(LastSaveError.Text);
             return false;
         }
         finally
@@ -171,9 +176,9 @@ public sealed class AppSettings
             History.RemoveRange(MaxHistoryEntries, History.Count - MaxHistoryEntries);
     }
 
-    private static AppSettings CreateDefaultsWithLoadError(string message)
+    private static AppSettings CreateDefaultsWithLoadError(DeferredMessage message)
     {
-        Trace.TraceError(message);
+        Trace.TraceError(message.Text);
         return new AppSettings { LastLoadError = message };
     }
 

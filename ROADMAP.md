@@ -427,7 +427,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-15] Extraer las cadenas en español cableadas de `MainWindow`**
+- [x] **[T1-15] Extraer las cadenas en español cableadas de `MainWindow`**
   - **Área:** i18n
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:720`, `:1668`, `:1802`
   - **Qué hacer:** tres cadenas visibles se construyen en español fijo: el prefijo «Iniciando:» del registro
@@ -438,7 +438,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-16] Extraer las cadenas en español cableadas de `AppSettings`**
+- [x] **[T1-16] Extraer las cadenas en español cableadas de `AppSettings`**
   - **Área:** i18n
   - **Ubicación:** `src/WingetUSoft/Settings/AppSettings.cs:88,96,112,147`
   - **Qué hacer:** los cuatro mensajes de error de configuración están en español fijo y **se le muestran al
@@ -450,7 +450,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-17] Extraer las cadenas en español cableadas de `WingetService`**
+- [x] **[T1-17] Extraer las cadenas en español cableadas de `WingetService`**
   - **Área:** i18n
   - **Ubicación:** `src/WingetUSoft/Services/WingetService.cs:53,106,133,709,722,775,830,1208-1209,1252,1344`
   - **Qué hacer:** `BuildWingetCommandErrorMessage` compone «winget no pudo {acción}…» con los verbos
@@ -458,6 +458,11 @@ decisión explícita.
     además 5 mensajes de excepción que acaban en diálogos. Todos por `L.T`.
   - **Criterio de aceptación:** provocar un fallo de winget con la app en portugués produce un mensaje
     íntegramente en portugués. `WingetServiceTests.BuildWingetCommandErrorMessage_*` adaptado y en verde.
+  - **Desviación al implementarlo:** las tres `ArgumentException` de `ParseElevatedWorkerOptions`
+    (`:709`, `:722`, `:730`) se quedan **sin traducir**, documentado en el propio método. Corren en el
+    proceso worker, que arranca directo desde `Program.Main` sin leer los ajustes —así que no hay idioma
+    elegido— y saltan *antes* de que exista la tubería, de modo que su texto nunca vuelve al proceso
+    principal. Solo se disparan si la propia app compone mal la invocación: son diagnóstico de protocolo.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 

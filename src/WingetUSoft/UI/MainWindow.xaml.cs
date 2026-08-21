@@ -721,7 +721,7 @@ public sealed partial class MainWindow : Window
 
                     try
                     {
-                        AppendLog($"[{index + 1}/{packagesToUpdate.Count}] Iniciando: {pkg.Name} ({pkg.Id})");
+                        AppendLog(L.T("log.startingPackage", index + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
 
                         var result = await WingetService.UpgradePackageAsync(
                             pkg.Id, _silentMode, false, progressReporter, _cts.Token,
@@ -1669,7 +1669,7 @@ public sealed partial class MainWindow : Window
             int prevCount = _packages.Count;
             await LoadPackagesAsync(_lastIncludeUnknown);
             if (_packages.Count > prevCount)
-                txtEstado.Text += "  ¡Nuevas actualizaciones disponibles!";
+                txtEstado.Text += "  " + L.T("status.newUpdatesAvailable");
         };
         _autoCheckTimer.Start();
     }
@@ -1803,7 +1803,7 @@ public sealed partial class MainWindow : Window
         {
             lock (_logLock) { _fileLoggingAvailable = false; }
             Trace.WriteLine($"No se pudo escribir el archivo de log: {ex.Message}");
-            AppendLog($"[aviso] No se pudo escribir el archivo de log: {ex.Message}", LogLineKind.Warning);
+            AppendLog(L.T("log.logFileFailed", ex.Message), LogLineKind.Warning);
         }
     }
 
@@ -1857,18 +1857,18 @@ public sealed partial class MainWindow : Window
             txtEstado.Text = L.T("error.saveConfigStatus");
 
         _ = ShowDialogAsync(L.T("error.configTitle"),
-            string.IsNullOrWhiteSpace(_settings.LastSaveError)
+            _settings.LastSaveError is null
                 ? userMessage
-                : $"{userMessage}\n\n{_settings.LastSaveError}");
+                : $"{userMessage}\n\n{_settings.LastSaveError.Text}");
 
         return false;
     }
 
     private void ShowSettingsLoadWarningIfNeeded()
     {
-        if (string.IsNullOrWhiteSpace(_settings.LastLoadError))
+        if (_settings.LastLoadError is null)
             return;
-        _ = ShowDialogAsync(L.T("msg.configResetTitle"), _settings.LastLoadError);
+        _ = ShowDialogAsync(L.T("msg.configResetTitle"), _settings.LastLoadError.Text);
     }
 
     private async Task CheckForAppUpdateAsync()

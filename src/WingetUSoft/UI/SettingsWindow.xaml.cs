@@ -183,9 +183,9 @@ public sealed partial class SettingsWindow : Window
 
     private Task ShowSaveErrorAsync()
     {
-        string detail = string.IsNullOrWhiteSpace(_settings.LastSaveError)
+        string detail = _settings.LastSaveError is null
             ? L.T("msg.saveSettingsError")
-            : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError}";
+            : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError.Text}";
 
         var dialog = new ContentDialog
         {

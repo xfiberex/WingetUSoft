@@ -124,12 +124,14 @@ public class WingetServiceTests
     public void BuildWingetCommandErrorMessage_UsesLastMeaningfulLine()
     {
         string message = WingetService.BuildWingetCommandErrorMessage(
-            "consultar actualizaciones",
+            "winget.actionCheckUpdates",
             42,
             "",
             "Error interno\r\nSe agotó el tiempo de espera\r\n");
 
-        Assert.Contains("consultar actualizaciones", message);
+        // El verbo llega como clave, no como texto: el mensaje se compone entero en el idioma activo.
+        Assert.Contains(L.T("winget.actionCheckUpdates"), message);
+        Assert.DoesNotContain("winget.action", message);
         Assert.Contains("Se agotó el tiempo de espera", message);
         Assert.Contains("42", message);
     }

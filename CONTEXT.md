@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.3** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.3), sin firmar) |
-| **En `main`, sin publicar** | **T1-07 a T1-10**: bloque de accesibilidad de la auditoría (región activa en la barra de estado, nombres accesibles en Configuración y Limpieza, rutas en la confirmación de borrado) |
+| **En `main`, sin publicar** | **T1-07 a T1-10** (accesibilidad) y **T1-15 a T1-17** (i18n): con esto el Tier T1 queda al 73 % |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -208,6 +208,44 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T1: cadenas en español cableadas (T1-15 a T1-17, sin publicar)
+
+Tercer corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **18 de 70** tareas, **T1 al 73 %**.
+Build 0/0, **196/196 unitarios**.
+
+Tres focos de texto que salían en español **en los cinco idiomas**. Los tres eran invisibles para los
+tests que ya existían: `LocalizationTests` comprueba que cada clave dada de alta tenga sus 5
+traducciones y `LocalizationUsageTests` que toda clave usada exista — ninguno de los dos puede ver un
+texto que **nunca pasó por `L.T`**.
+
+**1. `MainWindow` (T1-15).** El prefijo «Iniciando:» de cada paquete del lote, el «¡Nuevas
+actualizaciones disponibles!» de la auto-comprobación y el aviso de log ilegible, con su etiqueta
+«[aviso]» incluida. Tres claves nuevas.
+
+**2. `AppSettings` (T1-16) — el interesante.** Los mensajes de configuración corrupta o no guardada se
+le muestran al usuario en un diálogo, pero **no se pueden traducir donde se producen**: `Load()` corre
+antes de que se fije el idioma, porque el idioma es justamente uno de los ajustes que está leyendo.
+Traducirlos ahí los dejaría siempre en el idioma por defecto.
+
+> La solución es un tipo nuevo, `DeferredMessage(Key, Args)`: se guarda la **clave y sus argumentos**,
+> no el texto formateado, y `LastLoadError` / `LastSaveError` pasan de `string?` a `DeferredMessage?`.
+> El texto se resuelve con `.Text` en el punto de presentación — que además lo deja correcto si el
+> idioma cambia entre que el error se produce y que se muestra.
+
+**3. `WingetService` (T1-17).** `BuildWingetCommandErrorMessage` recibía el verbo **ya escrito en
+español** («consultar actualizaciones», «listar programas instalados», «buscar paquetes») y lo
+incrustaba en una plantilla también española. Ahora recibe la **clave** del verbo y compone el mensaje
+entero en el idioma activo; el test adaptado comprueba además que no se cuele la clave sin resolver.
+Más cuatro excepciones que acaban en diálogo (sesión elevada, winget no encontrado, ruta propia).
+
+> **Lo que se deja sin traducir a propósito:** las tres `ArgumentException` de
+> `ParseElevatedWorkerOptions`. Corren en el proceso *worker*, que arranca directo desde `Program.Main`
+> sin leer los ajustes —no hay idioma que aplicar— y saltan antes de que exista la tubería, así que su
+> texto nunca vuelve al proceso principal. Solo se disparan si la app compone mal su propia invocación:
+> son diagnóstico de protocolo, no mensajes de producto. Queda escrito en el método.
 
 ---
 

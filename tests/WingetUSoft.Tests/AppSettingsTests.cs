@@ -58,7 +58,7 @@ public class AppSettingsTests : IDisposable
         Assert.Equal(new[] { "VideoLAN.VLC" }, loaded.ExcludedIds);
         Assert.Single(loaded.History);
         Assert.Equal("VLC", loaded.History[0].PackageName);
-        Assert.True(string.IsNullOrWhiteSpace(loaded.LastLoadError));
+        Assert.Null(loaded.LastLoadError);
     }
 
     [Fact]
@@ -71,7 +71,8 @@ public class AppSettingsTests : IDisposable
 
         Assert.True(loaded.SilentMode);
         Assert.Empty(loaded.ExcludedIds);
-        Assert.False(string.IsNullOrWhiteSpace(loaded.LastLoadError));
+        Assert.NotNull(loaded.LastLoadError);
+        Assert.False(string.IsNullOrWhiteSpace(loaded.LastLoadError.Text));
         Assert.Single(Directory.GetFiles(AppSettings.DataDirectoryPath, "settings.invalid.*.json"));
     }
 
@@ -85,7 +86,8 @@ public class AppSettingsTests : IDisposable
         bool saved = settings.Save();
 
         Assert.False(saved);
-        Assert.False(string.IsNullOrWhiteSpace(settings.LastSaveError));
+        Assert.NotNull(settings.LastSaveError);
+        Assert.False(string.IsNullOrWhiteSpace(settings.LastSaveError.Text));
     }
 
     // ── Escritura atómica (T0-02) ───────────────────────────────────────────
@@ -138,7 +140,8 @@ public class AppSettingsTests : IDisposable
             var updated = new AppSettings { AutoCheckIntervalMinutes = 120 };
 
             Assert.False(updated.Save());
-            Assert.False(string.IsNullOrWhiteSpace(updated.LastSaveError));
+            Assert.NotNull(updated.LastSaveError);
+            Assert.False(string.IsNullOrWhiteSpace(updated.LastSaveError.Text));
         }
 
         Assert.Equal(before, File.ReadAllText(AppSettings.SettingsFilePath));

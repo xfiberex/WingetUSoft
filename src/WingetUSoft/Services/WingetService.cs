@@ -50,7 +50,7 @@ public static class WingetService
 
         if (result.ExitCode != 0)
             throw new InvalidOperationException(BuildWingetCommandErrorMessage(
-                "consultar actualizaciones",
+                "winget.actionCheckUpdates",
                 result.ExitCode,
                 result.Output,
                 result.Error));
@@ -103,7 +103,7 @@ public static class WingetService
         var result = await RunWingetAsync(["list", "--accept-source-agreements"], cancellationToken);
         if (result.ExitCode != 0 && string.IsNullOrWhiteSpace(result.Output))
             throw new InvalidOperationException(BuildWingetCommandErrorMessage(
-                "listar programas instalados", result.ExitCode, result.Output, result.Error));
+                "winget.actionListInstalled", result.ExitCode, result.Output, result.Error));
         return ParseUpgradeOutput(result.Output);
     }
 
@@ -130,7 +130,7 @@ public static class WingetService
         // winget roto). Con resultados vacíos pero salida legible, la respuesta correcta es "no hay nada".
         if (found.Count == 0 && result.ExitCode != 0 && string.IsNullOrWhiteSpace(result.Output))
             throw new InvalidOperationException(BuildWingetCommandErrorMessage(
-                "buscar paquetes", result.ExitCode, result.Output, result.Error));
+                "winget.actionSearch", result.ExitCode, result.Output, result.Error));
 
         return found;
     }
@@ -673,6 +673,16 @@ public static class WingetService
         return arguments;
     }
 
+    /// <summary>
+    /// Lee los argumentos con los que el proceso elevado se invoca a sí mismo.
+    /// </summary>
+    /// <remarks>
+    /// Sus excepciones son las únicas del servicio que **no** pasan por <see cref="L"/>, a propósito:
+    /// corren en el proceso worker, que arranca directo desde <c>Program.Main</c> sin leer los ajustes
+    /// y por tanto sin idioma elegido; y saltan **antes** de que exista la tubería, así que su texto
+    /// nunca vuelve al proceso principal ni llega al usuario. Solo pueden dispararse si la propia app
+    /// compone mal la invocación: son diagnóstico de protocolo, no mensajes de producto.
+    /// </remarks>
     private static ElevatedWorkerOptions ParseElevatedWorkerOptions(string[] args)
     {
         var options = new ElevatedWorkerOptions();
@@ -772,7 +782,7 @@ public static class WingetService
             {
                 if (!string.Equals(message.Type, "hello", StringComparison.Ordinal)
                     || !string.Equals(message.Token, authToken, StringComparison.Ordinal))
-                    throw new InvalidOperationException("La sesión elevada no pudo validarse correctamente.");
+                    throw new InvalidOperationException(L.T("winget.elevatedAuthFailed"));
 
                 authenticated = true;
                 continue;
@@ -827,7 +837,7 @@ public static class WingetService
             }
             : new UpgradeBatchResult
             {
-                ErrorOutput = "No se pudo establecer comunicación con la sesión elevada."
+                ErrorOutput = L.T("winget.elevatedNoComm")
             };
     }
 
@@ -1197,16 +1207,22 @@ public static class WingetService
         return id.IndexOfAny([' ', '\t']) < 0;
     }
 
-    internal static string BuildWingetCommandErrorMessage(string action, int exitCode, string output, string errorOutput)
+    /// <summary>
+    /// Mensaje de fallo de un comando de winget. <paramref name="actionKey"/> es la **clave** del verbo
+    /// ("winget.actionSearch"…), no el verbo ya traducido: el mensaje se compone entero en el idioma
+    /// activo, incluida la acción que falló.
+    /// </summary>
+    internal static string BuildWingetCommandErrorMessage(string actionKey, int exitCode, string output, string errorOutput)
     {
         string combined = string.IsNullOrWhiteSpace(errorOutput)
             ? output
             : $"{errorOutput}\n{output}";
 
         string detail = ExtractLastMeaningfulLine(combined);
+        string action = L.T(actionKey);
         return string.IsNullOrWhiteSpace(detail)
-            ? $"winget no pudo {action}. Código de salida: {exitCode}."
-            : $"winget no pudo {action}. {detail} (código de salida: {exitCode}).";
+            ? L.T("winget.commandFailed", action, exitCode)
+            : L.T("winget.commandFailedDetail", action, detail, exitCode);
     }
 
     private static string ExtractLastMeaningfulLine(string text)
@@ -1249,7 +1265,7 @@ public static class WingetService
                 return Path.GetFullPath(candidate);
         }
 
-        throw new FileNotFoundException("No se encontró una instalación confiable de winget.");
+        throw new FileNotFoundException(L.T("winget.notFound"));
     }
 
     private static IEnumerable<string> EnumerateWingetCandidates()
@@ -1341,7 +1357,7 @@ public static class WingetService
 
     private static string GetCurrentProcessExecutablePath() =>
         Environment.ProcessPath
-        ?? throw new InvalidOperationException("No se pudo determinar la ruta del ejecutable actual.");
+        ?? throw new InvalidOperationException(L.T("winget.ownPathUnknown"));
 
     private sealed class ElevatedWorkerOptions
     {
