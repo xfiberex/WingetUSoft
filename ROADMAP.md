@@ -325,7 +325,7 @@ decisión explícita.
   - **Esfuerzo:** medio
   - **Depende de:** T1-04, T1-05
 
-- [ ] **[T1-07] Región activa (`LiveSetting`) en la barra de estado y el registro**
+- [x] **[T1-07] Región activa (`LiveSetting`) en la barra de estado y el registro**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 4.1.3 Mensajes de estado)
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:584` (`txtEstado`) y `:555` (`rtbLog`); equivalentes en
     `CleanupWindow.xaml`, `UninstallWindow.xaml`, `SearchWindow.xaml`, `HistoryWindow.xaml`
@@ -337,10 +337,15 @@ decisión explícita.
     `FrameworkElementAutomationPeer.FromElement(txtEstado)?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged)`.
   - **Criterio de aceptación:** con el Narrador activo, iniciar una consulta anuncia el cambio de estado sin
     que el foco esté en la barra. *(Verificación manual: no es automatizable con FlaUI.)*
+  - **Desviación al implementarlo:** el `RichTextBlock` del registro **no** se convierte en región activa.
+    Una región activa se anuncia leyendo *todo* su contenido, y el registro llega a 400 líneas: cada línea
+    nueva releería el bloque entero. En su lugar el registro recibe un **nombre accesible**
+    (`LabeledBy` → `txtLogHeader`) para que sea identificable al recorrer la ventana, y el anuncio de
+    progreso se queda donde procede, en la barra de estado.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[T1-08] Nombre accesible para los `ToggleSwitch` de Configuración**
+- [x] **[T1-08] Nombre accesible para los `ToggleSwitch` de Configuración**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 4.1.2 Nombre, función, valor)
   - **Ubicación:** `src/WingetUSoft/UI/SettingsWindow.xaml:137-148`
   - **Qué hacer:** `tsShowNotifications` y `tsMinimizeToTray` llevan su etiqueta en un `TextBlock`
@@ -353,7 +358,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T1-09] Nombre accesible en las filas y casillas de `CleanupWindow`**
+- [x] **[T1-09] Nombre accesible en las filas y casillas de `CleanupWindow`**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 4.1.2)
   - **Ubicación:** `src/WingetUSoft/UI/CleanupWindow.xaml:174-190` y `src/WingetUSoft/Core/Models/CleanupItemViewModel.cs`
   - **Qué hacer:** `MainWindow` y `SearchWindow` exponen `RowLabel`/`SelectLabel` localizados (trabajo nacido
@@ -367,7 +372,7 @@ decisión explícita.
 
 ### Seguridad y confirmaciones
 
-- [ ] **[T1-10] Listar las rutas en la confirmación de borrado**
+- [x] **[T1-10] Listar las rutas en la confirmación de borrado**
   - **Área:** Seguridad / UX
   - **Ubicación:** `src/WingetUSoft/UI/CleanupWindow.xaml.cs:146-149` y `src/WingetUSoft/Localization/Localization.cs:433`
   - **Qué hacer:** `cleanup.confirmDeleteBody` dice solo «¿Eliminar {0} elemento(s) seleccionado(s)?». Para una

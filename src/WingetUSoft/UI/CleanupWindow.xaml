@@ -169,7 +169,8 @@
                             </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Height="38" Padding="8,0">
+                                    <Grid Height="38" Padding="8,0"
+                                          AutomationProperties.Name="{Binding RowLabel}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="40" />
                                             <ColumnDefinition Width="*" />
@@ -178,6 +179,7 @@
                                             <ColumnDefinition Width="160" />
                                         </Grid.ColumnDefinitions>
                                         <CheckBox Grid.Column="0"
+                                                  AutomationProperties.Name="{Binding SelectLabel}"
                                                   IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                   Checked="OnItemCheckChanged"
                                                   Unchecked="OnItemCheckChanged"
@@ -237,6 +239,7 @@
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Auto">
                             <RichTextBlock x:Name="rtbLog"
+                                           AutomationProperties.LabeledBy="{Binding ElementName=txtLogHeader}"
                                            FontFamily="Consolas"
                                            FontSize="12"
                                            IsTextSelectionEnabled="True"

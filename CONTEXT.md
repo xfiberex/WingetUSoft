@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.3** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.3), sin firmar) |
-| **En `main`, sin publicar** | nada: la 1.8.3 cierra el primer bloque de la auditoría (T0 completo + 8 de T1) |
+| **En `main`, sin publicar** | **T1-07 a T1-10**: bloque de accesibilidad de la auditoría (región activa en la barra de estado, nombres accesibles en Configuración y Limpieza, rutas en la confirmación de borrado) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -208,6 +208,50 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T1: bloque de accesibilidad (T1-07 a T1-10, sin publicar)
+
+Segundo corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **15 de 70** tareas, **T1 al 55 %**.
+Build 0/0, **196/196 unitarios**.
+
+**1. La barra de estado no existía para un lector de pantalla (T1-07).** `grep -rn "LiveSetting" src`
+daba **cero resultados**. La barra de estado es lo único que el usuario mira durante una operación larga
+—«Actualizando 3 de 8», «Completado», «Error»— pero cambiar `Text` no notifica nada al árbol de
+automatización, y el foco nunca está encima: está en el botón que lanzó la operación. Nuevo
+`UI/LiveRegion.cs`, enganchado en las cuatro ventanas con registro.
+
+> **Por qué un callback y no un ayudante `SetStatus(...)`:** hay **62** asignaciones a `txtEstado`
+> repartidas por cuatro ventanas. `RegisterPropertyChangedCallback(TextBlock.TextProperty, …)` cubre
+> todas de una vez — y también las que se escriban en el futuro, que es donde una reescritura de 62
+> puntos se habría vuelto a desincronizar.
+>
+> **El registro NO se convierte en región activa** (desviación consciente sobre lo que pedía la tarea):
+> una región activa se anuncia leyendo *todo* su contenido, y el registro llega a 400 líneas — cada
+> línea nueva releería el bloque entero. Recibe en su lugar un nombre accesible (`LabeledBy` →
+> `txtLogHeader`) y el progreso se anuncia donde procede: en la barra de estado.
+
+**2. Interruptores que no decían de qué eran (T1-08).** `tsShowNotifications` y `tsMinimizeToTray`
+llevaban su etiqueta en un `TextBlock` aparte, sin `Header` ni nombre accesible: el lector anunciaba
+«interruptor, desactivado» y nada más. `AutomationProperties.LabeledBy` los ata a su etiqueta visible,
+que ya se localiza en tiempo de ejecución — así el nombre sale correcto en los cinco idiomas sin claves
+nuevas. Es el primer uso de `LabeledBy` en el proyecto (antes: 0 apariciones).
+
+**3. Las filas de Limpieza se anunciaban por su tipo .NET (T1-09).** Mismo bug que ya se corrigió en la
+tabla principal y en la búsqueda al conducir la app real, vivo todavía en la ventana **que borra
+carpetas de forma recursiva**: el `ListViewItem` heredó el `ToString()` del ViewModel
+(«WingetUSoft.CleanupItemViewModel») y la casilla se anunciaba solo como «casilla de verificación», sin
+ruta. `CleanupItemViewModel` gana `RowLabel` y `SelectLabel`, con dos claves nuevas × 5 idiomas.
+
+**4. La última pantalla antes de borrar no nombraba ni una ruta (T1-10).** `cleanup.confirmDeleteBody`
+decía solo «¿Eliminar 7 elemento(s) seleccionado(s)?» para una operación irreversible sobre el sistema
+de archivos. Ahora lista hasta 10 rutas con el sufijo «…y N más», reutilizando el formato y la clave
+`list.andMore` de la confirmación de «Actualizar todo».
+
+**El patrón, otra vez.** Igual que en el corte anterior, tres de los cuatro hallazgos son *una corrección
+que se aplicó a una ventana y no a las demás* — y la que quedó fuera fue, las dos veces, la de limpieza:
+la única que borra archivos.
 
 ---
 

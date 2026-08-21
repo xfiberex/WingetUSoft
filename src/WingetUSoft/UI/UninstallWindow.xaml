@@ -212,6 +212,7 @@
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Auto">
                             <RichTextBlock x:Name="rtbLog"
+                                           AutomationProperties.LabeledBy="{Binding ElementName=txtLogHeader}"
                                            FontFamily="Consolas"
                                            FontSize="12"
                                            IsTextSelectionEnabled="True"

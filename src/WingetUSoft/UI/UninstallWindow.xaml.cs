@@ -25,6 +25,10 @@ public sealed partial class UninstallWindow : Window
     public UninstallWindow(AppSettings settings)
     {
         InitializeComponent();
+
+        // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
+        // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
+        LiveRegion.TrackStatusText(txtEstado);
         _settings = settings;
 
         var hWnd = WindowNative.GetWindowHandle(this);

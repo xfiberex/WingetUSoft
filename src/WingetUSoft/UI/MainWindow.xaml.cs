@@ -139,6 +139,10 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
+        // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
+        LiveRegion.TrackStatusText(txtEstado);
+
         // Build context menu
         ctxActualizar = new MenuFlyoutItem { Text = L.T("ctx.update") };
         ctxActualizar.Click += CtxActualizar_Click;

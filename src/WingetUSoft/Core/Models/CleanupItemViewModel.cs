@@ -14,6 +14,19 @@ public sealed class CleanupItemViewModel : INotifyPropertyChanged
 
     public string TypeLabel => IsDirectory ? L.T("cleanup.typeFolder") : L.T("cleanup.typeFile");
 
+    /// <summary>
+    /// Nombre accesible de la fila entera. Sin esto, el <c>ListViewItem</c> hereda el <c>ToString()</c>
+    /// del ViewModel y un lector de pantalla anuncia "WingetUSoft.CleanupItemViewModel" (el mismo
+    /// problema que ya se corrigió en la tabla principal y en la ventana de búsqueda).
+    /// </summary>
+    public string RowLabel => L.T("cleanup.rowAccessible", Path, TypeLabel, DisplaySize, PackageName);
+
+    /// <summary>
+    /// Etiqueta accesible de la casilla. Es la que decide qué carpetas se borran de forma recursiva,
+    /// así que anunciarla solo como "casilla de verificación" deja al usuario sin saber qué marca.
+    /// </summary>
+    public string SelectLabel => L.T("cleanup.selectAccessible", Path);
+
     public bool IsSelected
     {
         get => _isSelected;

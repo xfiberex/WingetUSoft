@@ -136,7 +136,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="txtShowNotifLabel" Text="Mostrar notificaciones al completar actualizaciones"
                                        VerticalAlignment="Center"/>
-                            <ToggleSwitch x:Name="tsShowNotifications" Grid.Column="1" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="tsShowNotifications" Grid.Column="1" VerticalAlignment="Center"
+                                          AutomationProperties.LabeledBy="{Binding ElementName=txtShowNotifLabel}"/>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -145,7 +146,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="txtMinimizeTrayLabel" Text="Minimizar a la bandeja del sistema al cerrar"
                                        VerticalAlignment="Center"/>
-                            <ToggleSwitch x:Name="tsMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="tsMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"
+                                          AutomationProperties.LabeledBy="{Binding ElementName=txtMinimizeTrayLabel}"/>
                         </Grid>
                     </StackPanel>
                 </Border>

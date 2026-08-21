@@ -23,6 +23,10 @@ public sealed partial class CleanupWindow : Window
     public CleanupWindow(AppSettings settings, IEnumerable<WingetPackage> uninstalledPackages)
     {
         InitializeComponent();
+
+        // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
+        // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
+        LiveRegion.TrackStatusText(txtEstado);
         _settings = settings;
         _uninstalledPackages = [.. uninstalledPackages];
 
@@ -143,9 +147,15 @@ public sealed partial class CleanupWindow : Window
             return;
         }
 
+        // Borrado irreversible (y recursivo en las carpetas): la última pantalla antes de ejecutar
+        // tiene que nombrar las rutas concretas, no solo cuántas son. Mismo formato que la
+        // confirmación de "Actualizar todo" en MainWindow.
+        string lista = string.Join("\n  • ", toDelete.Take(10).Select(i => i.Path));
+        if (toDelete.Count > 10) lista += L.T("list.andMore", toDelete.Count - 10);
+
         bool confirmed = await ShowConfirmDialogAsync(
             L.T("cleanup.confirmDeleteTitle"),
-            L.T("cleanup.confirmDeleteBody", toDelete.Count));
+            L.T("cleanup.confirmDeleteBody", toDelete.Count, lista));
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
