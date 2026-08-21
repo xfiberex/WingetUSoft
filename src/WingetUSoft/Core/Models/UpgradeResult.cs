@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace WingetUSoft;
 
 public sealed class UpgradeResult
@@ -8,6 +10,18 @@ public sealed class UpgradeResult
     public string Output { get; init; } = "";
     public string ErrorOutput { get; init; } = "";
 
+    /// <summary>
+    /// ¿Aparece <paramref name="word"/> como palabra completa en <paramref name="text"/>?
+    /// </summary>
+    /// <remarks>
+    /// Un <c>Contains</c> a secas convertía cualquier fallo que mencionara <c>requi‑red</c>,
+    /// <c>sha‑red</c>, <c>expi‑red</c> o <c>configu‑red</c> en un «Error de red»: al usuario
+    /// se le manda a revisar su conexión por un archivo que falta. Con el límite de palabra, «red» solo casa
+    /// cuando el texto realmente dice «red».
+    /// </remarks>
+    private static bool HasWord(string text, string word) =>
+        Regex.IsMatch(text, $@"\b{Regex.Escape(word)}\b", RegexOptions.IgnoreCase);
+
     public string GetFailureReason()
     {
         if (Success) return "";
@@ -15,32 +29,32 @@ public sealed class UpgradeResult
         string combined = $"{Output}\n{ErrorOutput}";
 
         if (UserCancelled || ExitCode == 1223
-            || combined.Contains("canceled by the user", StringComparison.OrdinalIgnoreCase)
-            || combined.Contains("cancelado por el usuario", StringComparison.OrdinalIgnoreCase))
+            || HasWord(combined, "canceled by the user")
+            || HasWord(combined, "cancelado por el usuario"))
             return L.T("reason.userCancelled");
 
-        if (combined.Contains("0x8A150011") || combined.Contains("No applicable update", StringComparison.OrdinalIgnoreCase))
+        if (combined.Contains("0x8A150011") || HasWord(combined, "No applicable update"))
             return L.T("reason.noApplicableUpdate");
 
-        if (combined.Contains("0x8A150014") || combined.Contains("No applicable installer", StringComparison.OrdinalIgnoreCase))
+        if (combined.Contains("0x8A150014") || HasWord(combined, "No applicable installer"))
             return L.T("reason.noApplicableInstaller");
 
-        if (combined.Contains("hash", StringComparison.OrdinalIgnoreCase) && combined.Contains("mismatch", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "hash") && HasWord(combined, "mismatch"))
             return L.T("reason.hashMismatch");
 
-        if (combined.Contains("administrator", StringComparison.OrdinalIgnoreCase) || combined.Contains("administrador", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "administrator") || HasWord(combined, "administrador"))
             return L.T("reason.needsAdmin");
 
-        if (combined.Contains("blocked", StringComparison.OrdinalIgnoreCase) || combined.Contains("bloqueado", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "blocked") || HasWord(combined, "bloqueado"))
             return L.T("reason.blocked");
 
-        if (combined.Contains("currently running", StringComparison.OrdinalIgnoreCase) || combined.Contains("en ejecución", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "currently running") || HasWord(combined, "en ejecución"))
             return L.T("reason.currentlyRunning");
 
-        if (combined.Contains("not found", StringComparison.OrdinalIgnoreCase) || combined.Contains("no se encontró", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "not found") || HasWord(combined, "no se encontró"))
             return L.T("reason.notFound");
 
-        if (combined.Contains("network", StringComparison.OrdinalIgnoreCase) || combined.Contains("red", StringComparison.OrdinalIgnoreCase))
+        if (HasWord(combined, "network") || HasWord(combined, "red"))
             return L.T("reason.networkError");
 
         // Fallback: extract the last meaningful line

@@ -189,6 +189,45 @@ public class WingetServiceTests
         Assert.Contains("42", result.GetFailureReason());
     }
 
+    /// <summary>
+    /// La clasificación buscaba «red» con <c>Contains</c>, así que casaba dentro de <c>required</c>,
+    /// <c>shared</c>, <c>expired</c>, <c>configured</c> o <c>registered</c>. Un fallo real como
+    /// «A required file is missing» se le presentaba al usuario como «Error de red», mandándolo a revisar
+    /// su conexión a internet por un archivo que falta.
+    /// </summary>
+    [Theory]
+    [InlineData("A required file is missing")]
+    [InlineData("The shared component could not be registered")]
+    [InlineData("The installer certificate has expired")]
+    [InlineData("No sources are configured")]
+    public void GetFailureReason_WordsThatMerelyContainRed_AreNotNetworkErrors(string errorOutput)
+    {
+        var result = new UpgradeResult { Success = false, ExitCode = 1, ErrorOutput = errorOutput };
+
+        Assert.NotEqual(L.T("reason.networkError"), result.GetFailureReason());
+    }
+
+    /// <summary>Y el usuario ve el fallo de verdad, no uno inventado.</summary>
+    [Fact]
+    public void GetFailureReason_MissingRequiredFile_ShowsTheRealMessage()
+    {
+        var result = new UpgradeResult { Success = false, ExitCode = 1, ErrorOutput = "A required file is missing" };
+
+        Assert.Contains("required file", result.GetFailureReason());
+    }
+
+    /// <summary>El contrapunto: un fallo de red de verdad sí se sigue clasificando como tal.</summary>
+    [Theory]
+    [InlineData("network connection failed")]
+    [InlineData("Error de red al descargar el instalador")]
+    [InlineData("Se perdió la conexión de red.")]
+    public void GetFailureReason_ActualNetworkFailures_AreStillClassified(string errorOutput)
+    {
+        var result = new UpgradeResult { Success = false, ExitCode = 1, ErrorOutput = errorOutput };
+
+        Assert.Equal(L.T("reason.networkError"), result.GetFailureReason());
+    }
+
     // ── ParseProgressLine ───────────────────────────────────────────────────
 
     [Fact]

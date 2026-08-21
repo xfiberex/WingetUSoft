@@ -95,6 +95,9 @@ public static class L
         ["menu.whatsnew"]     = ["Novedades...", "What's new...", "Novidades...", "Nouveautés...", "Novità..."],
 
         ["btn.close"]              = ["Cerrar", "Close", "Fechar", "Fermer", "Chiudi"],
+        ["btn.accept"]             = ["Aceptar", "OK", "OK", "OK", "OK"],
+        ["btn.yes"]                = ["Sí", "Yes", "Sim", "Oui", "Sì"],
+        ["btn.no"]                 = ["No", "No", "Não", "Non", "No"],
         ["whatsnew.title"]         = ["Novedades de WingetUSoft", "What's new in WingetUSoft", "Novidades do WingetUSoft", "Nouveautés de WingetUSoft", "Novità di WingetUSoft"],
         ["whatsnew.version"]       = ["Versión {0}", "Version {0}", "Versão {0}", "Version {0}", "Versione {0}"],
         ["whatsnew.viewOnGitHub"]  = ["Ver en GitHub", "View on GitHub", "Ver no GitHub", "Voir sur GitHub", "Vedi su GitHub"],

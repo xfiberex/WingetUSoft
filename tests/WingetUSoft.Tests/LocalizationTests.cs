@@ -59,4 +59,36 @@ public sealed class LocalizationTests
     [InlineData(null, AppLang.Es)]
     public void FromCulture_MapsLanguagePart(string? culture, AppLang expected)
         => Assert.Equal(expected, L.FromCulture(culture));
+
+    /// <summary>
+    /// Los botones de los diálogos son las cadenas que más se ven en toda la aplicación: los usan
+    /// <c>MainWindow</c>, <c>SearchWindow</c>, <c>UninstallWindow</c> y <c>CleanupWindow</c> a través de
+    /// <c>WindowDialogHelper</c>. Hasta la auditoría del 2026-08-20 estaban cableados en español, así que
+    /// un usuario con la interfaz en francés confirmaba un borrado pulsando «Sí» — y «No» ni siquiera es
+    /// una palabra francesa.
+    /// </summary>
+    /// <remarks>
+    /// Se comprueba el diccionario directamente en vez de mover <see cref="L.Current"/> con
+    /// <see cref="L.Set"/>: el idioma es estado global y estático, y xUnit ejecuta las clases de test en
+    /// paralelo, así que cambiarlo aquí volvería intermitentes los tests de otras clases.
+    /// </remarks>
+    [Theory]
+    [InlineData(AppLang.Es, "btn.accept", "Aceptar")]
+    [InlineData(AppLang.En, "btn.accept", "OK")]
+    [InlineData(AppLang.Fr, "btn.accept", "OK")]
+    [InlineData(AppLang.Es, "btn.yes", "Sí")]
+    [InlineData(AppLang.En, "btn.yes", "Yes")]
+    [InlineData(AppLang.Pt, "btn.yes", "Sim")]
+    [InlineData(AppLang.Fr, "btn.yes", "Oui")]
+    [InlineData(AppLang.It, "btn.yes", "Sì")]
+    [InlineData(AppLang.Es, "btn.no", "No")]
+    [InlineData(AppLang.En, "btn.no", "No")]
+    [InlineData(AppLang.Pt, "btn.no", "Não")]
+    [InlineData(AppLang.Fr, "btn.no", "Non")]
+    [InlineData(AppLang.It, "btn.no", "No")]
+    public void DialogButtons_AreTranslatedInEveryLanguage(AppLang lang, string key, string expected)
+    {
+        Assert.True(L.Map.ContainsKey(key), $"Falta la clave '{key}' en el diccionario.");
+        Assert.Equal(expected, L.Map[key][(int)lang]);
+    }
 }

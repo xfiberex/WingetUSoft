@@ -250,7 +250,7 @@ decisión explícita.
 
 ### Corrección de errores
 
-- [ ] **[T1-01] Coincidencia por palabra completa en la clasificación de fallos**
+- [x] **[T1-01] Coincidencia por palabra completa en la clasificación de fallos**
   - **Área:** Código
   - **Ubicación:** `src/WingetUSoft/Core/Models/UpgradeResult.cs:43`
   - **Qué hacer:** `combined.Contains("red", …)` casa dentro de `requi-red`, `sha-red`, `expi-red`,
@@ -409,7 +409,7 @@ decisión explícita.
 
 ### Internacionalización
 
-- [ ] **[T1-03] Localizar los botones de `WindowDialogHelper`**
+- [x] **[T1-03] Localizar los botones de `WindowDialogHelper`**
   - **Área:** i18n
   - **Ubicación:** `src/WingetUSoft/UI/WindowDialogHelper.cs:14,24-25`
   - **Qué hacer:** los textos «Aceptar», «Sí» y «No» están cableados en español. Este helper lo usan
@@ -1023,25 +1023,27 @@ decisión explícita.
 | Tier | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | T0 — Crítico | 2 | **2** | 0 | **100 %** |
-| T1 — Alta | 22 | 6 | 16 | 27 % |
+| T1 — Alta | 22 | 8 | 14 | 36 % |
 | T2 — Sustancial | 23 | 1 | 22 | 4 % |
 | T3 — Pulido | 17 | 0 | 17 | 0 % |
 | T4 — Futuro | 6 | 0 | 6 | 0 % |
-| **Total** | **70** | **9** | **61** | **13 %** |
+| **Total** | **70** | **11** | **59** | **16 %** |
 
 ### Registro de tareas completadas
 
-| Fecha | ID | Tarea | Verificado con | Versión |
-|---|---|---|---|---|
-| 2026-08-20 | T0-01 | Contención de rutas en `CleanupScanner` | 173/173 unitarios · 5 tests nuevos fallan al revertir la corrección | *(sin publicar)* |
-| 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | *(sin publicar)* |
-| 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | *(sin publicar)* |
-| 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | *(sin publicar)* |
-| 2026-08-20 | T2-06 | `LogLineKind` unificado en una sola declaración | build limpio; las 2 copias privadas eliminadas | *(sin publicar)* |
-| 2026-08-20 | T1-04 | `CleanupWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | *(sin publicar)* |
-| 2026-08-20 | T1-05 | `UninstallWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | *(sin publicar)* |
-| 2026-08-20 | T1-06 | Guard test anti-RGB cableado en registros | `EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette` | *(sin publicar)* |
-| 2026-08-20 | T1-21 | Afirmación WCAG del README ya cierta y acotada | `README.md:102-105` nombra las 4 ventanas | *(sin publicar)* |
+| Fecha | ID | Tarea | Verificado con | Commit | Versión |
+|---|---|---|---|---|---|
+| 2026-08-20 | T0-01 | Contención de rutas en `CleanupScanner` | 173/173 unitarios · 5 tests nuevos fallan al revertir la corrección | `7c7ef5c` | *(sin publicar)* |
+| 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | `7c7ef5c` | *(sin publicar)* |
+| 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | `7c7ef5c` | *(sin publicar)* |
+| 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | `7c7ef5c` | *(sin publicar)* |
+| 2026-08-20 | T2-06 | `LogLineKind` unificado en una sola declaración | build limpio; las 2 copias privadas eliminadas | `191ec8a` | *(sin publicar)* |
+| 2026-08-20 | T1-04 | `CleanupWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | *(sin publicar)* |
+| 2026-08-20 | T1-05 | `UninstallWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | `191ec8a` | *(sin publicar)* |
+| 2026-08-20 | T1-06 | Guard test anti-RGB cableado en registros | `EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette` | `191ec8a` | *(sin publicar)* |
+| 2026-08-20 | T1-21 | Afirmación WCAG del README ya cierta y acotada | `README.md:102-105` nombra las 4 ventanas | `191ec8a` | *(sin publicar)* |
+| 2026-08-21 | T1-03 | Botones de diálogo localizados (`btn.accept/yes/no`) | 196/196 · el guard test falla al recablear los literales | *(sin commitear)* | *(sin publicar)* |
+| 2026-08-21 | T1-01 | Coincidencia por palabra completa en la clasificación de fallos | 196/196 · 5 tests nuevos fallan al volver a `Contains` | *(sin commitear)* | *(sin publicar)* |
 
 ### Línea base de la auditoría (2026-08-20)
 
@@ -1049,11 +1051,11 @@ Para poder comparar al cerrar tareas:
 
 | Métrica | Valor | Cómo se obtuvo |
 |---|---|---|
-| Tests unitarios | 162 / 162 al auditar · **174 / 174 tras T0 + accesibilidad** | `dotnet test tests/WingetUSoft.Tests/…` |
+| Tests unitarios | 162 / 162 al auditar · **196 / 196 tras T0 + accesibilidad + i18n** | `dotnet test tests/WingetUSoft.Tests/…` |
 | Tests de UI | 16 métodos (13 `[Fact]` + 3 `[Theory]`) | conteo estático — **no ejecutados** en la auditoría |
 | Dependencias vulnerables | 0 | `dotnet list package --vulnerable --include-transitive` |
 | Paquetes con versión superior | 6 | `dotnet list package --outdated` |
-| Claves de localización | 363 × 5 idiomas | conteo sobre `Localization.cs` |
+| Claves de localización | 363 × 5 idiomas al auditar · **366 tras T1-03** | conteo sobre `Localization.cs` |
 | LOC C# (src + tests) | 10 360 | `wc -l` excluyendo `bin`/`obj`/`publish` |
 | Tamaño del `publish` | 142 MB | `du -sh src/WingetUSoft/publish` |
 | Tamaño del instalador | 35,8 MB | `WingetUSoft-Setup-1.8.2.exe` |

@@ -56,6 +56,45 @@ public sealed class LocalizationUsageTests
     }
 
     /// <summary>
+    /// Ningún texto de botón de <c>ContentDialog</c> puede ser un literal en el código.
+    /// </summary>
+    /// <remarks>
+    /// El test de arriba comprueba que las claves usadas existan; este comprueba lo contrario, que es como
+    /// se coló el bug real: <c>WindowDialogHelper</c> no usaba ninguna clave para «Aceptar», «Sí» y «No»
+    /// — los tenía cableados en español. No falta ninguna clave, así que nada lo delataba, y sin embargo
+    /// esos tres botones aparecían en español en los cinco idiomas y en prácticamente todos los diálogos
+    /// de la aplicación.
+    /// </remarks>
+    [Fact]
+    public void NoDialogButtonText_IsAHardcodedLiteral()
+    {
+        string uiDirectory = Path.Combine(FindSourceRoot(), "WingetUSoft", "UI");
+        Assert.True(Directory.Exists(uiDirectory), "No existe el directorio de UI: " + uiDirectory);
+
+        // Asignaciones del tipo  CloseButtonText = "Aceptar"  (con L.T(...) el siguiente carácter es 'L').
+        var literalPattern = new Regex(
+            @"(Primary|Secondary|Close)ButtonText\s*=\s*""", RegexOptions.Compiled);
+
+        var offenders = new List<string>();
+        int scanned = 0;
+
+        foreach (string file in Directory.EnumerateFiles(uiDirectory, "*.cs", SearchOption.AllDirectories))
+        {
+            string code = File.ReadAllText(file);
+            if (!code.Contains("ButtonText", StringComparison.Ordinal)) continue;
+
+            scanned++;
+            foreach (Match m in literalPattern.Matches(code))
+                offenders.Add($"{Path.GetFileName(file)}: {m.Value.Trim()}…");
+        }
+
+        Assert.True(scanned >= 4, $"El escaneo solo encontró {scanned} archivos con botones de diálogo; se esperaban al menos 4.");
+        Assert.True(offenders.Count == 0,
+            "Los textos de los botones deben salir de L.T(), no de un literal (se verían en español en los "
+                + "cinco idiomas):\n  " + string.Join("\n  ", offenders));
+    }
+
+    /// <summary>
     /// Sube desde el directorio del test hasta la raíz del repo (la que tiene <c>WingetUSoft.slnx</c>) y
     /// devuelve <c>src</c>. Falla con un mensaje claro si no la encuentra: un test que "pasa" porque no
     /// pudo leer el código no probaría nada.
