@@ -244,25 +244,29 @@ public sealed partial class CleanupWindow : Window
 
     // ---- Logging ------------------------------------------------------------
 
-    private enum LogLineKind { Normal, Success, Error, Warning }
-
     private void ClearLog()
     {
         rtbLog.Blocks.Clear();
         _logLineCount = 0;
     }
 
+    /// <summary>
+    /// El tema se lee del propio control, no de <c>Application.Current</c>: el tema se fuerza por
+    /// elemento, así que con "Claro" sobre un Windows oscuro la aplicación seguiría diciendo "oscuro" y
+    /// el registro saldría con los colores contrarios (mismo motivo que en MainWindow, Tier C #4).
+    /// </summary>
+    private bool IsDarkTheme() => rtbLog.ActualTheme == ElementTheme.Dark;
+
     private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        SolidColorBrush brush = kind switch
-        {
-            LogLineKind.Success => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 56,  122, 77)),
-            LogLineKind.Error   => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 186, 70,  54)),
-            LogLineKind.Warning => new SolidColorBrush(Windows.UI.Color.FromArgb(255, 177, 118, 38)),
-            _                   => (SolidColorBrush)Application.Current.Resources["TextFillColorPrimaryBrush"]
-        };
+        // Los colores salen de LogPalette, no de RGB cableados aquí. Los que había (#387A4D verde,
+        // #BA4636 rojo) son exactamente los que el Tier C #4 retiró de MainWindow por ilegibles sobre
+        // la tarjeta oscura: medían 2,74:1 y 2,71:1 contra el 4,5:1 que exige WCAG AA. La corrección se
+        // aplicó entonces solo a MainWindow y esta ventana se quedó atrás — justo la que informa de qué
+        // archivos se borraron y cuáles fallaron. LogPaletteTests mide el contraste de cada tono.
+        var brush = new SolidColorBrush(LogPalette.For(kind, IsDarkTheme()));
 
         var paragraph = new Paragraph();
         paragraph.Inlines.Add(new Run { Text = text, Foreground = brush });

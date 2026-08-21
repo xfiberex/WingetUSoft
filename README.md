@@ -100,7 +100,9 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 - **Filas con nombre accesible** — un lector de pantalla anuncia "*programa*, versión instalada X,
   disponible Y", no el nombre interno del objeto.
 - **Contraste verificado** — los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema
-  claro y oscuro, comprobado por tests.
+  claro y oscuro, comprobado por tests. La verificación cubre **las cuatro ventanas con registro**
+  (principal, buscar e instalar, desinstalar y limpieza): además de medir el contraste de cada tono,
+  un test comprueba que ninguna ventana cablee sus propios colores por su cuenta.
 
 > 📋 Consulta la **[hoja de ruta](ROADMAP.md)** para ver las características implementadas y las próximas
 > (organizadas por *tiers*).

@@ -57,6 +57,76 @@ public sealed class LogPaletteTests
     public void SuccessAndError_AreDistinguishable(bool darkTheme) =>
         Assert.NotEqual(LogPalette.For(LogLineKind.Success, darkTheme), LogPalette.For(LogLineKind.Error, darkTheme));
 
+    /// <summary>
+    /// Los tests de arriba miden <see cref="LogPalette"/>… pero solo protegen a quien la use.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Hasta la auditoría del 2026-08-20 esa distinción no era teórica: <c>CleanupWindow</c> y
+    /// <c>UninstallWindow</c> **no** usaban <c>LogPalette</c>. Conservaban los RGB cableados que el
+    /// Tier C #4 había retirado de <c>MainWindow</c> (#387A4D verde, #BA4636 rojo), que sobre la
+    /// tarjeta oscura miden 2,74:1 y 2,71:1 — por debajo del 4,5:1 de WCAG AA. Todos los tests de
+    /// contraste pasaban en verde mientras dos de las cuatro ventanas incumplían, y el README llegó a
+    /// afirmar que el contraste estaba «comprobado por tests».
+    /// </para>
+    /// <para>
+    /// Por eso este test no mide colores: lee el código fuente y comprueba **quién** decide el color.
+    /// El alcance son los archivos de <c>UI/</c> que tienen registro (<c>rtbLog</c>);
+    /// <c>TitleBarHelper</c> queda fuera a propósito, porque sus literales son para la API de barra de
+    /// título de Win32, que no tiene nada que ver con la paleta del registro.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette()
+    {
+        string uiDirectory = Path.Combine(FindRepositoryRoot(), "src", "WingetUSoft", "UI");
+        Assert.True(Directory.Exists(uiDirectory), "No existe el directorio de UI: " + uiDirectory);
+
+        var offenders = new List<string>();
+        int scanned = 0;
+
+        foreach (string file in Directory.EnumerateFiles(uiDirectory, "*.cs", SearchOption.AllDirectories))
+        {
+            string code = File.ReadAllText(file);
+            if (!code.Contains("rtbLog", StringComparison.Ordinal))
+                continue;
+
+            scanned++;
+            string name = Path.GetFileName(file);
+
+            if (code.Contains("Color.FromArgb", StringComparison.Ordinal))
+                offenders.Add($"{name}: cablea un color con Color.FromArgb en vez de usar LogPalette");
+
+            // Un recurso de nivel de aplicación NO sigue el RequestedTheme forzado por elemento, así que
+            // con "Claro" sobre un Windows oscuro devolvía el color del tema contrario.
+            if (code.Contains("Application.Current.Resources", StringComparison.Ordinal))
+                offenders.Add($"{name}: lee un pincel de Application.Current.Resources (ignora el tema por elemento)");
+
+            if (!code.Contains("LogPalette.", StringComparison.Ordinal))
+                offenders.Add($"{name}: tiene registro pero no usa LogPalette");
+        }
+
+        Assert.True(scanned >= 4, $"El escaneo solo encontró {scanned} ventanas con registro; se esperaban al menos 4.");
+        Assert.True(offenders.Count == 0,
+            "Los colores del registro deben salir de LogPalette (es lo único que los tests de contraste "
+                + "cubren):\n  " + string.Join("\n  ", offenders));
+    }
+
+    /// <summary>
+    /// Sube hasta la raíz del repositorio (la que tiene <c>WingetUSoft.slnx</c>). Falla con un mensaje
+    /// claro si no la encuentra: un test que "pasa" porque no pudo leer el código no probaría nada.
+    /// </summary>
+    private static string FindRepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "WingetUSoft.slnx")))
+            dir = dir.Parent;
+
+        Assert.True(dir is not null,
+            "No se encontró la raíz del repositorio (WingetUSoft.slnx) desde " + AppContext.BaseDirectory);
+        return dir!.FullName;
+    }
+
     [Fact]
     public void ContrastRatio_MatchesTheWcagReferenceValues()
     {

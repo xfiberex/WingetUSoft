@@ -291,7 +291,7 @@ decisión explícita.
 
 ### Accesibilidad
 
-- [ ] **[T1-04] `CleanupWindow` debe usar `LogPalette` en vez de RGB cableado**
+- [x] **[T1-04] `CleanupWindow` debe usar `LogPalette` en vez de RGB cableado**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 1.4.3 Contraste mínimo)
   - **Ubicación:** `src/WingetUSoft/UI/CleanupWindow.xaml.cs:255-279`
   - **Qué hacer:** los colores `#387A4D` (éxito) y `#BA4636` (error) son **exactamente** los que
@@ -305,7 +305,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** T2-06
 
-- [ ] **[T1-05] `UninstallWindow` debe usar `LogPalette` en vez de RGB cableado**
+- [x] **[T1-05] `UninstallWindow` debe usar `LogPalette` en vez de RGB cableado**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 1.4.3)
   - **Ubicación:** `src/WingetUSoft/UI/UninstallWindow.xaml.cs:257-281`
   - **Qué hacer:** mismo problema y misma corrección que T1-04, con los mismos tres colores.
@@ -313,7 +313,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** T2-06
 
-- [ ] **[T1-06] Test estructural que impida volver a cablear colores de registro**
+- [x] **[T1-06] Test estructural que impida volver a cablear colores de registro**
   - **Área:** QA / Accesibilidad
   - **Ubicación:** `tests/WingetUSoft.Tests/LogPaletteTests.cs`
   - **Qué hacer:** `LogPaletteTests` mide el contraste de `LogPalette` y rompe el build si baja de 4,5:1 —
@@ -505,7 +505,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** T1-19
 
-- [ ] **[T1-21] Corregir la afirmación falsa del README sobre contraste WCAG**
+- [x] **[T1-21] Corregir la afirmación falsa del README sobre contraste WCAG**
   - **Área:** Documentación
   - **Ubicación:** `README.md:102-103`
   - **Qué hacer:** «los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema claro y oscuro,
@@ -594,7 +594,7 @@ decisión explícita.
 
 ### Refactorización estructural
 
-- [ ] **[T2-06] Unificar `LogLineKind` en una sola declaración**
+- [x] **[T2-06] Unificar `LogLineKind` en una sola declaración**
   - **Área:** Arquitectura
   - **Ubicación:** `src/WingetUSoft/Core/LogPalette.cs:6` (internal, 5 valores),
     `src/WingetUSoft/UI/CleanupWindow.xaml.cs:247` (private, 4), `src/WingetUSoft/UI/UninstallWindow.xaml.cs:249` (private, 4)
@@ -1023,11 +1023,11 @@ decisión explícita.
 | Tier | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | T0 — Crítico | 2 | **2** | 0 | **100 %** |
-| T1 — Alta | 22 | 2 | 20 | 9 % |
-| T2 — Sustancial | 23 | 0 | 23 | 0 % |
+| T1 — Alta | 22 | 6 | 16 | 27 % |
+| T2 — Sustancial | 23 | 1 | 22 | 4 % |
 | T3 — Pulido | 17 | 0 | 17 | 0 % |
 | T4 — Futuro | 6 | 0 | 6 | 0 % |
-| **Total** | **70** | **4** | **66** | **6 %** |
+| **Total** | **70** | **9** | **61** | **13 %** |
 
 ### Registro de tareas completadas
 
@@ -1037,6 +1037,11 @@ decisión explícita.
 | 2026-08-20 | T0-02 | Escritura atómica de `settings.json` | 173/173 unitarios · `File.Replace` + limpieza de `.tmp` | *(sin publicar)* |
 | 2026-08-20 | T1-13 | Tests de contención de rutas | 8 casos nuevos en `CleanupScannerTests` | *(sin publicar)* |
 | 2026-08-20 | T1-14 | Tests de atomicidad de `Save()` | 3 casos nuevos en `AppSettingsTests` | *(sin publicar)* |
+| 2026-08-20 | T2-06 | `LogLineKind` unificado en una sola declaración | build limpio; las 2 copias privadas eliminadas | *(sin publicar)* |
+| 2026-08-20 | T1-04 | `CleanupWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | *(sin publicar)* |
+| 2026-08-20 | T1-05 | `UninstallWindow` usa `LogPalette` | 174/174 · el guard test falla al revertir | *(sin publicar)* |
+| 2026-08-20 | T1-06 | Guard test anti-RGB cableado en registros | `EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette` | *(sin publicar)* |
+| 2026-08-20 | T1-21 | Afirmación WCAG del README ya cierta y acotada | `README.md:102-105` nombra las 4 ventanas | *(sin publicar)* |
 
 ### Línea base de la auditoría (2026-08-20)
 
@@ -1044,7 +1049,7 @@ Para poder comparar al cerrar tareas:
 
 | Métrica | Valor | Cómo se obtuvo |
 |---|---|---|
-| Tests unitarios | 162 / 162 correctas (260 ms) · **173 / 173 tras T0** | `dotnet test tests/WingetUSoft.Tests/…` |
+| Tests unitarios | 162 / 162 al auditar · **174 / 174 tras T0 + accesibilidad** | `dotnet test tests/WingetUSoft.Tests/…` |
 | Tests de UI | 16 métodos (13 `[Fact]` + 3 `[Theory]`) | conteo estático — **no ejecutados** en la auditoría |
 | Dependencias vulnerables | 0 | `dotnet list package --vulnerable --include-transitive` |
 | Paquetes con versión superior | 6 | `dotnet list package --outdated` |
@@ -1052,7 +1057,7 @@ Para poder comparar al cerrar tareas:
 | LOC C# (src + tests) | 10 360 | `wc -l` excluyendo `bin`/`obj`/`publish` |
 | Tamaño del `publish` | 142 MB | `du -sh src/WingetUSoft/publish` |
 | Tamaño del instalador | 35,8 MB | `WingetUSoft-Setup-1.8.2.exe` |
-| Contraste del registro (tema oscuro) | 2,74:1 éxito · 2,71:1 error en 2 de 4 ventanas | fórmula WCAG 2.x sobre los RGB cableados |
+| Contraste del registro (tema oscuro) | ~~2,74:1 éxito · 2,71:1 error en 2 de 4 ventanas~~ → **≥ 4,5:1 en las 4** (T1-04/05) | fórmula WCAG 2.x; ahora medido por `LogPaletteTests` |
 | `AutomationProperties.LiveSetting` | 0 usos | `grep -rn` sobre `src/` |
 | `AutomationProperties.LabeledBy` | 0 usos | `grep -rn` sobre `src/` |
 | TODO / FIXME / HACK en el código | 0 | `grep -rn` sobre `src/`, `tests/`, `tools/` |
