@@ -93,7 +93,7 @@ public sealed partial class HistoryWindow : Window
     {
         // Sin historial todavia: estado vacio real (icono + mensaje centrado), nunca una fila falsa.
         // Hasta v1.8.0 el "sin datos" era una fila con Date=MinValue y Success=false, que se leia como
-        // una actualizacion "Fallido" del 01/01/0001.
+        // una actualización "Fallido" del 01/01/0001.
         if (totalCount == 0)
         {
             txtSummary.Text = L.T("history.noEntriesYet");

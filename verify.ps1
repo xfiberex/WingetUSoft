@@ -7,9 +7,10 @@
     'dotnet test' a mano ni de esperar al siguiente release:
 
       1. Compilación de la solución con las advertencias tratadas como error.
-      2. Pruebas unitarias.
-      3. Dependencias vulnerables (aborta) y desactualizadas (solo informa).
-      4. Con -Full: además los UI tests de FlaUI, que conducen la app real.
+      2. Estilo: 'dotnet format style/analyzers' contra el .editorconfig.
+      3. Pruebas unitarias.
+      4. Dependencias vulnerables (aborta) y desactualizadas (solo informa).
+      5. Con -Full: además los UI tests de FlaUI, que conducen la app real.
 
     POR QUÉ NO ES CI. Decisión cerrada del proyecto (ver ROADMAP.md, T2-12): nada de GitHub
     Actions ni runners hospedados. La verificación baja al equipo de desarrollo, y con ella
@@ -19,8 +20,10 @@
     Lo usan el hook .githooks/pre-push (variante rápida) y release.ps1 (que lo llama en vez de
     repetir sus pasos).
 
-    NOTA: 'dotnet format --verify-no-changes' se añadirá aquí cuando se cierre T3-09, que es
-    quien introduce el .editorconfig contra el que formatear.
+    NOTA sobre el formateo: se comprueban las categorías 'style' y 'analyzers', NO 'whitespace'.
+    El repositorio alinea deliberadamente en columnas (constantes, campos de structs interop, el
+    diccionario de traducciones) y 'dotnet format whitespace' quiere colapsar esa alineación: son
+    290 avisos en 14 archivos que no arreglan nada y destruyen legibilidad. Ver ROADMAP.md, T3-09.
 
 .PARAMETER Full
     Añade los UI tests de FlaUI. Necesitan una sesión de escritorio interactiva y desatendida:
@@ -32,6 +35,9 @@
 .PARAMETER SkipOutdated
     Omite el listado informativo de paquetes desactualizados (es el paso más lento: consulta NuGet).
 
+.PARAMETER SkipFormat
+    Omite la comprobación de estilo.
+
 .EXAMPLE
     .\verify.ps1
     .\verify.ps1 -Full
@@ -40,7 +46,8 @@
 param(
     [switch]$Full,
     [switch]$SkipTests,
-    [switch]$SkipOutdated
+    [switch]$SkipOutdated,
+    [switch]$SkipFormat
 )
 
 $ErrorActionPreference = "Stop"
@@ -76,7 +83,24 @@ Invoke-Native { & dotnet build $solution --nologo -warnaserror }
 if ($LASTEXITCODE -ne 0) { Fail "La compilación falló (o emitió advertencias)." }
 Ok "Compilación limpia."
 
-# ── 2. Pruebas unitarias ───────────────────────────────────────────────────
+# ── 2. Estilo ──────────────────────────────────────────────────────────────
+# Solo comprueba; nunca reescribe. Quien quiera que le arreglen el estilo lanza a mano
+# 'dotnet format style' sin --verify-no-changes.
+if ($SkipFormat) {
+    Warn "Comprobación de estilo omitida (-SkipFormat)."
+} else {
+    foreach ($category in @("style", "analyzers")) {
+        Info "Comprobando el estilo ($category) contra el .editorconfig..."
+        $formatOutput = Invoke-Native { & dotnet format $category $solution --verify-no-changes --no-restore --verbosity quiet 2>&1 }
+        if ($LASTEXITCODE -ne 0) {
+            $formatOutput | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
+            Fail "El código no cumple el .editorconfig ($category). Ejecuta 'dotnet format $category' para corregirlo."
+        }
+    }
+    Ok "Estilo conforme al .editorconfig."
+}
+
+# ── 3. Pruebas unitarias ───────────────────────────────────────────────────
 if ($SkipTests) {
     Warn "Pruebas omitidas (-SkipTests)."
 } else {
@@ -86,7 +110,7 @@ if ($SkipTests) {
     Ok "Pruebas unitarias correctas."
 }
 
-# ── 3. Dependencias ────────────────────────────────────────────────────────
+# ── 4. Dependencias ────────────────────────────────────────────────────────
 # 'dotnet list package --vulnerable' devuelve 0 aunque encuentre algo: hay que mirar la salida.
 # Las líneas de paquete afectado empiezan por '>' tras la sangría.
 Info "Buscando dependencias vulnerables (incluidas las transitivas)..."
@@ -118,7 +142,7 @@ if ($SkipOutdated) {
     }
 }
 
-# ── 4. UI tests ────────────────────────────────────────────────────────────
+# ── 5. UI tests ────────────────────────────────────────────────────────────
 if ($Full) {
     if (-not (Test-Path $uiTestProject)) { Fail "No se encontró el proyecto de UI tests: $uiTestProject" }
     Info "Ejecutando UI tests (abren la app real: no toques el ratón ni el teclado)..."

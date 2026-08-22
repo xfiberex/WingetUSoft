@@ -180,7 +180,7 @@ public sealed partial class MainWindow : Window
             onThemeChanged: RecolorLog);
 
         // El mismo icono, dentro de la barra de titulo personalizada: al extender el contenido
-        // sobre la barra Windows deja de dibujar el icono del sistema, asi que hay que pintarlo a
+        // sobre la barra Windows deja de dibujar el icono del sistema, así que hay que pintarlo a
         // mano o la ventana queda con titulo pero sin marca.
         TitleBarIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(WindowChrome.IconPath));
 
@@ -247,7 +247,7 @@ public sealed partial class MainWindow : Window
     private void AddKeyboardAccelerators()
     {
         // Por defecto WinUI muestra un tooltip con la tecla del atajo (ese "F5" flotante al detener el
-        // puntero). Los atajos ya se listan en la barra superior, asi que el globito solo estorba: lo
+        // puntero). Los atajos ya se listan en la barra superior, así que el globito solo estorba: lo
         // ocultamos para todos los aceleradores enganchados a Content.
         Content.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
 

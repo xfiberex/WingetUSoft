@@ -1,9 +1,9 @@
 namespace WingetUSoft;
 
 /// <summary>
-/// Scans common Windows directories for residual files and folders left behind
-/// after a package uninstall. Only checks targeted candidate paths derived from
-/// the package name and ID — never recursively scans system folders.
+/// Busca los restos que un desinstalador deja atrás en los directorios habituales de Windows.
+/// Solo mira rutas candidatas concretas, derivadas del nombre y el Id del paquete: nunca recorre
+/// carpetas del sistema en busca de coincidencias.
 /// </summary>
 public static class CleanupScanner
 {
@@ -45,7 +45,7 @@ public static class CleanupScanner
         return results;
     }
 
-    // ---- Candidate path generation ------------------------------------------
+    // ---- Generación de rutas candidatas --------------------------------------
 
     private static IEnumerable<string> GetCandidatePaths(WingetPackage package)
     {
@@ -59,7 +59,7 @@ public static class CleanupScanner
         var baseDirs = new[] { roaming, local, localPrograms, progData, pf, pf86 };
         var terms    = GetSearchTerms(package);
 
-        // Single-level: {baseDir}\{term}
+        // Un nivel: {baseDir}\{término}
         foreach (string baseDir in baseDirs)
         {
             if (string.IsNullOrEmpty(baseDir)) continue;
@@ -70,7 +70,7 @@ public static class CleanupScanner
             }
         }
 
-        // Two-level: {baseDir}\{publisher}\{appName}
+        // Dos niveles: {baseDir}\{editor}\{aplicación}
         string[] parts = package.Id.Split('.', 2);
         if (parts.Length == 2
             && parts[0].Length >= 3
@@ -85,7 +85,7 @@ public static class CleanupScanner
         }
     }
 
-    // ---- Path safety --------------------------------------------------------
+    // ---- Seguridad de rutas --------------------------------------------------
 
     /// <summary>
     /// Caracteres que no pueden formar parte del nombre de una carpeta en Windows. Incluye los dos

@@ -983,23 +983,46 @@ decisión explícita.
     versionado si alguien invoca `ISCC` sin `/DMyAppVersion`.
   - **Criterio de aceptación:** ninguna reserva de versión anterior a la actual. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-04] Sustituir los escapes `í` de un comentario XML por caracteres reales**
+- [x] **[T3-04] Sustituir los escapes `í` de un comentario XML por caracteres reales**
   - **Área:** Redacción · **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:1675-1679`
   - **Qué hacer:** los escapes no se interpretan dentro de un comentario: se leen literalmente en el editor y
     en la documentación generada («línea», «índice», «podría»).
+  - **Verificado (2026-08-22): ya no aplica.** El comentario con los escapes era el del `AppendLog` de
+    `MainWindow`, y T2-05 lo reescribió entero al mover el registro a `UI/ActivityLog`. Comprobado que no
+    queda ni una entidad XML (`&#...;`) en ningún `.cs` de `src/` ni de `tests/`.
   - **Criterio de aceptación:** el comentario se lee correctamente en el editor. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-05] Restaurar los acentos en los comentarios sin tildar**
+- [x] **[T3-05] Restaurar los acentos en los comentarios sin tildar**
   - **Área:** Redacción · **Ubicación:** `src/WingetUSoft/Services/WingetShowLabels.cs`, `src/WingetUSoft/installer/installer.iss`, partes de `MainWindow.xaml.cs`
   - **Qué hacer:** escriben «desinstalacion», «asi», «proposito», «version» mientras el resto del proyecto
     acentúa correctamente. Verificar antes que el archivo se guarda con la codificación adecuada (el propio
     `CONTEXT.md` §4 documenta el problema de BOM en PowerShell 5.1).
+  - **Resultado:** acentos restaurados en `WingetShowLabels.cs` (cabecera y los 33 comentarios de idioma),
+    en 13 comentarios de `installer.iss` y en cuatro sueltos de `WindowSizing`, `HistoryWindow` y
+    `MainWindow`. **Solo comentarios**: ninguna cadena que llegue a la UI o al instalador.
+  - **Detalle que evitó romper la alineación:** los comentarios de idioma de `WingetShowLabels` están
+    alineados en columna, y todos los reemplazos conservan la misma longitud en caracteres
+    (ingles→inglés, aleman→alemán, espanol→español, frances→francés, japones→japonés,
+    portugues→portugués), así que la columna sobrevive intacta.
+  - **Sobre la codificación, que era el riesgo señalado:** `installer.iss` ya llevaba acentos UTF-8 **sin
+    BOM** (`MyAppPublisher = "Ricky Angel Jiménez Bueno"`) y sigue igual. No se cambió porque se comprobó
+    contra el artefacto real: el `CompanyName` del instalador de la v1.8.6 lee «Jiménez» correctamente.
+  - **Verificado (2026-08-22):** el `.iss` compila —build de prueba con `-Version 0.0.0`, instalador
+    generado y su `CompanyName` con la tilde intacta; el artefacto de prueba se borró después—.
   - **Criterio de aceptación:** ortografía uniforme; el `.iss` sigue compilando y los `.ps1` ejecutándose. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-06] Fijar una convención de idioma para los comentarios**
+- [x] **[T3-06] Fijar una convención de idioma para los comentarios**
   - **Área:** Redacción · **Ubicación:** `CONTEXT.md` §4 y los archivos afectados (`WingetService.cs:24,29,946-948`, `CleanupScanner.cs:3-7,48,88,96`, `MainWindow.xaml.cs:1708,1716`)
   - **Qué hacer:** la mayoría de comentarios están en español pero hay bloques en inglés, sin convención
     declarada. Decidir una, anotarla en §4 y alinear lo existente.
+  - **Convención adoptada:** comentarios y documentación XML **en español**, con acentos y signos de
+    apertura; en inglés solo los identificadores, las cadenas de la API de Windows y los términos
+    técnicos que no se traducen (*named pipe*, *snap layout*, *hash*). Escrita en `CONTEXT.md` §4, que es
+    lo que pedía el criterio.
+  - **Resultado:** alineados los bloques que quedaban en inglés — la cabecera y los cuatro comentarios de
+    sección de `CleanupScanner`, la nota de verificación Authenticode de `GitHubUpdateService`, las dos
+    de los `Regex` de progreso, la del lector de stdout carácter a carácter y el resumen de
+    `IsWingetInstalled` en `WingetService`.
   - **Criterio de aceptación:** la convención está escrita en `CONTEXT.md` §4. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-07] Quitar el nombre accesible en español cableado en XAML**
@@ -1016,10 +1039,27 @@ decisión explícita.
     regirlo. El ajuste promete más de lo que entrega.
   - **Criterio de aceptación:** el nombre del método y el texto del ajuste describen el comportamiento real. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-09] Añadir `.editorconfig`**
+- [x] **[T3-09] Añadir `.editorconfig`**
   - **Área:** Consistencia de estilo · **Ubicación:** raíz del repositorio
   - **Qué hacer:** el estilo es consistente por disciplina del autor, no por herramienta. Codificar las
     convenciones ya en uso y la severidad de los analizadores de .NET.
+  - **Resultado:** `.editorconfig` en la raíz. No inventa estilo: codifica el que ya estaba en uso
+    (4 espacios, CRLF, llaves en línea propia, `namespace` con ámbito de archivo, sin `this.`, campos
+    privados con `_`) y añade las reglas de encoding que este proyecto ya pagó caras — BOM obligatorio en
+    los `.ps1` y LF en `.githooks/`.
+  - **`verify.ps1` comprueba ahora el estilo**, que era el motivo de la tarea. Dos categorías, `style` y
+    `analyzers`; el paso solo comprueba, nunca reescribe.
+  - **Desviación al implementarlo, y es la parte importante:** la categoría **`whitespace` queda fuera a
+    propósito**, así que el criterio literal (`dotnet format --verify-no-changes` a secas) **no** se
+    cumple. Con la configuración puesta, `style` y `analyzers` pasan limpias, pero `whitespace` produce
+    **290 avisos en 14 archivos** y todos son lo mismo: quiere colapsar la **alineación en columnas** que
+    el repositorio usa deliberadamente —las constantes de `Notifier`, los campos de los structs de
+    interop, los `[GeneratedRegex]` de `ReleaseNotes` y, 211 de los 290, el diccionario de traducciones
+    de `Localization.cs`—. No hay opción de `.editorconfig` que permita esa alineación: o se acepta el
+    aviso o se destruye el estilo del autor en un diff de 290 líneas que no arregla nada. Se eligió
+    conservarlo, y queda anotado en la cabecera de `verify.ps1` y en `CONTEXT.md` §4.
+  - **Verificado (2026-08-22):** `verify.ps1` en verde, y comprobado saboteando: un `this._campo` hace
+    que el paso falle con `IDE0003` y código de salida 2.
   - **Criterio de aceptación:** `dotnet format --verify-no-changes` pasa sobre el código actual. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-10] Uniformar el uso de `ConfigureAwait` en `Services`**

@@ -57,7 +57,7 @@ public static class WindowSizing
     ///
     /// En la práctica, la mitad del área de trabajo es siempre más restrictiva que "área de trabajo
     /// menos margen" (el margen son un puñado de DIP, muy por debajo de la mitad de cualquier
-    /// resolución real), así que ese clamp por mitad es el que termina dominando el resultado. Aun así
+    /// resolución real), así que ese clamp por mitad es el que termina dominando el resultado. Aún así
     /// se conserva el clamp por margen como red de seguridad para casos extremos: <see cref="Math.Min(int, int)"/>
     /// ya escoge el más pequeño de los dos sin coste adicional.
     /// </summary>

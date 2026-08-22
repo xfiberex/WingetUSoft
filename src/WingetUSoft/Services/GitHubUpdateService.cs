@@ -92,7 +92,7 @@ internal static class GitHubUpdateService
         }
     }
 
-    // Normalize to 4-part version so "1.2.0" (Revision=-1) compares equal to "1.2.0.0"
+    // Se normaliza a 4 partes para que "1.2.0" (Revision=-1) compare igual que "1.2.0.0"
     private static string NormalizeVersion(string version)
     {
         while (version.Count(c => c == '.') < 3)
@@ -265,8 +265,8 @@ internal static class GitHubUpdateService
         return Convert.ToHexString(hash);
     }
 
-    // Verifies that the file carries a valid Authenticode signature trusted by Windows.
-    // Returns false for unsigned, expired, or untrusted signatures.
+    // Comprueba que el archivo lleva una firma Authenticode válida y de confianza para Windows.
+    // Devuelve false si no está firmado, si la firma caducó o si no es de confianza.
     internal static bool VerifyAuthenticodeSignature(string filePath)
     {
         var fileInfo = new NativeMethods.WINTRUST_FILE_INFO

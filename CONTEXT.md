@@ -109,6 +109,15 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 ## 4. Decisiones y convenciones clave
 
 - **Namespace único** `WingetUSoft` para app y tests.
+- **Comentarios y documentación XML en español**, con acentos y signos de apertura (`¿`, `¡`). En
+  inglés van solo los identificadores, las cadenas de la API de Windows y los términos técnicos que no
+  se traducen (*named pipe*, *snap layout*, *hash*). La mayoría del repositorio ya era así; T3-06 alineó
+  los bloques sueltos que quedaban en inglés (`CleanupScanner`, la verificación Authenticode, los
+  lectores de stdout) y T3-05 devolvió las tildes a `WingetShowLabels` y a `installer.iss`.
+  El **estilo del código** lo fija `.editorconfig` (T3-09), no la disciplina: `verify.ps1` comprueba las
+  categorías `style` y `analyzers` de `dotnet format`. La categoría `whitespace` queda fuera a
+  propósito: el repositorio alinea en columnas (constantes, campos de structs interop, el diccionario de
+  traducciones) y `dotnet format` querría colapsar esa alineación — 290 avisos que no arreglan nada.
 - **Tests: xUnit** (migrado desde MSTest en Tier A #0). No reintroducir MSTest/NUnit/TUnit.
 - **Localización:** patrón `L.T("clave", args…)`, diccionario clave → `string[5]` (ES/EN/PT/FR/IT). Todo
   string de UI pasa por ahí. El idioma del sistema solo se detecta en el **primer arranque** (sin
@@ -135,15 +144,19 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 - **Instalador (Inno Setup):** `AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}` — **no cambiar nunca**
   (permite actualización in-place). `PrivilegesRequired=admin`, `CloseApplications=yes`. **Único
   empaquetador**: nada de MSIX/ClickOnce.
-- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.8.3`); `release.ps1` sube
+- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.8.6`); `release.ps1` sube
   `<Version>`, `<AssemblyVersion>` y `<FileVersion>` a la vez — la app y el updater leen `AssemblyVersion`.
 - **Scripts PowerShell con acentos o `—`: guardar siempre con BOM UTF-8.** Windows PowerShell 5.1 asume
   el codepage ANSI para `.ps1` sin BOM y el tokenizer se rompe ("Falta el paréntesis de cierre"). Mismo
   hallazgo que documenta FormatDiskPro.
 - **`release.ps1` solo hace `git add -u`** (archivos ya rastreados): los archivos **nuevos** hay que
   `git add`earlos **antes**, o el release saldría sin ellos.
-- **No ejecutar `release.ps1` redirigiendo la salida** (`*>` a un archivo): PS 5.1 convierte el stderr
-  normal de `git push` en un error terminante y el script muere entre el push de la rama y el del tag.
+- **PowerShell 5.1 convierte el stderr de un exe nativo en error terminante** cuando la salida del
+  script se redirige o se canaliza y `$ErrorActionPreference` vale `Stop` — aunque el exe termine con
+  código 0. Y git escribe *siempre* en stderr. Fue lo que mató el release de la v1.8.6 entre el push de
+  la rama y el del tag. **Ya está resuelto de raíz:** `release.ps1` y `verify.ps1` envuelven cada
+  llamada nativa en `Invoke-Native`, así que ya se pueden invocar redirigiendo la salida. Si se añade
+  una llamada a `git`, `gh` o `dotnet` a cualquiera de los dos, tiene que ir dentro del envoltorio.
 
 ---
 

@@ -21,17 +21,17 @@ public static class WingetService
     private static readonly object WingetPathSync = new();
     private static string? _cachedWingetExecutablePath;
 
-    // Matches: "45.3 MB / 200.0 MB" or "500 KB / 1.2 GB" (supports comma decimal separator)
+    // Casa con: "45,3 MB / 200,0 MB" o "500 KB / 1.2 GB" (admite la coma como separador decimal)
     private static readonly Regex SizeProgressRegex = new(
         @"([\d]+(?:[.,][\d]+)?)\s*(KB|MB|GB)\s*/\s*([\d]+(?:[.,][\d]+)?)\s*(KB|MB|GB)",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    // Matches: "8.5 MB/s" or "500 KB/s"
+    // Casa con: "8,5 MB/s" o "500 KB/s"
     private static readonly Regex SpeedRegex = new(
         @"([\d]+(?:[.,][\d]+)?)\s*(KB|MB|GB)/s",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    /// <summary>Checks if winget is installed. Returns the version string or null.</summary>
+    /// <summary>¿Está winget instalado? Devuelve su versión, o <c>null</c> si no lo está.</summary>
     public static async Task<string?> CheckWingetAvailableAsync()
     {
         try
@@ -985,9 +985,10 @@ public static class WingetService
         _ => (long)value
     };
 
-    // Reads stdout char by char, firing the callback on both \n and \r line endings
-    // so that winget's carriage-return progress updates are captured in real time.
-    // \r-terminated progress lines are throttled to ~8 fps to avoid flooding the UI queue.
+    // Lee stdout carácter a carácter y dispara la retrollamada tanto con \n como con \r: winget
+    // reescribe la línea de progreso con retornos de carro, y sin atender al \r no se vería avanzar
+    // hasta que la descarga terminara. Las líneas terminadas en \r se limitan a ~8 fps para no
+    // inundar la cola del hilo de UI.
     private static async Task ReadStreamWithProgressAsync(
         Stream stream,
         StringBuilder output,
@@ -1352,7 +1353,7 @@ public static class WingetService
         public bool BatchCancelled { get; set; }
         public string Output { get; set; } = string.Empty;
         public string ErrorOutput { get; set; } = string.Empty;
-        // Download progress fields
+        // Campos del progreso de descarga
         public long DownloadedBytes { get; set; }
         public long TotalBytes { get; set; }
         public double SpeedBytesPerSecond { get; set; }
