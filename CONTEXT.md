@@ -11,8 +11,8 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.8.5** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.5), sin firmar) |
-| **En `main`, sin publicar** | **el Tier T2 completo** — rendimiento, refactorización estructural, responsive/i18n, `verify.ps1` + hook de pre-push, pruebas del worker elevado y el arreglo de codificación de `release.ps1` |
+| **Versión publicada** | **1.8.6** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.6), sin firmar) |
+| **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-22 |
 
@@ -89,7 +89,7 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **Tests unitarios** | **266/266** |
 | **UI tests (FlaUI)** | **36/36** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
 | **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **46 de 70** — T0, T1 y T2 completos |
-| **Publicado** | hasta la **v1.8.5**. En `main` hay cuatro cortes del Tier T2 sin publicar |
+| **Publicado** | hasta la **v1.8.6**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
 
@@ -207,6 +207,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-08-22 | **1.8.6** | **Tier T2 completo** — filtros accesibles y que envuelven, fechas y nombres de archivo por idioma, `verify.ps1` + hook de pre-push, y pruebas del protocolo del worker elevado |
 | 2026-08-21 | **1.8.5** | **Rendimiento (T2)** — instalador −37 % (fuera el runtime de IA sin usar), registro fuera del hilo de UI, purga de logs, caché en la búsqueda |
 | 2026-08-21 | **1.8.4** | **Auditoría T1 completo** — TOCTOU del instalador, registro de fallos que no se pisa, fallos clasificados por código, accesibilidad e i18n |
 | 2026-08-21 | **1.8.3** | **Auditoría T0 + T1** — recorrido de rutas en la limpieza, guardado atómico de la configuración, contraste WCAG AA en las 4 ventanas, botones de diálogo localizados |
@@ -222,7 +223,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
-### 2026-08-22 — Tier T2 cerrado: verificación local, protocolo del worker y documentación (T2-12 a T2-18, sin publicar)
+### 2026-08-22 — Tier T2 cerrado: verificación local, protocolo del worker y documentación (T2-12 a T2-18, release v1.8.6)
 
 Cuarto corte del Tier T2 y último: **46 de 70** tareas. **T0, T1 y T2 completos.**
 
@@ -282,7 +283,7 @@ rastrea el disco), que nada viene marcado, y que el borrado no pasa por la papel
 
 ---
 
-### 2026-08-22 — Auditoría T2: responsive, i18n y los sueltos de código (T2-08 a T2-11, T2-19, T2-20, T2-22, sin publicar)
+### 2026-08-22 — Auditoría T2: responsive, i18n y los sueltos de código (T2-08 a T2-11, T2-19, T2-20, T2-22, release v1.8.6)
 
 Tercer corte del Tier T2: **39 de 70** tareas, y **16 de 23** del tier.
 
@@ -331,7 +332,7 @@ arreglo correspondiente: cada uno falla, y solo él.
 
 ---
 
-### 2026-08-21 — Auditoría T2: refactorización estructural (T2-04, T2-05, T2-07, sin publicar)
+### 2026-08-21 — Auditoría T2: refactorización estructural (T2-04, T2-05, T2-07, release v1.8.6)
 
 Segundo corte del Tier T2: **32 de 70** tareas. Tres bloques que estaban copiados entre 2 y 6 veces.
 
@@ -376,7 +377,7 @@ cableado en una ventana lo hace fallar.
 
 ---
 
-### 2026-08-21 — `release.ps1` corrompía los acentos del `.csproj` (sin publicar)
+### 2026-08-21 — `release.ps1` corrompía los acentos del `.csproj` (release v1.8.6)
 
 Salió solo al cortar la v1.8.5, y llevaba ahí desde siempre: **el `.csproj` nunca había tenido un
 carácter no ASCII** hasta que T2-03 le añadió un comentario largo en español.
@@ -396,7 +397,7 @@ palabra. El texto del `.csproj` se restauró revirtiendo la doble codificación.
 
 ---
 
-### 2026-08-21 — Auditoría T2: bloque de rendimiento (T2-01, T2-02, T2-03, T2-21, T2-23, sin publicar)
+### 2026-08-21 — Auditoría T2: bloque de rendimiento (T2-01, T2-02, T2-03, T2-21, T2-23, release v1.8.5)
 
 Primer corte del Tier T2: **29 de 70** tareas. Cinco puntos donde la app hacía trabajo caro sin
 necesidad — tres en el hilo de UI, uno en disco y uno en el peso de la descarga.
@@ -455,7 +456,7 @@ dormido bloquea la ventana justo mientras informa del progreso. Las dos ramas va
 
 ---
 
-### 2026-08-21 — La verificación de accesibilidad que la auditoría daba por manual (sin publicar)
+### 2026-08-21 — La verificación de accesibilidad que la auditoría daba por manual (release v1.8.4)
 
 La v1.8.4 salió con los criterios de aceptación de **T1-07, T1-08 y T1-09 sin verificar**: la auditoría
 los marcaba como «verificación manual, no automatizable con FlaUI». Lo eran solo en parte.
@@ -492,7 +493,7 @@ buen momento y si el texto se entiende de oído. Eso no lo cubre ningún test.
 
 ---
 
-### 2026-08-21 — Auditoría T1 completado: los cuatro de fondo (T1-02, T1-11, T1-12, T1-18, sin publicar)
+### 2026-08-21 — Auditoría T1 completado: los cuatro de fondo (T1-02, T1-11, T1-12, T1-18, release v1.8.4)
 
 Cuarto corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **24 de 70** tareas. **T0 y T1 cerrados
 enteros.** Build 0/0, **223/223 unitarios**, **27/27 UI tests**.
@@ -555,7 +556,7 @@ el test que las prueba, no razonando sobre ellas.
 
 ---
 
-### 2026-08-21 — Auditoría T1: cadenas en español cableadas (T1-15 a T1-17, sin publicar)
+### 2026-08-21 — Auditoría T1: cadenas en español cableadas (T1-15 a T1-17, release v1.8.4)
 
 Tercer corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **18 de 70** tareas, **T1 al 73 %**.
 Build 0/0, **196/196 unitarios**.
@@ -593,7 +594,7 @@ Más cuatro excepciones que acaban en diálogo (sesión elevada, winget no encon
 
 ---
 
-### 2026-08-21 — Auditoría T1: bloque de accesibilidad (T1-07 a T1-10, sin publicar)
+### 2026-08-21 — Auditoría T1: bloque de accesibilidad (T1-07 a T1-10, release v1.8.4)
 
 Segundo corte de la Parte II de [`ROADMAP.md`](ROADMAP.md): **15 de 70** tareas, **T1 al 55 %**.
 Build 0/0, **196/196 unitarios**.
