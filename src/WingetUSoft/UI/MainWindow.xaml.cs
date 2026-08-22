@@ -109,8 +109,8 @@ public sealed partial class MainWindow : Window
     private readonly AppSettings _settings = AppSettings.Load();
     private DispatcherTimer? _autoCheckTimer;
     private bool _cancelStopsCurrentProcess = true;
-    private bool _fileLoggingAvailable = true;
-    private readonly object _logLock = new();
+    /// <summary>Escritor del registro a disco. Encola y escribe fuera del hilo de UI (T2-01).</summary>
+    private readonly FileLog _fileLog;
     private int _logLineCount;
     private bool _initialized;
     private int _excludedFilter = 0;
@@ -142,6 +142,11 @@ public sealed partial class MainWindow : Window
         // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
         // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
         LiveRegion.TrackStatusText(txtEstado);
+        _fileLog = new FileLog(OnFileLogFailed);
+
+        // Purga de registros viejos: al arrancar es el único momento en que nadie escribe todavía.
+        // En segundo plano porque toca disco y no hay nada que esperar de ella (T2-02).
+        _ = Task.Run(() => AppSettings.PurgeOldLogs());
 
         // Build context menu
         ctxActualizar = new MenuFlyoutItem { Text = L.T("ctx.update") };
@@ -1787,24 +1792,18 @@ public sealed partial class MainWindow : Window
 
     private void AppendLogFile(string text)
     {
-        if (!_settings.LogToFile || !_fileLoggingAvailable) return;
+        if (!_settings.LogToFile) return;
+        _fileLog.Write(text);
+    }
 
-        try
-        {
-            string path;
-            lock (_logLock)
-            {
-                Directory.CreateDirectory(AppSettings.LogDirectory);
-                path = Path.Combine(AppSettings.LogDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
-                File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss}] {text}{Environment.NewLine}");
-            }
-        }
-        catch (Exception ex)
-        {
-            lock (_logLock) { _fileLoggingAvailable = false; }
-            Trace.WriteLine($"No se pudo escribir el archivo de log: {ex.Message}");
-            AppendLog(L.T("log.logFileFailed", ex.Message), LogLineKind.Warning);
-        }
+    /// <summary>
+    /// Aviso de que el registro a disco se apagó. Llega desde la tarea de fondo del <see cref="FileLog"/>,
+    /// así que hay que volver al hilo de UI antes de tocar nada de la ventana.
+    /// </summary>
+    private void OnFileLogFailed(string message)
+    {
+        Trace.WriteLine($"No se pudo escribir el archivo de log: {message}");
+        DispatcherQueue.TryEnqueue(() => AppendLog(L.T("log.logFileFailed", message), LogLineKind.Warning));
     }
 
     // --- Helpers ---
@@ -2141,6 +2140,7 @@ public sealed partial class MainWindow : Window
 
         _autoCheckTimer?.Stop();
         _cts?.Cancel();
+        _fileLog.Dispose();   // vacía la cola: lo último del registro también llega al archivo
     }
 
     private void ShowUpdateNotification(int success, int failed)

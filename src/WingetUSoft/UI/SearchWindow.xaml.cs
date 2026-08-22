@@ -189,12 +189,31 @@ public sealed partial class SearchWindow : Window
 
     /// <summary>Ids instalados, en un set case-insensitive. Si la consulta falla, se devuelve vacío: no
     /// saber si algo está instalado no debe impedir buscar.</summary>
-    private static async Task<HashSet<string>> GetInstalledIdsAsync(CancellationToken ct)
+    /// <summary>
+    /// Ids de lo ya instalado, cacheados mientras viva la ventana. <c>null</c> = todavía sin consultar.
+    /// </summary>
+    /// <remarks>
+    /// Cada búsqueda cruzaba sus resultados con un <c>winget list</c> completo —un proceso externo, con
+    /// su arranque y su parseo— para pintar la columna «Instalado». Teclear tres consultas seguidas
+    /// costaba tres listados enteros del equipo, y la lista de programas instalados **no cambia entre
+    /// búsquedas**: solo puede cambiarla una instalación, y esa la hace esta misma ventana.
+    /// </remarks>
+    private HashSet<string>? _installedIds;
+
+    /// <summary>
+    /// Ids instalados, del caché si lo hay. Solo se cachea el resultado **bueno**: si winget falla se
+    /// devuelve un conjunto vacío sin guardarlo, porque cachear el vacío dejaría la columna «Instalado»
+    /// mintiendo el resto de la sesión.
+    /// </summary>
+    private async Task<HashSet<string>> GetInstalledIdsAsync(CancellationToken ct)
     {
+        if (_installedIds is not null) return _installedIds;
+
         try
         {
             var installed = await WingetService.GetInstalledPackagesAsync(ct);
-            return new HashSet<string>(installed.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
+            _installedIds = new HashSet<string>(installed.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
+            return _installedIds;
         }
         catch (OperationCanceledException) { throw; }
         catch { return new HashSet<string>(StringComparer.OrdinalIgnoreCase); }
@@ -253,6 +272,10 @@ public sealed partial class SearchWindow : Window
                     Success = true,
                 });
                 _settings.Save();
+
+                // Acaba de cambiar lo instalado: el caché queda obsoleto y la próxima consulta
+                // vuelve a listar. Es el único punto de la app que puede invalidarlo.
+                _installedIds = null;
 
                 // Repite la búsqueda para que la fila pase a "Instalado": dejarla como estaba invitaría a
                 // instalarlo otra vez.

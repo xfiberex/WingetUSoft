@@ -70,6 +70,58 @@ public sealed class AppSettings
 
     public static string LogDirectory => Path.Combine(DataDirectoryPath, "logs");
 
+    /// <summary>Días que se conservan los registros diarios antes de purgarlos.</summary>
+    internal const int LogRetentionDays = 30;
+
+    /// <summary>
+    /// Borra los registros diarios con más de <see cref="LogRetentionDays"/> días.
+    /// </summary>
+    /// <remarks>
+    /// Se escribe un <c>.log</c> por día, con <c>LogToFile = true</c> de fábrica y sin límite ninguno:
+    /// tal cual, la carpeta crece para siempre en el equipo del usuario. La purga va al arrancar porque
+    /// es el único momento en que se sabe que nadie está escribiendo, y nunca debe impedir que la app
+    /// abra: cualquier fallo aquí se traga a propósito, es mantenimiento, no funcionalidad.
+    ///
+    /// Se filtra por **nombre** (<c>aaaa-mm-dd.log</c>) y no por fecha del sistema de archivos: copiar
+    /// o restaurar la carpeta reescribe las fechas de los archivos, y entonces se borraría lo que no
+    /// toca o se conservaría lo que ya sobra.
+    /// </remarks>
+    /// <returns>Cuántos archivos se borraron.</returns>
+    internal static int PurgeOldLogs(int retentionDays = LogRetentionDays)
+    {
+        int deleted = 0;
+
+        try
+        {
+            if (!Directory.Exists(LogDirectory)) return 0;
+
+            // "Los últimos 30 días" incluye hoy, así que el corte es hace 29 días y quedan 30 archivos.
+            // Con -retentionDays se conservaban 31: el día del borde sobrevivía de propina.
+            DateTime oldestKept = DateTime.Today.AddDays(-(retentionDays - 1));
+
+            foreach (string file in Directory.EnumerateFiles(LogDirectory, "*.log"))
+            {
+                if (!DateTime.TryParseExact(
+                        Path.GetFileNameWithoutExtension(file), "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out DateTime day))
+                    continue;   // no lo escribimos nosotros: no se toca
+
+                if (day >= oldestKept) continue;
+
+                try { File.Delete(file); deleted++; }
+                catch (IOException) { }                    // en uso: ya caerá en el próximo arranque
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"No se pudieron purgar los registros antiguos: {ex.Message}");
+        }
+
+        return deleted;
+    }
+
     public static AppSettings Load()
     {
         try

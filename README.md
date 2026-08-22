@@ -91,7 +91,7 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 - **Modo de actualización** — silenciosa o interactiva, y opción de ejecutar como administrador.
 - **Auto-comprobación** — comprueba actualizaciones de forma periódica configurable (30 / 60 / 120 min).
 - **Aviso al terminar** — sonido + parpadeo de la barra de tareas al acabar un lote largo, y progreso en el icono de la barra de tareas.
-- **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`.
+- **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`, con purga automática de los de más de 30 días.
 
 ### Accesibilidad
 - **Manejable solo con teclado** — incluidas las cabeceras de la tabla (botones enfocables que anuncian
@@ -225,10 +225,14 @@ WingetUSoft/
 | Artefacto | Ruta |
 |---|---|
 | Configuración | `%LocalAppData%\WingetUSoft\settings.json` |
-| Logs diarios | `%LocalAppData%\WingetUSoft\logs\YYYY-MM-DD.log` |
+| Logs diarios | `%LocalAppData%\WingetUSoft\logs\YYYY-MM-DD.log` (se conservan **30 días**) |
+| Registro de fallos | `%LocalAppData%\WingetUSoft\crash.log` |
 
 Si `settings.json` se corrompe, se crea una copia de seguridad automática con timestamp y se restauran
 los valores por defecto.
+
+Los registros diarios se purgan al arrancar: se borran los de más de 30 días, para que la carpeta no
+crezca sin límite. Los archivos que la app no haya escrito ella misma no se tocan.
 
 ## Licencia
 

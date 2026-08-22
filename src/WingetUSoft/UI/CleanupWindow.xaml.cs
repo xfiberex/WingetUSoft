@@ -172,10 +172,14 @@ public sealed partial class CleanupWindow : Window
 
             try
             {
-                if (item.IsDirectory)
-                    await Task.Run(() => Directory.Delete(item.Path, recursive: true), _cts.Token);
-                else
-                    File.Delete(item.Path);
+                // Las dos ramas van al hilo de fondo. Borrar un archivo parece barato, pero no lo es
+                // siempre: sobre una unidad de red o un disco dormido, un solo File.Delete bloquea el
+                // hilo de UI y la ventana se queda sin repintar justo mientras informa del progreso.
+                await Task.Run(() =>
+                {
+                    if (item.IsDirectory) Directory.Delete(item.Path, recursive: true);
+                    else File.Delete(item.Path);
+                }, _cts.Token);
 
                 _items.Remove(item);
                 AppendLog(L.T("cleanup.deletedLog", item.Path), LogLineKind.Success);

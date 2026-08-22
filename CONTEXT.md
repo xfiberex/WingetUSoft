@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.4** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.4), sin firmar) |
-| **En `main`, sin publicar** | tests de accesibilidad contra la app real (verifican T1-07/08/09, que la v1.8.4 publicó sin verificar) |
+| **En `main`, sin publicar** | tests de accesibilidad + **bloque de rendimiento de T2** (registro fuera del hilo de UI, purga de logs, −37 % de instalador) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -209,6 +209,65 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T2: bloque de rendimiento (T2-01, T2-02, T2-03, T2-21, T2-23, sin publicar)
+
+Primer corte del Tier T2: **29 de 70** tareas. Cinco puntos donde la app hacía trabajo caro sin
+necesidad — tres en el hilo de UI, uno en disco y uno en el peso de la descarga.
+
+**1. El registro a disco paraba el hilo de UI en cada línea (T2-01).** `AppendLogFile` hacía
+`Directory.CreateDirectory` + `File.AppendAllText` —abrir, escribir y cerrar el archivo— por **cada
+línea**, síncronamente y dentro de un `lock`. Y no son líneas sueltas: durante una actualización la app
+retransmite toda la salida de winget, así que un lote de diez paquetes abría y cerraba el archivo
+cientos de veces, cada una parando justo al hilo que tiene que repintar la barra de progreso. Nuevo
+`Services/FileLog.cs`: el hilo de UI solo encola, y una tarea consumidora mantiene el `StreamWriter`
+abierto mientras haya actividad. Una ráfaga entera = **una apertura**, y hay un test que lo fija.
+
+> Dos decisiones que no son obvias: la **marca de tiempo se pone al encolar**, no al escribir —si no, un
+> pico de escritura desplazaría las horas del registro respecto a cuándo pasaron las cosas—, y el
+> archivo **se suelta tras cinco segundos de silencio** en vez de quedarse abierto para siempre, que
+> retendría un handle sobre el archivo que la purga (T2-02) tiene que poder borrar.
+
+**2. Los registros diarios crecían para siempre (T2-02).** Un `.log` por día, `LogToFile = true` de
+fábrica, sin límite de tamaño ni de antigüedad. Ahora se purgan al arrancar los de más de 30 días, en
+segundo plano. Se filtra por **nombre** (`aaaa-mm-dd.log`) y no por fecha del sistema de archivos:
+copiar o restaurar la carpeta reescribe las fechas de los archivos, y entonces se borraría lo que no
+toca. Los archivos que no escribimos nosotros no se tocan.
+
+> **El test destapó un off-by-one.** «Los últimos 30 días» incluye hoy, así que el corte está hace 29
+> días: con `AddDays(-30)` sobrevivían 31 archivos. Salió de escribir el criterio de aceptación tal
+> cual estaba redactado, no de revisar el código.
+
+**3. ~41 MB de runtime de IA que nadie usa (T2-03).** Con `WindowsAppSDKSelfContained`, la SDK copia al
+publish toda su carga útil, incluida la pila de IA en el equipo: `onnxruntime.dll` (20,6 MB),
+`DirectML.dll` (17,7 MB) y los `Microsoft.Windows.AI.*` (~2,6 MB). Esta app gestiona paquetes de
+winget y **no referencia ni una** de esas APIs. **Se puede excluir: `publish` 142 MB → 101 MB, y el instalador que descarga el usuario
+34,2 MB → 21,6 MB (−37 %)** — el ahorro real supera al del publish porque esos DLL comprimen mal.
+
+> **Cómo, y por qué no por la vía oficial.** La SDK compone la carga útil en dos targets
+> (`AddMicrosoftWindowsAppSDKPayloadFilesFromMsix` y `...FromComponents`) y ambos consultan un item
+> `MicrosoftWindowsAppSDKFilesExcluded`. Ese sería el gancho oficial, pero hay que rellenarlo con rutas
+> completas derivadas de `WindowsAppSdkComponentPackages`, que la SDK define **dentro** de sus propios
+> targets y no existe al evaluar el proyecto. Se filtra por nombre en un target propio detrás de los
+> suyos, que no depende de en qué paquete de componentes viva cada archivo.
+>
+> **Verificado, no supuesto:** el riesgo real era romper la activación COM de WinUI 3 *unpackaged*, que
+> no se ve compilando. Los 32 UI tests se ejecutaron **contra el ejecutable publicado y recortado**
+> (`WINGETUSOFT_EXE`), no contra el build de desarrollo: la app arranca, abre ventanas, cambia de
+> idioma y navega los menús sin la pila de IA.
+
+**4. Un `winget list` completo por cada búsqueda (T2-21).** La ventana de búsqueda cruzaba sus
+resultados con la lista de instalados para pintar la columna «Instalado», lanzando un proceso externo
+en **cada** consulta. La lista no cambia entre búsquedas: solo puede cambiarla una instalación, y esa
+la hace esa misma ventana, que es donde se invalida el caché. Solo se cachea el resultado bueno: si
+winget falla se devuelve vacío **sin guardarlo**, porque cachear el vacío dejaría la columna mintiendo
+el resto de la sesión.
+
+**5. `File.Delete` en el hilo de UI (T2-23).** En la ventana de limpieza los directorios iban a
+`Task.Run` y los archivos no. Borrar un archivo parece barato, pero sobre una unidad de red o un disco
+dormido bloquea la ventana justo mientras informa del progreso. Las dos ramas van al hilo de fondo.
 
 ---
 

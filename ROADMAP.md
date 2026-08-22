@@ -567,7 +567,7 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
 
 ### Rendimiento
 
-- [ ] **[T2-01] Sacar el logging a archivo del hilo de UI**
+- [x] **[T2-01] Sacar el logging a archivo del hilo de UI**
   - **Área:** Rendimiento
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:1784-1804`
   - **Qué hacer:** `AppendLogFile` hace `Directory.CreateDirectory` + `File.AppendAllText` (abrir / escribir /
@@ -580,7 +580,7 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[T2-02] Retención de los logs diarios**
+- [x] **[T2-02] Retención de los logs diarios**
   - **Área:** Rendimiento / mantenimiento
   - **Ubicación:** `src/WingetUSoft/Settings/AppSettings.cs:66` y `src/WingetUSoft/UI/MainWindow.xaml.cs:1793`
   - **Qué hacer:** se escribe un `.log` por día en `%LocalAppData%\WingetUSoft\logs\`, sin límite de tamaño ni
@@ -588,10 +588,12 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     archivos con más de N días (30 como valor razonable), y documentarlo en el README junto a las rutas de
     datos de usuario.
   - **Criterio de aceptación:** al arrancar con logs de 40 días, solo quedan los de los últimos 30.
+  - **Nota:** la primera implementación conservaba **31** archivos — «los últimos 30 días» incluye hoy,
+    así que el corte es hace 29 días, no hace 30. Lo destapó el test al escribir el criterio tal cual.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-03] Investigar la exclusión del runtime de IA del paquete publicado**
+- [x] **[T2-03] Investigar la exclusión del runtime de IA del paquete publicado**
   - **Área:** Rendimiento / tamaño de distribución
   - **Ubicación:** `src/WingetUSoft/WingetUSoft.csproj:12` (`WindowsAppSDKSelfContained`)
   - **Qué hacer:** medido sobre `src/WingetUSoft/publish` (142 MB → instalador de 35,8 MB): `onnxruntime.dll`
@@ -601,10 +603,17 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     *unpackaged*; si no, dejar constancia y enlazar con T4-01.
   - **Criterio de aceptación:** o bien el `publish` baja de 142 MB manteniendo la app funcional (arranque
     verificado + UI tests en verde), o bien queda documentado en `CONTEXT.md` §4 por qué no se puede.
+  - **Resultado:** **sí se puede.** La SDK compone su carga útil en dos targets
+    (`AddMicrosoftWindowsAppSDKPayloadFiles*`), y basta un target propio detrás que retire por nombre
+    `onnxruntime`, `DirectML` y `Microsoft.Windows.AI.*`. **`publish`: 142 MB → 101 MB; el instalador que descarga el usuario, 34,2 MB → 21,6 MB (−37 %).** No se usa el
+    gancho «oficial» (`MicrosoftWindowsAppSDKFilesExcluded`) porque hay que rellenarlo con rutas
+    derivadas de `WindowsAppSdkComponentPackages`, que la SDK define dentro de sus propios targets y no
+    existe al evaluar el proyecto. Quedan 7 `*.Projection.dll` (~0,5 MB) que llegan por otra vía
+    (`ReferenceCopyLocalPaths`) y no se tocan: son ensamblados gestionados del cierre de referencias.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[T2-21] Cachear los ids instalados en la ventana de búsqueda**
+- [x] **[T2-21] Cachear los ids instalados en la ventana de búsqueda**
   - **Área:** Rendimiento
   - **Ubicación:** `src/WingetUSoft/UI/SearchWindow.xaml.cs:156`
   - **Qué hacer:** `GetInstalledIdsAsync` lanza un `winget list` completo (proceso externo) en **cada**
@@ -614,7 +623,7 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-23] Borrar archivos en segundo plano en la ventana de limpieza**
+- [x] **[T2-23] Borrar archivos en segundo plano en la ventana de limpieza**
   - **Área:** Rendimiento
   - **Ubicación:** `src/WingetUSoft/UI/CleanupWindow.xaml.cs:168`
   - **Qué hacer:** los directorios van a `Task.Run` pero `File.Delete` se ejecuta síncronamente en el hilo de
