@@ -2,15 +2,65 @@ using Xunit;
 
 namespace WingetUSoft.Tests;
 
-public class CleanupScannerTests
+/// <summary>
+/// El escáner de residuos. Todas las carpetas de prueba viven **dentro de un directorio temporal
+/// propio de cada test** (T3-13).
+/// </summary>
+/// <remarks>
+/// Antes creaban carpetas reales en <c>%LOCALAPPDATA%</c>. Estaban protegidas con <c>try/finally</c>,
+/// pero un proceso de test que muriera —o un `dotnet test` interrumpido con Ctrl+C— dejaba basura en el
+/// perfil del usuario. Ahora el escáner recibe sus seis directorios base como parámetro y aquí se le
+/// apuntan a subcarpetas de un temporal que se borra entero al final; el `IDisposable` de cada instancia
+/// de la clase de test es lo que xUnit ejecuta aunque el test falle.
+/// </remarks>
+public sealed class CleanupScannerTests : IDisposable
 {
-    // Uses a name suffix unlikely to collide with real installed software.
-    private const string TestSuffix = "_WUSoftScanTest";
+    private readonly string _root;
+    private readonly CleanupBaseDirectories _dirs;
+
+    public CleanupScannerTests()
+    {
+        _root = Path.Combine(Path.GetTempPath(), "WingetUSoft.ScanTests", Guid.NewGuid().ToString("N"));
+
+        string local = Sub("Local");
+        _dirs = new CleanupBaseDirectories(
+            Roaming: Sub("Roaming"),
+            Local: local,
+            LocalPrograms: Sub(Path.Combine("Local", "Programs")),
+            ProgramData: Sub("ProgramData"),
+            ProgramFiles: Sub("ProgramFiles"),
+            ProgramFilesX86: Sub("ProgramFilesX86"));
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_root, recursive: true); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private string Sub(string relative)
+    {
+        string path = Path.Combine(_root, relative);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    /// <summary>Crea una carpeta bajo <c>Local</c>, que es el directorio base de un solo nivel más usado aquí.</summary>
+    private string CreateInLocal(string name)
+    {
+        string path = Path.Combine(_dirs.Local, name);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private Task<List<CleanupItemViewModel>> ScanAsync(params WingetPackage[] packages)
+        => CleanupScanner.ScanAsync(packages, _dirs);
 
     [Fact]
     public async Task ScanAsync_EmptyPackageList_ReturnsEmpty()
     {
-        var results = await CleanupScanner.ScanAsync([]);
+        var results = await ScanAsync();
         Assert.Empty(results);
     }
 
@@ -21,49 +71,28 @@ public class CleanupScannerTests
         cts.Cancel();
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            CleanupScanner.ScanAsync([new WingetPackage { Name = "Foo", Id = "Pub.Foo" }], cts.Token));
+            CleanupScanner.ScanAsync([new WingetPackage { Name = "Foo", Id = "Pub.Foo" }], _dirs, cts.Token));
     }
 
     [Fact]
     public async Task ScanAsync_ExistingDirectoryMatchingPackageName_IsFound()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dirName = $"TestApp{TestSuffix}";
-        string testDir = Path.Combine(localAppData, dirName);
-        Directory.CreateDirectory(testDir);
+        const string dirName = "TestApp";
+        string testDir = CreateInLocal(dirName);
 
-        try
-        {
-            var packages = new[]
-            {
-                new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" }
-            };
+        var results = await ScanAsync(new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" });
 
-            var results = await CleanupScanner.ScanAsync(packages);
-
-            Assert.True(
-                results.Any(r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase)),
-                $"Expected to find '{testDir}' in scan results.");
-        }
-        finally
-        {
-            Directory.Delete(testDir, recursive: false);
-        }
+        Assert.Contains(results, r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public async Task ScanAsync_NonExistentPaths_ReturnsEmpty()
     {
-        var packages = new[]
+        var results = await ScanAsync(new WingetPackage
         {
-            new WingetPackage
-            {
-                Name = $"NonExistentApp{TestSuffix}",
-                Id   = $"Nobody.NonExistentApp{TestSuffix}"
-            }
-        };
-
-        var results = await CleanupScanner.ScanAsync(packages);
+            Name = "NonExistentApp",
+            Id = "Nobody.NonExistentApp"
+        });
 
         Assert.Empty(results);
     }
@@ -71,31 +100,17 @@ public class CleanupScannerTests
     [Fact]
     public async Task ScanAsync_SamePathFromMultiplePackages_ReportedOnce()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dirName = $"SharedApp{TestSuffix}";
-        string testDir = Path.Combine(localAppData, dirName);
-        Directory.CreateDirectory(testDir);
+        const string dirName = "SharedApp";
+        string testDir = CreateInLocal(dirName);
 
-        try
-        {
-            // Two packages whose name/id both resolve to the same candidate path.
-            var packages = new[]
-            {
-                new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" },
-                new WingetPackage { Name = dirName, Id = $"OtherPub.{dirName}" }
-            };
+        // Dos paquetes cuyo nombre e Id resuelven al mismo candidato.
+        var results = await ScanAsync(
+            new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" },
+            new WingetPackage { Name = dirName, Id = $"OtherPub.{dirName}" });
 
-            var results = await CleanupScanner.ScanAsync(packages);
+        int matches = results.Count(r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
 
-            int matches = results.Count(r =>
-                string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
-
-            Assert.True(matches == 1, "The same path should only appear once even if multiple packages resolve to it.");
-        }
-        finally
-        {
-            Directory.Delete(testDir, recursive: false);
-        }
+        Assert.Equal(1, matches);
     }
 
     // ── Contención de rutas (T0-01) ─────────────────────────────────────────
@@ -114,12 +129,8 @@ public class CleanupScannerTests
     [InlineData("...")]
     public async Task ScanAsync_NameEscapesTheBaseDirectory_ProducesNoCandidate(string maliciousName)
     {
-        var packages = new[]
-        {
-            new WingetPackage { Name = maliciousName, Id = $"Publisher.{maliciousName}" }
-        };
-
-        var results = await CleanupScanner.ScanAsync(packages);
+        var results = await ScanAsync(
+            new WingetPackage { Name = maliciousName, Id = $"Publisher.{maliciousName}" });
 
         Assert.True(
             results.Count == 0,
@@ -134,33 +145,20 @@ public class CleanupScannerTests
     [Fact]
     public async Task ScanAsync_ExistingDirectoryReachableOnlyByTraversal_IsNotReported()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dirName = $"EscapeTarget{TestSuffix}";
-        string outsideDir = Path.Combine(localAppData, dirName);
-        Directory.CreateDirectory(outsideDir);
+        const string dirName = "EscapeTarget";
+        string outsideDir = CreateInLocal(dirName);
 
-        try
-        {
-            // El escáner usa "{LocalAppData}\Programs" como directorio base. Con "..\<dir>" se sale de
-            // Programs y aterriza en la carpeta recién creada, que sí existe.
-            var packages = new[]
-            {
-                new WingetPackage { Name = $@"..\{dirName}", Id = $@"Publisher...\{dirName}" }
-            };
+        // "Local\Programs" es uno de los directorios base. Con "..\<dir>" se sale de Programs y
+        // aterriza en la carpeta recién creada bajo Local, que sí existe.
+        var results = await ScanAsync(
+            new WingetPackage { Name = $@"..\{dirName}", Id = $@"Publisher...\{dirName}" });
 
-            var results = await CleanupScanner.ScanAsync(packages);
-
-            // Se comparan las rutas NORMALIZADAS a propósito: sin la corrección, el candidato llegaba
-            // como "…\Programs\..\EscapeTarget…", que no es igual carácter a carácter al directorio de
-            // destino aunque apunte exactamente a él. Comparar las cadenas en crudo dejaba pasar el test
-            // sin probar nada.
-            Assert.DoesNotContain(results, r =>
-                string.Equals(Path.GetFullPath(r.Path), outsideDir, StringComparison.OrdinalIgnoreCase));
-        }
-        finally
-        {
-            Directory.Delete(outsideDir, recursive: false);
-        }
+        // Se comparan las rutas NORMALIZADAS a propósito: sin la corrección, el candidato llegaba
+        // como "…\Programs\..\EscapeTarget", que no es igual carácter a carácter al directorio de
+        // destino aunque apunte exactamente a él. Comparar las cadenas en crudo dejaba pasar el test
+        // sin probar nada.
+        Assert.DoesNotContain(results, r =>
+            string.Equals(Path.GetFullPath(r.Path), outsideDir, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -170,48 +168,58 @@ public class CleanupScannerTests
     [Fact]
     public async Task ScanAsync_OrdinaryNameWithSpacesAndPunctuation_IsStillFound()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dirName = $"Mi Programa - Edición 2026{TestSuffix}";
-        string testDir = Path.Combine(localAppData, dirName);
-        Directory.CreateDirectory(testDir);
+        const string dirName = "Mi Programa - Edición 2026";
+        string testDir = CreateInLocal(dirName);
 
-        try
-        {
-            var packages = new[] { new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" } };
+        var results = await ScanAsync(new WingetPackage { Name = dirName, Id = $"Publisher.{dirName}" });
 
-            var results = await CleanupScanner.ScanAsync(packages);
-
-            Assert.Contains(results, r =>
-                string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
-        }
-        finally
-        {
-            Directory.Delete(testDir, recursive: false);
-        }
+        Assert.Contains(results, r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public async Task ScanAsync_FoundItem_IsNotSelectedByDefault()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string dirName = $"DefaultSelTest{TestSuffix}";
-        string testDir = Path.Combine(localAppData, dirName);
-        Directory.CreateDirectory(testDir);
+        const string dirName = "DefaultSelTest";
+        string testDir = CreateInLocal(dirName);
 
-        try
-        {
-            var packages = new[] { new WingetPackage { Name = dirName, Id = $"Pub.{dirName}" } };
-            var results = await CleanupScanner.ScanAsync(packages);
+        var results = await ScanAsync(new WingetPackage { Name = dirName, Id = $"Pub.{dirName}" });
 
-            var item = results.FirstOrDefault(r =>
-                string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
+        var item = results.FirstOrDefault(r => string.Equals(r.Path, testDir, StringComparison.OrdinalIgnoreCase));
 
-            Assert.NotNull(item);
-            Assert.False(item.IsSelected, "Cleanup items must NOT be pre-selected to avoid accidental deletion.");
-        }
-        finally
-        {
-            Directory.Delete(testDir, recursive: false);
-        }
+        Assert.NotNull(item);
+        Assert.False(item.IsSelected, "Los residuos NUNCA vienen preseleccionados: el borrado es irreversible.");
+    }
+
+    /// <summary>
+    /// El barrido de dos niveles (<c>{base}\{editor}\{app}</c>), que es el que encuentra lo que instala
+    /// un editor bajo su propia carpeta.
+    /// </summary>
+    [Fact]
+    public async Task ScanAsync_PublisherAndAppFromTheId_IsFound()
+    {
+        string nested = Path.Combine(_dirs.ProgramFiles, "Publisher", "SomeApp");
+        Directory.CreateDirectory(nested);
+
+        var results = await ScanAsync(new WingetPackage { Name = "Nada que ver", Id = "Publisher.SomeApp" });
+
+        Assert.Contains(results, r => string.Equals(r.Path, nested, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// El escáner no puede salirse de los directorios que se le dan. Es lo que hace que este test se
+    /// pueda ejecutar sin tocar el perfil real, y a la vez lo que garantiza que en producción no mire
+    /// donde no debe.
+    /// </summary>
+    [Fact]
+    public async Task ScanAsync_NeverReportsAnythingOutsideItsBaseDirectories()
+    {
+        CreateInLocal("AlgoQueExiste");
+
+        var results = await ScanAsync(
+            new WingetPackage { Name = "AlgoQueExiste", Id = "Pub.AlgoQueExiste" });
+
+        Assert.NotEmpty(results);
+        Assert.All(results, r =>
+            Assert.StartsWith(_root, Path.GetFullPath(r.Path), StringComparison.OrdinalIgnoreCase));
     }
 }

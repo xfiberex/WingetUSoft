@@ -5,10 +5,49 @@ namespace WingetUSoft;
 /// Solo mira rutas candidatas concretas, derivadas del nombre y el Id del paquete: nunca recorre
 /// carpetas del sistema en busca de coincidencias.
 /// </summary>
+/// <summary>
+/// Los seis directorios que el escáner inspecciona. Van juntos en un tipo, y no como una lista, porque
+/// los dos barridos usan subconjuntos distintos: el de un nivel mira los seis; el de dos niveles
+/// (<c>{base}\{editor}\{app}</c>) deja fuera <c>%LocalAppData%\Programs</c>, donde nadie anida por
+/// editor. Existe además para poder apuntarlos a un directorio temporal en las pruebas: antes creaban
+/// carpetas reales en el perfil del usuario y un proceso de test muerto dejaba basura ahí.
+/// </summary>
+internal readonly record struct CleanupBaseDirectories(
+    string Roaming,
+    string Local,
+    string LocalPrograms,
+    string ProgramData,
+    string ProgramFiles,
+    string ProgramFilesX86)
+{
+    internal static CleanupBaseDirectories FromEnvironment()
+    {
+        string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        return new CleanupBaseDirectories(
+            Roaming: Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            Local: local,
+            LocalPrograms: System.IO.Path.Combine(local, "Programs"),
+            ProgramData: Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            ProgramFiles: Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            ProgramFilesX86: Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86));
+    }
+
+    internal string[] ForSingleLevel => [Roaming, Local, LocalPrograms, ProgramData, ProgramFiles, ProgramFilesX86];
+
+    internal string[] ForTwoLevels => [ProgramFiles, ProgramFilesX86, Roaming, Local, ProgramData];
+}
+
 public static class CleanupScanner
 {
-    public static async Task<List<CleanupItemViewModel>> ScanAsync(
+    public static Task<List<CleanupItemViewModel>> ScanAsync(
         IEnumerable<WingetPackage> packages,
+        CancellationToken ct = default)
+        => ScanAsync(packages, CleanupBaseDirectories.FromEnvironment(), ct);
+
+    internal static async Task<List<CleanupItemViewModel>> ScanAsync(
+        IEnumerable<WingetPackage> packages,
+        CleanupBaseDirectories baseDirectories,
         CancellationToken ct = default)
     {
         var results = new List<CleanupItemViewModel>();
@@ -18,7 +57,7 @@ public static class CleanupScanner
         {
             ct.ThrowIfCancellationRequested();
 
-            foreach (var candidate in GetCandidatePaths(package))
+            foreach (var candidate in GetCandidatePaths(package, baseDirectories))
             {
                 ct.ThrowIfCancellationRequested();
                 if (!seen.Add(candidate)) continue;
@@ -47,16 +86,9 @@ public static class CleanupScanner
 
     // ---- Generación de rutas candidatas --------------------------------------
 
-    private static IEnumerable<string> GetCandidatePaths(WingetPackage package)
+    private static IEnumerable<string> GetCandidatePaths(WingetPackage package, CleanupBaseDirectories baseDirectories)
     {
-        string roaming       = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        string local         = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string localPrograms = System.IO.Path.Combine(local, "Programs");
-        string progData      = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
-        string pf            = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        string pf86          = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-
-        var baseDirs = new[] { roaming, local, localPrograms, progData, pf, pf86 };
+        var baseDirs = baseDirectories.ForSingleLevel;
         var terms    = GetSearchTerms(package);
 
         // Un nivel: {baseDir}\{término}
@@ -76,7 +108,7 @@ public static class CleanupScanner
             && parts[0].Length >= 3
             && parts[1].Length >= 3)
         {
-            foreach (string baseDir in new[] { pf, pf86, roaming, local, progData })
+            foreach (string baseDir in baseDirectories.ForTwoLevels)
             {
                 if (string.IsNullOrEmpty(baseDir)) continue;
                 if (TryCombineInside(baseDir, parts[0], parts[1]) is { } candidate)

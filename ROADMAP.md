@@ -188,8 +188,8 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
-**Progreso (2026-08-22): 46 de 70.** ✅ **T0, T1 y T2 completos** (2 + 22 + 23). Siguiente frente:
-**T3** (17 tareas de pulido y mantenimiento) y **T4** (6, solo con decisión explícita).
+**Progreso (2026-08-22): 63 de 70.** ✅ **T0, T1, T2 y T3 completos** (2 + 22 + 23 + 17). Queda
+**T4** (6 tareas), que por definición solo se abre con decisión explícita.
 
 ---
 
@@ -1139,11 +1139,26 @@ decisión explícita.
     que cruzar a mano; van marcadas con `[diagnóstico]` para distinguirlas de un fallo no controlado.
   - **Criterio de aceptación:** todo diagnóstico emitido termina en un destino observable. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-13] Aislar `CleanupScannerTests` del perfil real del usuario**
+- [x] **[T3-13] Aislar `CleanupScannerTests` del perfil real del usuario**
   - **Área:** QA · **Ubicación:** `tests/WingetUSoft.Tests/CleanupScannerTests.cs:32,77,107`
   - **Qué hacer:** crean directorios reales en `%LOCALAPPDATA%`. Están protegidos con `try/finally`, pero un
     proceso de test muerto deja basura en el perfil. Redirigir con `AppSettings.DataDirectoryPath` o
     parametrizar los directorios base del escáner.
+  - **Resultado:** de las dos salidas del criterio se toma la segunda: `AppSettings.DataDirectoryPath` no
+    servía —el escáner no lo usa—, así que se parametrizan sus directorios base. Nuevo
+    `CleanupBaseDirectories`, un `record struct` con los seis; `ScanAsync` público sigue igual y delega en
+    una sobrecarga `internal` que los recibe.
+  - **Van en un tipo y no en una lista** porque los dos barridos usan subconjuntos distintos: el de un
+    nivel mira los seis, y el de dos (`{base}\{editor}\{app}`) deja fuera `%LocalAppData%\Programs`, donde
+    nadie anida por editor. Con una lista plana habría que haber cambiado ese comportamiento.
+  - **Los tests se reescribieron enteros:** cada instancia crea su propio temporal con las seis
+    subcarpetas y lo borra en `Dispose`, que xUnit ejecuta aunque el test falle — antes el `try/finally`
+    no cubría un proceso muerto o un `Ctrl+C`.
+  - **Y de paso ganaron dos casos que faltaban:** el barrido de dos niveles no estaba cubierto por
+    ninguno, y ahora hay un test que exige que **ningún** resultado caiga fuera de los directorios base.
+    Ese último es justo lo que hace que la suite pueda correr sin tocar el perfil.
+  - **Verificado (2026-08-22):** repasada la suite entera — no queda un solo `Environment.SpecialFolder`
+    en `tests/`; todo lo que se escribe cuelga de `Path.GetTempPath()`.
   - **Criterio de aceptación:** la suite no escribe fuera de un directorio temporal. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [x] **[T3-14] Pasar el `themeMode` real en `HistoryWindow`**
@@ -1181,11 +1196,21 @@ decisión explícita.
     Comprobado saboteando: neutralizar la comprobación hace fallar los cinco casos del prefijo y solo esos.
   - **Criterio de aceptación:** un nombre fuera de ese prefijo hace fallar el arranque del worker. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-17] Limpiar los artefactos de compilación del árbol de trabajo**
+- [x] **[T3-17] Limpiar los artefactos de compilación del árbol de trabajo**
   - **Área:** Mantenimiento · **Ubicación:** `publish/`, `src/WingetUSoft/publish/`, `src/WingetUSoft/installer/Output/`, `build.binlog`
   - **Qué hacer:** ~700 MB entre dos copias del `publish` (142 MB cada una), nueve instaladores históricos y
     un binlog. **Todo está correctamente ignorado por git** (verificado contra `git ls-files`), así que es
     solo higiene local: ralentiza búsquedas e indexado. Conservar el instalador de la última versión.
+  - **Resultado:** el árbol baja de **2,2 GB a 1,8 GB**. Fuera las dos copias de `publish` (142 MB y
+    101 MB) y los cuatro instaladores históricos con sus checksums (1.4.0, 1.4.1, 1.8.4 y 1.8.5, unos
+    130 MB). `build.binlog` ya no existía.
+  - **Se conserva el instalador de la versión publicada** (1.8.6) con su `.sha256`. Los anteriores siguen
+    descargables desde sus releases de GitHub.
+  - **No se tocan `bin/` ni `obj/`** (202 MB + 313 MB) aunque son el grueso de lo que queda: son la salida
+    de compilación viva —de ahí sale el `.exe` que conducen los UI tests— y borrarlos solo obliga a una
+    recompilación completa. La tarea nombraba `publish`, los instaladores y el binlog.
+  - **Verificado (2026-08-22):** comprobado antes de borrar que `git ls-files` no devuelve **nada** dentro
+    de esas rutas, y después que `git status` sigue igual que antes.
   - **Criterio de aceptación:** el árbol de trabajo baja de forma apreciable y `git status` sigue limpio. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 ---

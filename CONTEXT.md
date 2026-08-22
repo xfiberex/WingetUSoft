@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.6** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.6), sin firmar) |
-| **En `main`, sin publicar** | endurecimiento de `release.ps1` y `verify.ps1` contra el `NativeCommandError` de PowerShell 5.1 |
+| **En `main`, sin publicar** | el `NativeCommandError` de `release.ps1`/`verify.ps1` y **el Tier T3 completo** |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-22 |
 
@@ -86,9 +86,9 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **266/266** |
-| **UI tests (FlaUI)** | **36/36** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **46 de 70** — T0, T1 y T2 completos |
+| **Tests unitarios** | **279/279** |
+| **UI tests (FlaUI)** | **37/37** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
+| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **63 de 70** — T0, T1, T2 y T3 completos |
 | **Publicado** | hasta la **v1.8.6**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
@@ -195,10 +195,9 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ## 6. Pendientes / ideas
 
-- **Seguir el plan de auditoría** de [`ROADMAP.md`](ROADMAP.md) Parte II. T0, T1 y T2 están cerrados; lo
-  siguiente es **T3** (17 tareas de pulido y mantenimiento, empezando por el `.editorconfig` de T3-09, del
-  que depende añadir `dotnet format --verify-no-changes` a `verify.ps1`). Recordar en cada corte: el
-  release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app no puede verificar un
+- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 63 de 70.** T0, T1, T2 y T3 cerrados. Solo
+  queda **T4** (6 tareas), que por definición no se abre sin decisión explícita. Recordar en cada corte:
+  el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app no puede verificar un
   instalador sin firmar y **rechaza la actualización**.
 - **Certificado de firma de código (OV/EV) — descartado por ahora.** Consecuencia asumida: SmartScreen
   dice "editor desconocido" en cada instalación, y la verificación se apoya en el SHA-256 (detecta
@@ -241,6 +240,69 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-22 — Tier T3 cerrado: el estilo deja de depender de la disciplina (T3-01 a T3-17, sin publicar)
+
+**63 de 70.** T0, T1, T2 y T3 completos; solo queda T4, que no se abre sin decisión explícita.
+
+**1. `.editorconfig`, y `verify.ps1` que lo hace cumplir (T3-09).** El estilo era consistente por
+disciplina del autor, no por herramienta. Ahora está codificado —el que ya estaba en uso, más las dos
+reglas de encoding que este proyecto pagó caras: BOM en los `.ps1` y LF en `.githooks/`— y `verify.ps1`
+comprueba las categorías `style` y `analyzers` de `dotnet format`.
+
+> **La categoría `whitespace` queda fuera, y es una desviación del criterio literal.** Produce 290
+> avisos en 14 archivos, todos lo mismo: quiere colapsar la **alineación en columnas** que el
+> repositorio usa a propósito —las constantes de `Notifier`, los structs de interop, y 211 de los 290 en
+> el diccionario de traducciones—. No hay opción que la permita: o se acepta el aviso o se destruye el
+> estilo del autor en un diff que no arregla nada.
+
+**2. La convención de idioma de los comentarios no estaba escrita (T3-05, T3-06).** Ahora sí, en §4:
+español con acentos; en inglés solo identificadores, cadenas de la API de Windows y términos que no se
+traducen. Alineados los bloques sueltos que quedaban en inglés y devueltas las tildes a
+`WingetShowLabels` y a `installer.iss`.
+
+> Detalle que evitó romper algo: los comentarios de idioma de `WingetShowLabels` están alineados en
+> columna y todos los reemplazos conservan la longitud (ingles→inglés, aleman→alemán…). Y el `.iss` se
+> deja en UTF-8 **sin BOM** porque se comprobó contra el artefacto real: el `CompanyName` del instalador
+> de la v1.8.6 lee «Jiménez» bien.
+
+**3. Dos cosas que no eran cosmética (T3-08, T3-11).** El ajuste «Mostrar notificaciones» regía un método
+que solo escribe en la barra de estado, así que apagarlo **borraba también el resumen del lote** — que no
+es una notificación, es el resultado de lo que el usuario acaba de pedir. Y
+`LnkDescargarUpdate_Click`, un `async void`, se llamaba como método desde la confirmación de «Buscar
+actualización»: el `finally` que rehabilita el menú corría con la descarga aún en marcha y las
+excepciones se escapaban del `try` del llamador.
+
+**4. La política de `ConfigureAwait` la impone ahora un analizador (T3-10).** La seguían 12 de 47 awaits
+de `Services`. En vez de aplicarla a mano, se activa **CA2007** como advertencia en un `.editorconfig`
+propio de esa carpeta y `dotnet format analyzers` hace el cambio; como `verify.ps1` compila con
+`-warnaserror`, un await nuevo sin configurar rompe el build. El ámbito es la carpeta porque en `UI` lo
+correcto es lo contrario.
+
+> El corrector automático rompió tres `await using` con tipo explícito —`.ConfigureAwait(false)` devuelve
+> un `ConfiguredAsyncDisposable`, que no es un `Stream`—. Quedan sin configurar, con `#pragma` y motivo.
+
+**5. Lo que se diagnosticaba no iba a ninguna parte (T3-12).** Los cinco `Trace` de `AppSettings` se
+emitían sin listener: en Release, al vacío. Ahora van a `crash.log` con fecha y marca `[diagnóstico]`,
+en el mismo archivo que los fallos no controlados, porque el valor está en el orden — saber que la purga
+de logs venía fallando desde antes del error que sí se notó.
+
+**6. Y dos de higiene (T3-13, T3-17).** Los tests del escáner creaban carpetas reales en
+`%LOCALAPPDATA%`; ahora el escáner recibe sus seis directorios base como parámetro y la suite entera
+escribe solo bajo `Path.GetTempPath()`. El árbol de trabajo baja de **2,2 GB a 1,8 GB** quitando las dos
+copias de `publish` y los cuatro instaladores históricos; se conserva el de la versión publicada.
+
+**Verificado:** `.\verify.ps1 -Full` en verde — build 0/0, **279/279** unitarias, **37/37** UI tests.
+T3-07, T3-09, T3-10 y T3-16 comprobados saboteando su arreglo.
+
+> **Y un sabotaje corrigió el propio test, que es lo más útil que salió de aquí.** El primer test de
+> T3-07 exigía solo que el nombre accesible «no estuviera vacío» y **pasaba con el arreglo quitado**: sin
+> nombre propio, WinUI le deduce uno del `PlaceholderText` y el control reporta «Nombre o Id...», que es
+> un ejemplo de qué escribir, no una etiqueta — un lector de pantalla anunciaría el ejemplo como si fuera
+> el nombre del campo. Para cualquier otro `TextBox`: comprobar que el nombre accesible *existe* no
+> demuestra nada.
 
 ---
 
