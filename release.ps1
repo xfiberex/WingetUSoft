@@ -87,7 +87,11 @@ if (-not (Test-Path $csproj))      { Die "No se encontró el proyecto: $csproj" 
 if (-not (Test-Path $buildScript)) { Die "No se encontró el script de instalador: $buildScript" }
 
 # ── Versión ────────────────────────────────────────────────────────────────
-$csprojRaw = Get-Content $csproj -Raw
+# -Encoding UTF8 no es opcional: en PowerShell 5.1, Get-Content asume la página de códigos ANSI
+# cuando el archivo no lleva BOM — y el .csproj no lo lleva. Sin esto, sus caracteres acentuados se
+# leen como cp1252 y el WriteAllText de más abajo los reescribe doblemente codificados: el bump de
+# versión de la v1.8.5 destrozó así los acentos de los comentarios del proyecto.
+$csprojRaw = Get-Content $csproj -Raw -Encoding UTF8
 $currentVersion = $null
 if ($csprojRaw -match '<Version>(.*?)</Version>') { $currentVersion = $Matches[1] }
 

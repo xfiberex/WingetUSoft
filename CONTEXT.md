@@ -11,8 +11,8 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.8.4** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.4), sin firmar) |
-| **En `main`, sin publicar** | tests de accesibilidad + **bloque de rendimiento de T2** (registro fuera del hilo de UI, purga de logs, −37 % de instalador) |
+| **Versión publicada** | **1.8.5** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.5), sin firmar) |
+| **En `main`, sin publicar** | arreglo del bug de codificación de `release.ps1` que salió al cortar la 1.8.5 |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -198,6 +198,7 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-08-21 | **1.8.5** | **Rendimiento (T2)** — instalador −37 % (fuera el runtime de IA sin usar), registro fuera del hilo de UI, purga de logs, caché en la búsqueda |
 | 2026-08-21 | **1.8.4** | **Auditoría T1 completo** — TOCTOU del instalador, registro de fallos que no se pisa, fallos clasificados por código, accesibilidad e i18n |
 | 2026-08-21 | **1.8.3** | **Auditoría T0 + T1** — recorrido de rutas en la limpieza, guardado atómico de la configuración, contraste WCAG AA en las 4 ventanas, botones de diálogo localizados |
 | 2026-07-21 | **1.8.2** | Icono en la barra de título y título simplificado; titular de copyright con nombre legal (app, LICENSE e instalador) |
@@ -209,6 +210,26 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — `release.ps1` corrompía los acentos del `.csproj` (sin publicar)
+
+Salió solo al cortar la v1.8.5, y llevaba ahí desde siempre: **el `.csproj` nunca había tenido un
+carácter no ASCII** hasta que T2-03 le añadió un comentario largo en español.
+
+`release.ps1` lee el proyecto con `Get-Content -Raw` para estampar la versión. En **PowerShell 5.1**,
+`Get-Content` asume la página de códigos ANSI cuando el archivo **no lleva BOM** — y el `.csproj` no lo
+lleva. Así que leyó los bytes UTF-8 como cp1252 y el `WriteAllText` de después los reescribió doblemente
+codificados: `carga útil` → `carga Ãºtil`. El commit `release: v1.8.5` debería haber tocado 3 líneas y
+tocó 11 — ahí se vio.
+
+Arreglado con `-Encoding UTF8` al leer, y comprobado con un ciclo leer/modificar/escribir real, no de
+palabra. El texto del `.csproj` se restauró revirtiendo la doble codificación.
+
+> **No afecta a lo publicado:** el daño era en comentarios XML, así que el instalador de la v1.8.5 y su
+> `.sha256` son correctos. Pero cualquier release futuro habría vuelto a corromper el archivo, y cada vez
+> un poco más.
 
 ---
 
