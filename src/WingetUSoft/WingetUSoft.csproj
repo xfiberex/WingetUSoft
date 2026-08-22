@@ -15,9 +15,9 @@
     <Platforms>x64;ARM64</Platforms>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>1.8.4</Version>
-    <AssemblyVersion>1.8.4.0</AssemblyVersion>
-    <FileVersion>1.8.4.0</FileVersion>
+    <Version>1.8.5</Version>
+    <AssemblyVersion>1.8.5.0</AssemblyVersion>
+    <FileVersion>1.8.5.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -60,21 +60,21 @@
 
 
   <!--
-    T2-03 — Fuera el runtime de IA del paquete publicado.
+    T2-03 â€” Fuera el runtime de IA del paquete publicado.
 
-    Con WindowsAppSDKSelfContained, la SDK copia al publish TODA su carga útil, incluida la pila de IA
+    Con WindowsAppSDKSelfContained, la SDK copia al publish TODA su carga Ãºtil, incluida la pila de IA
     en el equipo: onnxruntime.dll (20,6 MB), DirectML.dll (17,7 MB) y los Microsoft.Windows.AI.* (~2,6
     MB). Son ~41 MB de los 142 del publish. Esta app gestiona paquetes de winget: no referencia ni una
-    de esas APIs (comprobado por grep sobre todo el código fuente), así que el usuario se descargaba
-    ese peso en cada actualización para nada.
+    de esas APIs (comprobado por grep sobre todo el cÃ³digo fuente), asÃ­ que el usuario se descargaba
+    ese peso en cada actualizaciÃ³n para nada.
 
-    Se filtra por NOMBRE y después de los targets que componen la carga útil, en vez de por la vía
+    Se filtra por NOMBRE y despuÃ©s de los targets que componen la carga Ãºtil, en vez de por la vÃ­a
     "oficial" (el item MicrosoftWindowsAppSDKFilesExcluded que esos targets consultan): ese item hay
     que rellenarlo con rutas completas derivadas de WindowsAppSdkComponentPackages, que la SDK define
-    dentro de sus propios targets y no está disponible al evaluar el proyecto. Filtrar por nombre a
-    posteriori no depende de en qué paquete de componentes viva cada archivo.
+    dentro de sus propios targets y no estÃ¡ disponible al evaluar el proyecto. Filtrar por nombre a
+    posteriori no depende de en quÃ© paquete de componentes viva cada archivo.
 
-    Si algún día la app usa Windows AI Foundation, basta con borrar este bloque.
+    Si algÃºn dÃ­a la app usa Windows AI Foundation, basta con borrar este bloque.
   -->
   <Target Name="RemoveUnusedAIRuntime"
           AfterTargets="AddMicrosoftWindowsAppSDKPayloadFilesFromMsix;AddMicrosoftWindowsAppSDKPayloadFilesFromComponents">
