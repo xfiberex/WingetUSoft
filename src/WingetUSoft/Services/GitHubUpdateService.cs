@@ -186,9 +186,17 @@ internal static class GitHubUpdateService
         response.EnsureSuccessStatusCode();
 
         long? totalBytes = response.Content.Headers.ContentLength;
+
+        // CA2007 pide configurar también estos dos `await using`, pero en una declaración con tipo
+        // explícito `.ConfigureAwait(false)` devuelve un ConfiguredAsyncDisposable y no compila:
+        // habría que partir cada una en la variable tipada más un descartable suelto. No compensa —
+        // el DisposeAsync de estos flujos ya se ejecuta fuera del hilo de UI, porque la continuación
+        // que llega hasta aquí viene de awaits que sí están configurados.
+#pragma warning disable CA2007
         await using Stream contentStream = await response.Content
             .ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         await using FileStream fileStream = new(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+#pragma warning restore CA2007
 
         byte[] buffer = new byte[81920];
         long totalRead = 0;
@@ -260,7 +268,9 @@ internal static class GitHubUpdateService
     internal static async Task<string> ComputeSha256Async(
         string filePath, CancellationToken cancellationToken = default)
     {
+#pragma warning disable CA2007   // Ver la nota de DownloadInstallerAsync: no se puede configurar un `await using` con tipo explícito.
         await using FileStream stream = File.OpenRead(filePath);
+#pragma warning restore CA2007
         byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
         return Convert.ToHexString(hash);
     }

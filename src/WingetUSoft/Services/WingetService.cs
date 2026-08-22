@@ -16,6 +16,9 @@ public static class WingetService
     private const string ElevatedWorkerSwitch = "--elevated-batch-worker";
     private const string PipeNameArgument = "--pipe-name";
     private const string AuthTokenArgument = "--auth-token";
+
+    /// <summary>Prefijo obligatorio del evento de cancelación del worker elevado (T3-16).</summary>
+    private const string CancelEventNamePrefix = @"Local\WingetUSoft.Cancel.";
     private const string CancelEventArgument = "--cancel-event";
     private const string PackageIdArgument = "--package-id";
     private static readonly object WingetPathSync = new();
@@ -36,7 +39,7 @@ public static class WingetService
     {
         try
         {
-            var result = await RunWingetAsync(["--version"]);
+            var result = await RunWingetAsync(["--version"]).ConfigureAwait(false);
             string version = result.Output.Trim();
             return string.IsNullOrWhiteSpace(version) ? null : version;
         }
@@ -46,7 +49,7 @@ public static class WingetService
         bool includeUnknown = false,
         CancellationToken cancellationToken = default)
     {
-        var result = await RunWingetAsync(BuildListUpgradableArguments(includeUnknown), cancellationToken);
+        var result = await RunWingetAsync(BuildListUpgradableArguments(includeUnknown), cancellationToken).ConfigureAwait(false);
 
         if (result.ExitCode != 0)
             throw new InvalidOperationException(BuildWingetCommandErrorMessage(
@@ -68,7 +71,7 @@ public static class WingetService
     {
         if (runAsAdministrator)
         {
-            var batchResult = await UpgradePackagesAsAdministratorAsync([packageId], silent, cancellationToken, logProgress);
+            var batchResult = await UpgradePackagesAsAdministratorAsync([packageId], silent, cancellationToken, logProgress).ConfigureAwait(false);
 
             if (batchResult.UserCancelled)
             {
@@ -94,13 +97,13 @@ public static class WingetService
             };
         }
 
-        return await RunWingetInteractiveAsync(packageId, silent, progress, cancellationToken, logProgress);
+        return await RunWingetInteractiveAsync(packageId, silent, progress, cancellationToken, logProgress).ConfigureAwait(false);
     }
 
     public static async Task<List<WingetPackage>> GetInstalledPackagesAsync(
         CancellationToken cancellationToken = default)
     {
-        var result = await RunWingetAsync(["list", "--accept-source-agreements"], cancellationToken);
+        var result = await RunWingetAsync(["list", "--accept-source-agreements"], cancellationToken).ConfigureAwait(false);
         if (result.ExitCode != 0 && string.IsNullOrWhiteSpace(result.Output))
             throw new InvalidOperationException(BuildWingetCommandErrorMessage(
                 "winget.actionListInstalled", result.ExitCode, result.Output, result.Error));
@@ -122,7 +125,7 @@ public static class WingetService
 
         var result = await RunWingetAsync(
             ["search", "--query", query.Trim(), "--accept-source-agreements", "--disable-interactivity"],
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         var found = WingetSearchParser.Parse(result.Output);
 
@@ -173,7 +176,7 @@ public static class WingetService
         if (includeVersions)
             arguments.Add("--include-versions");
 
-        var result = await RunWingetAsync(arguments, cancellationToken);
+        var result = await RunWingetAsync(arguments, cancellationToken).ConfigureAwait(false);
         return new UpgradeResult
         {
             Success = result.ExitCode == 0,
@@ -231,7 +234,7 @@ public static class WingetService
         };
         if (silent) arguments.Add("--silent");
 
-        var result = await RunWingetAsync(arguments, cancellationToken);
+        var result = await RunWingetAsync(arguments, cancellationToken).ConfigureAwait(false);
         return new UpgradeResult
         {
             Success = result.ExitCode == 0,
@@ -249,7 +252,7 @@ public static class WingetService
         {
             var result = await RunWingetAsync(
                 ["show", "--id", packageId, "--accept-source-agreements"],
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             return ParsePackageInfo(result.Output);
         }
         catch (OperationCanceledException)
@@ -368,7 +371,7 @@ public static class WingetService
 
         string pipeName = $"WingetUSoft.{Guid.NewGuid():N}";
         string authToken = Guid.NewGuid().ToString("N");
-        string cancelEventName = $"Local\\WingetUSoft.Cancel.{Guid.NewGuid():N}";
+        string cancelEventName = $"{CancelEventNamePrefix}{Guid.NewGuid():N}";
 
         using var cancelEvent = new EventWaitHandle(false, EventResetMode.ManualReset, cancelEventName);
         using var pipeServer = new NamedPipeServerStream(
@@ -408,11 +411,11 @@ public static class WingetService
             logProgress?.Report(normalizedPackageIds.Count == 1
                 ? L.T("worker.elevatedInProgressSingle")
                 : L.T("worker.elevatedInProgressBatch"));
-            await process.WaitForExitAsync();
+            await process.WaitForExitAsync().ConfigureAwait(false);
 
             if (!messageTask.IsCompleted)
             {
-                Task completedTask = await Task.WhenAny(messageTask, Task.Delay(TimeSpan.FromSeconds(ElevatedWorkerGracePeriodSeconds)));
+                Task completedTask = await Task.WhenAny(messageTask, Task.Delay(TimeSpan.FromSeconds(ElevatedWorkerGracePeriodSeconds))).ConfigureAwait(false);
                 if (completedTask != messageTask)
                     messageReaderCts.Cancel();
             }
@@ -420,7 +423,7 @@ public static class WingetService
             UpgradeBatchResult parsedResult;
             try
             {
-                parsedResult = await messageTask;
+                parsedResult = await messageTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -479,7 +482,7 @@ public static class WingetService
             options = ParseElevatedWorkerOptions(args);
 
             using var pipe = new NamedPipeClientStream(".", options.PipeName, PipeDirection.Out, PipeOptions.Asynchronous);
-            await pipe.ConnectAsync(ElevatedPipeConnectTimeoutMs);
+            await pipe.ConnectAsync(ElevatedPipeConnectTimeoutMs).ConfigureAwait(false);
 
             using var streamWriter = new StreamWriter(pipe, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
             {
@@ -492,10 +495,10 @@ public static class WingetService
             {
                 Type = "hello",
                 Token = options.AuthToken
-            });
+            }).ConfigureAwait(false);
 
             using var cancelEvent = EventWaitHandle.OpenExisting(options.CancelEventName);
-            await SendWorkerStatusAsync(writer, "starting", 0, string.Empty, options.PackageIds.Count);
+            await SendWorkerStatusAsync(writer, "starting", 0, string.Empty, options.PackageIds.Count).ConfigureAwait(false);
 
             int completedItems = 0;
             bool batchCancelled = false;
@@ -510,8 +513,8 @@ public static class WingetService
 
             var channelDrainTask = Task.Run(async () =>
             {
-                await foreach (var msg in progressChannel.Reader.ReadAllAsync())
-                    await SendWorkerMessageAsync(writer, msg);
+                await foreach (var msg in progressChannel.Reader.ReadAllAsync().ConfigureAwait(false))
+                    await SendWorkerMessageAsync(writer, msg).ConfigureAwait(false);
             });
 
             foreach (string packageId in options.PackageIds)
@@ -519,12 +522,12 @@ public static class WingetService
                 if (cancelEvent.WaitOne(0))
                 {
                     batchCancelled = true;
-                    await SendWorkerStatusAsync(writer, "cancelled", completedItems, packageId, options.PackageIds.Count);
+                    await SendWorkerStatusAsync(writer, "cancelled", completedItems, packageId, options.PackageIds.Count).ConfigureAwait(false);
                     break;
                 }
 
                 completedItems++;
-                await SendWorkerStatusAsync(writer, "running", completedItems, packageId, options.PackageIds.Count);
+                await SendWorkerStatusAsync(writer, "running", completedItems, packageId, options.PackageIds.Count).ConfigureAwait(false);
 
                 long lastProgressTick = 0L;
                 long progressIntervalTicks = Stopwatch.Frequency / 4; // max 4 updates/sec
@@ -550,7 +553,7 @@ public static class WingetService
                     options.Silent,
                     progress: progressHandler,
                     cancellationToken: CancellationToken.None,
-                    logProgress: null);
+                    logProgress: null).ConfigureAwait(false);
 
                 await SendWorkerMessageAsync(writer, new ElevatedWorkerMessage
                 {
@@ -561,18 +564,18 @@ public static class WingetService
                     UserCancelled = result.UserCancelled,
                     Output = result.Output,
                     ErrorOutput = result.ErrorOutput
-                });
+                }).ConfigureAwait(false);
             }
 
             progressChannel.Writer.Complete();
-            await channelDrainTask;
+            await channelDrainTask.ConfigureAwait(false);
 
-            await SendWorkerStatusAsync(writer, "completed", completedItems, string.Empty, options.PackageIds.Count);
+            await SendWorkerStatusAsync(writer, "completed", completedItems, string.Empty, options.PackageIds.Count).ConfigureAwait(false);
             await SendWorkerMessageAsync(writer, new ElevatedWorkerMessage
             {
                 Type = "summary",
                 BatchCancelled = batchCancelled
-            });
+            }).ConfigureAwait(false);
 
             return 0;
         }
@@ -586,7 +589,7 @@ public static class WingetService
                     {
                         Type = "summary",
                         ErrorOutput = ex.Message
-                    });
+                    }).ConfigureAwait(false);
                 }
                 catch
                 {
@@ -683,7 +686,14 @@ public static class WingetService
     /// nunca vuelve al proceso principal ni llega al usuario. Solo pueden dispararse si la propia app
     /// compone mal la invocación: son diagnóstico de protocolo, no mensajes de producto.
     /// </remarks>
-    private static ElevatedWorkerOptions ParseElevatedWorkerOptions(string[] args)
+    /// <summary>
+    /// Interpreta y valida los argumentos con los que se invoca al worker elevado.
+    /// </summary>
+    /// <remarks>
+    /// <c>internal</c> para poder probarlo: es la única frontera entre una línea de comandos y un
+    /// proceso que va a correr como administrador.
+    /// </remarks>
+    internal static ElevatedWorkerOptions ParseElevatedWorkerOptions(string[] args)
     {
         var options = new ElevatedWorkerOptions();
 
@@ -731,6 +741,13 @@ public static class WingetService
             || options.PackageIds.Count == 0)
             throw new ArgumentException("La invocación del worker elevado no contiene todos los argumentos requeridos.");
 
+        // El nombre del evento llega por la línea de comandos y acaba en EventWaitHandle.OpenExisting,
+        // que abriría cualquier objeto de sincronización del sistema que se le nombre. Exigir el prefijo
+        // con el que lo crea UpgradePackagesAsAdministratorAsync lo acota a los que crea esta app.
+        if (!options.CancelEventName.StartsWith(CancelEventNamePrefix, StringComparison.Ordinal))
+            throw new ArgumentException(
+                $"El nombre del evento de cancelación debe empezar por '{CancelEventNamePrefix}'.");
+
         return options;
     }
 
@@ -750,11 +767,11 @@ public static class WingetService
         IProgress<WingetProgressInfo>? downloadProgress,
         CancellationToken cancellationToken)
     {
-        await pipeServer.WaitForConnectionAsync(cancellationToken);
+        await pipeServer.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         using var reader = new StreamReader(pipeServer, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: PipeReaderBufferSize, leaveOpen: true);
 
-        return await ReadElevatedWorkerMessagesAsync(reader, authToken, statusProgress, downloadProgress, cancellationToken);
+        return await ReadElevatedWorkerMessagesAsync(reader, authToken, statusProgress, downloadProgress, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -790,7 +807,7 @@ public static class WingetService
 
         while (true)
         {
-            string? line = await reader.ReadLineAsync(cancellationToken);
+            string? line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (line is null)
                 break;
 
@@ -942,8 +959,8 @@ public static class WingetService
             line => logProgress?.Report(line));
         var stderrTask = ReadStreamSimpleAsync(process.StandardError.BaseStream, fullError);
 
-        await Task.WhenAll(stdoutTask, stderrTask);
-        await process.WaitForExitAsync();
+        await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+        await process.WaitForExitAsync().ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1052,7 +1069,7 @@ public static class WingetService
     {
         using var reader = new StreamReader(stream, Encoding.UTF8);
         string? line;
-        while ((line = await reader.ReadLineAsync()) is not null)
+        while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is not null)
             output.AppendLine(line);
     }
 
@@ -1087,7 +1104,7 @@ public static class WingetService
 
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        await process.WaitForExitAsync();
+        await process.WaitForExitAsync().ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -1330,7 +1347,7 @@ public static class WingetService
         Environment.ProcessPath
         ?? throw new InvalidOperationException(L.T("winget.ownPathUnknown"));
 
-    private sealed class ElevatedWorkerOptions
+    internal sealed class ElevatedWorkerOptions
     {
         public string PipeName { get; set; } = string.Empty;
         public string AuthToken { get; set; } = string.Empty;

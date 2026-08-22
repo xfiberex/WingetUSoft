@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -116,7 +115,7 @@ public sealed class AppSettings
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"No se pudieron purgar los registros antiguos: {ex.Message}");
+            CrashLog.WriteDiagnostic(nameof(PurgeOldLogs), ex.Message);
         }
 
         return deleted;
@@ -197,7 +196,7 @@ public sealed class AppSettings
         catch (Exception ex)
         {
             LastSaveError = new DeferredMessage("settings.saveFailed", SettingsFilePath, ex.Message);
-            Trace.TraceError(LastSaveError.Text);
+            CrashLog.WriteDiagnostic(nameof(Save), ex.Message);
             return false;
         }
         finally
@@ -217,7 +216,7 @@ public sealed class AppSettings
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"No se pudo borrar el archivo temporal de configuración: {ex.Message}");
+            CrashLog.WriteDiagnostic(nameof(TryDeleteLeftoverTempFile), ex.Message);
         }
     }
 
@@ -230,7 +229,9 @@ public sealed class AppSettings
 
     private static AppSettings CreateDefaultsWithLoadError(DeferredMessage message)
     {
-        Trace.TraceError(message.Text);
+        // El texto va sin traducir a propósito: esto lo lee quien depura, no el usuario, y aquí el
+        // idioma todavía no está fijado (Load corre antes que L.Set — ver DeferredMessage).
+        CrashLog.WriteDiagnostic(nameof(Load), message.Key);
         return new AppSettings { LastLoadError = message };
     }
 
@@ -250,7 +251,7 @@ public sealed class AppSettings
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"No se pudo crear una copia del archivo de configuración inválido: {ex.Message}");
+            CrashLog.WriteDiagnostic(nameof(TryBackupUnreadableSettingsFile), ex.Message);
         }
     }
 }

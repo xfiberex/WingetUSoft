@@ -1052,12 +1052,19 @@ decisión explícita.
     comprobar que el nombre accesible «existe» no demuestra nada.
   - **Criterio de aceptación:** el nombre accesible existe en una sola fuente. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-08] Alinear `ShowUpdateNotification` con lo que promete su ajuste**
+- [x] **[T3-08] Alinear `ShowUpdateNotification` con lo que promete su ajuste**
   - **Área:** UX · **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:2139-2148`
   - **Qué hacer:** el método está regido por `_settings.ShowNotifications` («Mostrar notificaciones al
     completar actualizaciones») pero solo escribe en `txtEstado`; el aviso real (sonido + parpadeo) lo hace
     `Notifier` con su propio umbral de 10 s. O se renombra el método a lo que hace, o el ajuste deja de
     regirlo. El ajuste promete más de lo que entrega.
+  - **Resultado:** de las dos salidas que ofrecía el criterio se toman **las dos**. El método pasa a
+    llamarse `ShowBatchResultInStatusBar`, que es lo que hace, **y** deja de regirlo el ajuste.
+  - **Y al mirarlo de cerca había algo peor que un nombre desafortunado:** como el ajuste sí lo regía,
+    apagar «Mostrar notificaciones» borraba también el **resumen del lote en la barra de estado**. Eso no
+    es una notificación: es el resultado de lo que el usuario acaba de pedir, y quien apaga los avisos no
+    está pidiendo que se le oculte qué pasó. El ajuste se queda con `Notifier` —sonido y parpadeo de la
+    barra de tareas, con su umbral de 10 s—, que es exactamente lo que su texto promete.
   - **Criterio de aceptación:** el nombre del método y el texto del ajuste describen el comportamiento real. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [x] **[T3-09] Añadir `.editorconfig`**
@@ -1083,23 +1090,53 @@ decisión explícita.
     que el paso falle con `IDE0003` y código de salida 2.
   - **Criterio de aceptación:** `dotnet format --verify-no-changes` pasa sobre el código actual. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-10] Uniformar el uso de `ConfigureAwait` en `Services`**
+- [x] **[T3-10] Uniformar el uso de `ConfigureAwait` en `Services`**
   - **Área:** Código · **Ubicación:** `GitHubUpdateService.cs` (11 usos), `WingetService.cs` (1), `CleanupScanner.cs` (0)
   - **Qué hacer:** decidir una política para la capa de servicios (`ConfigureAwait(false)` es lo correcto:
     no necesitan el contexto de UI) y aplicarla; anotarla en `CONTEXT.md` §4.
+  - **Política adoptada:** `ConfigureAwait(false)` en toda la capa `Services`; en `UI`, nunca. Escrita en
+    `CONTEXT.md` §4.
+  - **Resultado:** aplicada a los 47 awaits de la capa (1/1 en `CleanupScanner`, 13/13 en
+    `GitHubUpdateService`, 33/33 en `WingetService`). Antes la seguían 12 de 47.
+  - **No la aplicó un `sed`, sino el analizador:** se activa **CA2007** como advertencia en un
+    `.editorconfig` propio de `src/WingetUSoft/Services/` y `dotnet format analyzers` hace el cambio.
+    Así la política deja de depender de la memoria de quien escribe: `verify.ps1` compila con
+    `-warnaserror`, de modo que un await nuevo sin configurar en esa carpeta **rompe el build**. Y el
+    ámbito es la carpeta, no el repositorio, porque en `UI` lo correcto es justo lo contrario.
+  - **Desviación al implementarlo:** tres `await using` con tipo explícito quedan **sin** configurar, con
+    `#pragma` y motivo al lado. El corrector automático de CA2007 los rompió —`.ConfigureAwait(false)`
+    devuelve un `ConfiguredAsyncDisposable`, que no es un `Stream`, y no compilaba— y configurarlos de
+    verdad obliga a partir cada declaración en la variable tipada más un descartable suelto: más ruido
+    que beneficio, cuando la continuación que llega hasta ahí ya viene de awaits configurados.
+  - **Verificado (2026-08-22):** saboteando — quitar un `ConfigureAwait` de `CleanupScanner` hace que el
+    build falle con `error CA2007`.
   - **Criterio de aceptación:** política escrita y aplicada de forma uniforme en los 4 archivos de `Services`. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-11] No invocar un `async void` como si fuera un método**
+- [x] **[T3-11] No invocar un `async void` como si fuera un método**
   - **Área:** Código · **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:1979`
   - **Qué hacer:** `LnkDescargarUpdate_Click(sender, e)` se llama directamente desde
     `MenuBuscarActualizacion_Click`: no se puede esperar y sus excepciones no se pueden capturar. Extraer el
     cuerpo a un `Task DownloadAndInstallUpdateAsync()` que ambos consuman.
+  - **Resultado:** el cuerpo pasa a `DownloadAndInstallUpdateAsync()`, un `Task` que consumen los dos
+    caminos: el botón de la InfoBar y la confirmación de «Buscar actualización».
+  - **Lo que estaba mal de verdad:** al llamar al `async void` como método, la confirmación seguía su
+    camino sin esperar a la descarga y el `finally` que rehabilita el menú se ejecutaba **con la descarga
+    todavía en marcha**. Y cualquier excepción de la descarga se escapaba del `try` del llamador: en un
+    `async void` no hay tarea que la capture, va directa al manejador de excepciones no observadas.
   - **Criterio de aceptación:** ningún `async void` se invoca como método en el código. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-12] Dar salida a los `Trace` o retirarlos**
+- [x] **[T3-12] Dar salida a los `Trace` o retirarlos**
   - **Área:** Observabilidad · **Ubicación:** `src/WingetUSoft/Settings/AppSettings.cs:113,127,147`
   - **Qué hacer:** `Trace.TraceError` / `TraceWarning` se emiten sin ningún listener configurado, así que en
     Release no van a ninguna parte. Redirigirlos al log de archivo o eliminarlos.
+  - **Resultado:** los cinco `Trace` pasan a `CrashLog.WriteDiagnostic(origen, mensaje)`, que anota con
+    fecha en `crash.log`, el archivo que ya se recorta por tamaño y que un usuario adjuntaría a un informe.
+  - **Por qué ahí y no en el log de archivo:** el `FileLog` lo crea `MainWindow`, y `AppSettings.Load()`
+    corre **antes** de que exista — el mismo problema de orden que obligó a inventar `DeferredMessage`.
+    `CrashLog` es estático y no depende de la UI, así que funciona desde el primer instante.
+  - **Comparten archivo a propósito:** el valor de estas anotaciones está en el orden. Saber que la purga
+    de logs venía fallando desde antes del error que sí se notó vale más que tener dos archivos que haya
+    que cruzar a mano; van marcadas con `[diagnóstico]` para distinguirlas de un fallo no controlado.
   - **Criterio de aceptación:** todo diagnóstico emitido termina en un destino observable. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-13] Aislar `CleanupScannerTests` del perfil real del usuario**
@@ -1127,11 +1164,21 @@ decisión explícita.
   - **Resultado:** la línea menciona ahora las instalaciones además de las actualizaciones.
   - **Criterio de aceptación:** la descripción menciona ambos tipos de entrada. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-16] Validar el nombre del evento de cancelación del worker elevado**
+- [x] **[T3-16] Validar el nombre del evento de cancelación del worker elevado**
   - **Área:** Seguridad · **Ubicación:** `src/WingetUSoft/Services/WingetService.cs:497`
   - **Qué hacer:** `EventWaitHandle.OpenExisting(options.CancelEventName)` acepta cualquier nombre recibido
     por argumento. No es explotable por sí solo (quien controle los argumentos ya ejecuta código como el
     usuario), pero exigir el prefijo `Local\WingetUSoft.Cancel.` cuesta una línea.
+  - **Resultado:** el prefijo `Local\WingetUSoft.Cancel.` pasa a ser una constante, se usa al **crear** el
+    evento y se exige al **recibirlo**.
+  - **Desviación al implementarlo, y mejora el resultado:** la comprobación no se queda donde estaba el
+    `OpenExisting`, sino que baja a `ParseElevatedWorkerOptions`, que es donde vive el resto de la
+    validación de argumentos. Eso permitió hacer el parser `internal` y **probarlo**: es la única frontera
+    entre una línea de comandos y un proceso que va a correr como administrador, y no tenía ni un test.
+  - **Verificado (2026-08-22):** `ElevatedWorkerOptionsTests` — 11 casos: una invocación válida, cinco
+    nombres de evento fuera del prefijo (otro espacio de nombres, otra app, otro sufijo, sin `Local\`, y
+    el prefijo en minúsculas), cuatro argumentos requeridos ausentes y un argumento desconocido.
+    Comprobado saboteando: neutralizar la comprobación hace fallar los cinco casos del prefijo y solo esos.
   - **Criterio de aceptación:** un nombre fuera de ese prefijo hace fallar el arranque del worker. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-17] Limpiar los artefactos de compilación del árbol de trabajo**

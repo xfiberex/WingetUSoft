@@ -72,6 +72,32 @@ internal static class CrashLog
         }
     }
 
+    /// <summary>
+    /// Anota un diagnóstico que **no** es una excepción no controlada: algo de recuperación
+    /// automática que no salió, y que no interrumpe a nadie pero conviene poder mirar después.
+    /// </summary>
+    /// <remarks>
+    /// Comparte archivo con <see cref="Write"/> —marcado como diagnóstico— porque el valor de este
+    /// registro está en el orden: saber que la purga de logs venía fallando desde antes del error
+    /// que sí se notó vale más que tener dos archivos que hay que cruzar a mano.
+    /// </remarks>
+    internal static void WriteDiagnostic(string origin, string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppSettings.DataDirectoryPath);
+            TrimIfTooLarge();
+
+            File.AppendAllText(
+                FilePath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [diagnóstico] {origin}: {message}" + Environment.NewLine);
+        }
+        catch
+        {
+            // Igual que en Write: si ni esto se puede anotar, no queda nada mejor que hacer.
+        }
+    }
+
     /// <summary>Aviso visible: un fallo silencioso deja al usuario sin saber que perdió la operación.</summary>
     internal static void Notify()
     {

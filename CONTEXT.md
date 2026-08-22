@@ -129,6 +129,14 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
   (`Core/WingetTable`) y las etiquetas de `winget show` tienen su tabla de 10 idiomas
   (`Services/WingetShowLabels`, generada con un script desde el `.msixbundle` oficial). Aprendido a la
   mala en el Tier C #3.
+- **`ConfigureAwait(false)` en toda la capa `Services`.** No toca la UI —habla con winget, la red y el
+  disco—, así que no necesita volver al hilo de la interfaz después de un await, y hacerlo encola una
+  continuación que compite con el repintado. En `UI` es al revés: ahí **no** se configura, porque el
+  código de después del await sí toca controles. Lo impone el analizador **CA2007**, activado como
+  advertencia en `src/WingetUSoft/Services/.editorconfig`, y `verify.ps1` compila con `-warnaserror`:
+  un await nuevo sin configurar en esa carpeta rompe el build. Única excepción, con `#pragma` y motivo
+  al lado: las declaraciones `await using` con tipo explícito, donde `.ConfigureAwait(false)` devuelve
+  un `ConfiguredAsyncDisposable` y no compila.
 - **`winget pin` NO sirve para "omitir esta versión":** sus anclajes congelan el paquete también para
   las versiones futuras. Se resuelve en la app (`Core/SkippedVersions`). Ver Tier E.
 - **Elevación:** la app corre **`asInvoker`**; los lotes elevados usan un **worker interno con named

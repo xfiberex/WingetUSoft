@@ -1,0 +1,16 @@
+# Política de ConfigureAwait para la capa de servicios (T3-10).
+#
+# `Services` no toca la UI: habla con winget, con la red y con el disco. No necesita volver al hilo
+# de la interfaz para continuar después de un await, y hacerlo tiene coste — cada continuación se
+# encola en el dispatcher y compite con el repintado. Los llamadores de `UI` sí awaitan sin
+# configurar, así que ellos siguen reanudándose en el hilo correcto: es el reparto estándar.
+#
+# Antes de T3-10 la política existía a medias: 11 de 13 awaits en GitHubUpdateService la seguían,
+# 1 de 33 en WingetService y ninguno en CleanupScanner. Ahora la impone el analizador CA2007 en vez
+# de la memoria de quien escribe, y `verify.ps1` compila con -warnaserror, así que un await nuevo sin
+# configurar rompe el build.
+#
+# El ámbito es esta carpeta a propósito: en `UI` lo correcto es justo lo contrario.
+
+[*.cs]
+dotnet_diagnostic.CA2007.severity = warning

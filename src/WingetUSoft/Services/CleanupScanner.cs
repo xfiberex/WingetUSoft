@@ -28,7 +28,7 @@ public static class CleanupScanner
                 if (!isDir && !isFile) continue;
 
                 long size = isDir
-                    ? await Task.Run(() => CalculateDirSize(candidate), ct)
+                    ? await Task.Run(() => CalculateDirSize(candidate), ct).ConfigureAwait(false)
                     : TryGetFileSize(candidate);
 
                 results.Add(new CleanupItemViewModel

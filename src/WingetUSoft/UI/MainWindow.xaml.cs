@@ -783,7 +783,7 @@ public sealed partial class MainWindow : Window
         if (_failedUpgrades.Count > 0)
             await ShowFailureSummaryAsync();
 
-        ShowUpdateNotification(success, failed);
+        ShowBatchResultInStatusBar(success, failed);
 
         // Aviso al terminar (sonido + parpadeo de la barra de tareas): solo si la operación fue
         // larga (≥ 10 s), no se canceló y el usuario no está ya mirando la ventana.
@@ -1834,7 +1834,19 @@ public sealed partial class MainWindow : Window
         return $"{L.T("update.changelog")}\n{plain}\n\n{baseMessage}";
     }
 
-    private async void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e)
+    private async void LnkDescargarUpdate_Click(object sender, RoutedEventArgs e) =>
+        await DownloadAndInstallUpdateAsync();
+
+    /// <summary>
+    /// Descarga el instalador de la nueva versión, lo verifica y lo lanza.
+    /// </summary>
+    /// <remarks>
+    /// Vive aparte del manejador del clic porque hay dos caminos que llegan aquí: el botón de la
+    /// InfoBar y la confirmación de «Buscar actualización». El segundo llamaba directamente al
+    /// manejador, que es <c>async void</c>: nadie podía esperar a que la descarga terminara y sus
+    /// excepciones se escapaban del <c>try</c> del llamador.
+    /// </remarks>
+    private async Task DownloadAndInstallUpdateAsync()
     {
         if (string.IsNullOrEmpty(_appUpdateUrl)) return;
 
@@ -1920,7 +1932,7 @@ public sealed partial class MainWindow : Window
                 if (await ShowConfirmDialogAsync(L.T("update.availTitle"),
                     $"{L.T("update.availBody", info.Version)}\n\n{confirmBody}"))
                 {
-                    LnkDescargarUpdate_Click(sender, e);
+                    await DownloadAndInstallUpdateAsync();
                 }
             }
         }
@@ -2081,10 +2093,17 @@ public sealed partial class MainWindow : Window
         _fileLog.Dispose();   // vacía la cola: lo último del registro también llega al archivo
     }
 
-    private void ShowUpdateNotification(int success, int failed)
+    /// <summary>
+    /// Deja en la barra de estado el resultado del lote que acaba de terminar.
+    /// </summary>
+    /// <remarks>
+    /// <b>No</b> lo rige «Mostrar notificaciones»: esto no es una notificación, es el resultado de lo
+    /// que el usuario acaba de pedir, y quien apaga los avisos no está pidiendo que se le oculte.
+    /// El ajuste rige el aviso de verdad —sonido y parpadeo de la barra de tareas—, que da
+    /// <see cref="Notifier"/> con su propio umbral de duración.
+    /// </remarks>
+    private void ShowBatchResultInStatusBar(int success, int failed)
     {
-        if (!_settings.ShowNotifications) return;
-
         string message = failed == 0
             ? L.T("notif.updatedSuccess", success)
             : L.T("notif.updatedMixed", success, failed);
