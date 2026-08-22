@@ -1,0 +1,23 @@
+#!/bin/sh
+# Verificación antes de publicar (T2-12). Sustituye a lo que en otros proyectos haría CI: aquí no
+# hay GitHub Actions ni runners hospedados (decisión cerrada, ver ROADMAP.md), así que la última
+# oportunidad de detectar un test roto antes de que llegue a main es este hook.
+#
+# Se instala una sola vez por clon:
+#     git config core.hooksPath .githooks
+#
+# Corre la variante rápida (build + unitarias + dependencias vulnerables). Los UI tests se quedan
+# fuera a propósito: tardan y toman el escritorio, así que van en 'verify.ps1 -Full' y en release.ps1.
+# Para saltárselo puntualmente: git push --no-verify
+echo "pre-push: verificando el repositorio (verify.ps1)..."
+
+repo_root=$(git rev-parse --show-toplevel)
+powershell -NoProfile -ExecutionPolicy Bypass -File "$repo_root/verify.ps1" -SkipOutdated
+status=$?
+
+if [ $status -ne 0 ]; then
+    echo "pre-push: la verificacion fallo. Push abortado (usa --no-verify si sabes lo que haces)."
+    exit $status
+fi
+
+exit 0

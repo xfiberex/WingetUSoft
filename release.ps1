@@ -70,6 +70,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# ¿Puso este script el GH_TOKEN? Solo se limpia el que ponga él (ver el finally del final).
+$ghTokenSetByThisScript = $false
+
 function Info($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)    { Write-Host "[OK] $m" -ForegroundColor Green }
 function Warn($m)  { Write-Host "[!] $m" -ForegroundColor Yellow }
@@ -78,8 +81,7 @@ function Die($m)   { Write-Host "[X] $m" -ForegroundColor Red; exit 1 }
 # ── Rutas ──────────────────────────────────────────────────────────────────
 $root          = $PSScriptRoot
 $csproj        = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
-$testProject   = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
-$uiTestProject = Join-Path $root "tests\WingetUSoft.UiTests\WingetUSoft.UiTests.csproj"
+$verifyScript  = Join-Path $root "verify.ps1"
 $buildScript   = Join-Path $root "src\WingetUSoft\installer\build-installer.ps1"
 $outputDir     = Join-Path $root "src\WingetUSoft\installer\Output"
 
@@ -138,34 +140,34 @@ try {
         $untracked | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
     }
 
-    # ── Pruebas ──────────────────────────────────────────────────────────────
-    if ($SkipTests) {
-        Warn "Pruebas omitidas (-SkipTests)."
-    } else {
-        Info "Ejecutando pruebas unitarias..."
-        & dotnet test $testProject --nologo
-        if ($LASTEXITCODE -ne 0) { Die "Las pruebas unitarias fallaron. Release abortado." }
-        Ok "Pruebas unitarias correctas."
+    # ── Verificación ──────────────────────────────────────────────────────────────────────────
+    # Este script NO define qué es "verificado": lo hace verify.ps1, que es también lo que corre el
+    # hook de pre-push. Aquí solo se decide cuánto de esa verificación se exige para publicar.
+    #
+    # Los UI tests conducen la app REAL por UI Automation (FlaUI/UIA3): abren ventanas, pulsan botones
+    # y leen el árbol de automatización. Necesitan una sesión de escritorio interactiva y desatendida
+    # -- no valen una sesión bloqueada ni una consola sin escritorio (CI, tarea programada, SSH); ahí
+    # hay que pasar -SkipUiTests. NO necesitan elevación: la app es asInvoker. Cubren cosas que las
+    # unitarias no pueden ver: que la ventana quepa en la WorkArea y en las celdas de snap, que el
+    # cambio de idioma repinte los controles ya visibles, o que un filtro no quede recortado contra el
+    # borde. Justo el tipo de regresión que se cuela en un release.
+    if (-not (Test-Path $verifyScript)) { Die "No se encontró el script de verificación: $verifyScript" }
 
-        # Los UI tests conducen la app REAL por UI Automation (FlaUI/UIA3): abren ventanas, pulsan
-        # botones y leen el árbol de automatización. Necesitan una sesión de escritorio interactiva y
-        # desatendida -- no valen una sesión bloqueada ni una consola sin escritorio (CI, tarea
-        # programada, SSH); ahí hay que pasar -SkipUiTests. NO necesitan elevación: la app es asInvoker.
-        #
-        # Cubren cosas que las unitarias no pueden ver: que la ventana quepa en la WorkArea y en las
-        # celdas de snap, que el cambio de idioma repinte los controles ya visibles, y que las cabeceras
-        # de la tabla se puedan activar sin ratón. Justo el tipo de regresión que se cuela en un release.
-        if ($SkipUiTests) {
-            Warn "UI tests omitidos (-SkipUiTests): este release NO se ha verificado contra la app real."
-        } elseif (-not (Test-Path $uiTestProject)) {
-            Die "No se encontró el proyecto de UI tests: $uiTestProject  (usa -SkipUiTests si es a propósito)."
-        } else {
-            Info "Ejecutando UI tests (abren la app real: no toques el ratón ni el teclado)..."
-            & dotnet test $uiTestProject --nologo
-            if ($LASTEXITCODE -ne 0) { Die "Los UI tests fallaron. Release abortado." }
-            Ok "UI tests correctos."
-        }
+    $verifyArgs = @{}
+    if ($SkipTests) {
+        Warn "Pruebas omitidas (-SkipTests): solo se verifican compilación y dependencias."
+        $verifyArgs.SkipTests = $true
+    } elseif ($SkipUiTests) {
+        Warn "UI tests omitidos (-SkipUiTests): este release NO se ha verificado contra la app real."
+    } else {
+        $verifyArgs.Full = $true
+        Info "Los UI tests abren la app real: no toques el ratón ni el teclado."
     }
+
+    Info "Verificando el repositorio (verify.ps1)..."
+    & $verifyScript @verifyArgs
+    if ($LASTEXITCODE -ne 0) { Die "La verificación falló. Release abortado." }
+    Ok "Repositorio verificado."
 
     # ── Notas del release ──────────────────────────────────────────────────────
     $notesPath = $NotesFile
@@ -187,6 +189,27 @@ try {
     }
     if (-not (Test-Path $notesPath)) { Die "No se encontró el archivo de notas: $notesPath" }
 
+    # Los flags que rebajan la verificación avisan por consola, y ese aviso se lo lleva el viento.
+    # Meses después, mirando un release, no había forma de saber si salió verificado. Se anota en las
+    # notas publicadas, que es lo único que sobrevive.
+    $omissions = @()
+    if ($SkipTests)   { $omissions += "**Pruebas omitidas** (``-SkipTests``): esta versión se publicó sin ejecutar las pruebas unitarias ni los UI tests." }
+    if ($SkipUiTests -and -not $SkipTests) { $omissions += "**UI tests omitidos** (``-SkipUiTests``): esta versión no se verificó contra la app real." }
+    if ($AllowDirty)  { $omissions += "**Árbol de trabajo sucio** (``-AllowDirty``): había archivos sin rastrear que no entraron en el commit del release." }
+
+    if ($omissions) {
+        # Nunca se modifica el archivo que pasó el usuario (-NotesFile): se compone una copia temporal.
+        $notesWithWarning = Join-Path $env:TEMP "wus_release_notes_$Version.md"
+        $body = @(Get-Content $notesPath -Encoding UTF8)
+        $body += @("", "---", "", "> ⚠️ **Verificación incompleta en este release.**")
+        foreach ($o in $omissions) { $body += "> - $o" }
+        $body | Out-File -FilePath $notesWithWarning -Encoding utf8
+        if ($tempNotes) { Remove-Item $tempNotes -Force -ErrorAction SilentlyContinue }
+        $tempNotes = $notesWithWarning
+        $notesPath = $notesWithWarning
+        Warn "Las notas del release incluirán la advertencia de verificación incompleta ($($omissions.Count) punto/s)."
+    }
+
     # ── DRY RUN: mostrar plan y salir ────────────────────────────────────────
     if ($DryRun) {
         Write-Host ""
@@ -200,6 +223,9 @@ try {
         Write-Host "    4. git push origin $branch" -ForegroundColor DarkGray
         Write-Host "       git push origin $tag" -ForegroundColor DarkGray
         Write-Host "    5. gh release create $tag (assets: WingetUSoft-Setup-$Version.exe + .sha256)" -ForegroundColor DarkGray
+        Write-Host ""
+        Write-Host "    Notas que se publicarían:" -ForegroundColor DarkGray
+        Get-Content $notesPath -Encoding UTF8 | ForEach-Object { Write-Host "      $_" -ForegroundColor DarkGray }
         if ($tempNotes) { Remove-Item $tempNotes -Force -ErrorAction SilentlyContinue }
         Ok "Dry run completado."
         return
@@ -292,7 +318,12 @@ try {
         $cred = "protocol=https`nhost=github.com`n`n" | & git credential fill 2>$null
         $ErrorActionPreference = $eap
         $pwdLine = $cred | Where-Object { $_ -like 'password=*' } | Select-Object -First 1
-        if ($pwdLine) { $env:GH_TOKEN = $pwdLine.Substring(9) }
+        if ($pwdLine) {
+            # A partir de aquí el PAT vive en el entorno del proceso y lo hereda TODO hijo posterior,
+            # durante el resto de la sesión de PowerShell. El finally de abajo lo deshace.
+            $ghTokenSetByThisScript = $true
+            $env:GH_TOKEN = $pwdLine.Substring(9)
+        }
         if (-not $env:GH_TOKEN) { Die "No se pudo obtener credencial para gh. Ejecuta 'gh auth login' y reintenta (el tag ya está publicado)." }
     }
 
@@ -305,5 +336,15 @@ try {
     Ok "Release $tag publicado: https://github.com/xfiberex/WingetUSoft/releases/tag/$tag"
 }
 finally {
+    # El PAT sale de la credencial cacheada de git y se pone en $env:GH_TOKEN para que 'gh' lo use.
+    # Sin esto seguía ahí el resto de la sesión de PowerShell, heredándolo cualquier proceso que se
+    # lanzara después desde la misma consola.
+    #
+    # Solo se limpia si lo puso este script: un GH_TOKEN que ya estuviera en el entorno es del usuario,
+    # se puso a propósito y no es de este script borrarlo (ver ROADMAP.md, T2-18).
+    if ($ghTokenSetByThisScript) {
+        Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue
+        Write-Host "[OK] GH_TOKEN limpiado del entorno." -ForegroundColor Green
+    }
     Pop-Location
 }

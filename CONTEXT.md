@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.5** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.5), sin firmar) |
-| **En `main`, sin publicar** | arreglo de codificación de `release.ps1` + **refactorización estructural de T2** (tabla de winget, registro de actividad y arranque de ventanas) + **responsive/i18n y sueltos de código de T2** (filtros con nombre accesible y que envuelven, fechas y nombres de archivo por idioma) |
+| **En `main`, sin publicar** | **el Tier T2 completo** — rendimiento, refactorización estructural, responsive/i18n, `verify.ps1` + hook de pre-push, pruebas del worker elevado y el arreglo de codificación de `release.ps1` |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-22 |
 
@@ -86,10 +86,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **196/196** |
-| **UI tests (FlaUI)** | **27/27** — los corre `release.ps1`: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **11 de 70** |
-| **Publicado** | hasta la **v1.8.3**. `main` y el ultimo tag coinciden |
+| **Tests unitarios** | **266/266** |
+| **UI tests (FlaUI)** | **36/36** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
+| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **46 de 70** — T0, T1 y T2 completos |
+| **Publicado** | hasta la **v1.8.5**. En `main` hay cuatro cortes del Tier T2 sin publicar |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
 
@@ -157,27 +157,36 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | Tests de UI (app real) | `dotnet test tests/WingetUSoft.UiTests/WingetUSoft.UiTests.csproj` |
 | Instalador | `src\WingetUSoft\installer\build-installer.ps1` (`-CertThumbprint <huella>` para firmar) |
 | Capturas del README | `.\tools\capture-screenshots.ps1` |
+| **Verificar el repositorio** | `.\verify.ps1` (rápida) · `.\verify.ps1 -Full` (añade los UI tests) |
+| Activar el hook de pre-push | `git config core.hooksPath .githooks` (una vez por clon) |
 | **Publicar versión** | `.\release.ps1 -Version X.Y.Z` (`-DryRun` para simular) |
 
-`release.ps1`: validar → **tests unitarios + UI** → bump `<Version>` → instalador (+ `.sha256`) → commit
+`release.ps1`: validar → **`verify.ps1 -Full`** → bump `<Version>` → instalador (+ `.sha256`) → commit
 + tag `vX.Y.Z` → push → `gh release create` con **los dos assets**. Flags: `-DryRun`, `-SkipTests`,
-`-SkipUiTests`, `-AllowDirty`, `-NotesFile`, y los de firma.
+`-SkipUiTests`, `-AllowDirty`, `-NotesFile`, y los de firma. Usar cualquiera de los tres primeros deja
+constancia en las notas publicadas del release.
+
+**Qué significa «verificado» lo define `verify.ps1`, en un solo sitio**: build con `-warnaserror`,
+unitarias, dependencias vulnerables (aborta) y desactualizadas (informa), y con `-Full` los UI tests.
+Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
 ## 6. Pendientes / ideas
 
-- **Seguir el plan de auditoría** de [`ROADMAP.md`](ROADMAP.md) Parte II. Lo siguiente es **T1-02**:
-  clasificar los fallos de winget por código de salida y no por texto, que winget traduce al idioma de
-  Windows. Recordar en cada corte: el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`,
-  la app no puede verificar un instalador sin firmar y **rechaza la actualización**.
+- **Seguir el plan de auditoría** de [`ROADMAP.md`](ROADMAP.md) Parte II. T0, T1 y T2 están cerrados; lo
+  siguiente es **T3** (17 tareas de pulido y mantenimiento, empezando por el `.editorconfig` de T3-09, del
+  que depende añadir `dotnet format --verify-no-changes` a `verify.ps1`). Recordar en cada corte: el
+  release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app no puede verificar un
+  instalador sin firmar y **rechaza la actualización**.
 - **Certificado de firma de código (OV/EV) — descartado por ahora.** Consecuencia asumida: SmartScreen
   dice "editor desconocido" en cada instalación, y la verificación se apoya en el SHA-256 (detecta
   manipulación en tránsito, no un compromiso de la cuenta de GitHub). El pipeline ya lo soporta si algún
   día hay certificado (`build-installer.ps1 -CertThumbprint …`; el updater prefiere la firma sobre el hash).
-- **CI (GitHub Actions) — descartado.** `release.ps1` ya corre unitarios **y** UI tests antes de cada
-  corte; un runner hospedado no puede correr los UI tests (necesitan escritorio interactivo), así que solo
-  duplicaría lo ya cubierto.
+- **CI (GitHub Actions) — descartado**, y reafirmado al cerrar T2-12. La alternativa no fue «nada», sino
+  bajar la verificación al equipo de desarrollo: `verify.ps1` y el hook de pre-push corren en cada push lo
+  mismo que corre un release, **incluidos los UI tests** (con `-Full`), que son justamente lo que un runner
+  hospedado no puede ejecutar por necesitar escritorio interactivo.
 - **Notificación toast — descartada.** El aviso ya existe (sonido + parpadeo de la barra de tareas +
   progreso en el icono), y en una app unpackaged el toast exige registrar un servidor COM del
   `AppNotificationManager`: mucha fontanería para un beneficio marginal. **No quedan ideas abiertas.**
@@ -210,6 +219,66 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-22 — Tier T2 cerrado: verificación local, protocolo del worker y documentación (T2-12 a T2-18, sin publicar)
+
+Cuarto corte del Tier T2 y último: **46 de 70** tareas. **T0, T1 y T2 completos.**
+
+**1. «Verificado» pasa a estar definido en un solo sitio (T2-12, T2-13).** Hasta hoy la verificación
+completa solo ocurría al cortar una versión, o si alguien se acordaba de lanzar `dotnet test`: entre
+release y release, un test roto podía vivir en `main` sin que nada lo señalara. La solución **no es CI**
+—decisión cerrada, y reafirmada aquí— sino `verify.ps1`: build con `-warnaserror`, unitarias, dependencias
+vulnerables (aborta) y desactualizadas (informa), y con `-Full` los UI tests. Lo invocan el hook
+`.githooks/pre-push` y `release.ps1`, que ya no repite ninguno de esos pasos.
+
+> Lo interesante del reparto: lo que un runner hospedado **nunca** podría correr —los UI tests, que
+> necesitan escritorio interactivo— es justo lo que aquí sí entra en el flujo.
+>
+> Tres detalles que costó descubrir. `dotnet list package --vulnerable` devuelve **0 aunque encuentre
+> algo**, así que hay que mirar la salida y no el código de salida. El hook necesita un `.gitattributes`
+> con `eol=lf`, o `sh` lo rechaza en Windows. Y `verify.ps1` necesita **BOM**: sin él, PowerShell 5.1 lo
+> lee como ANSI y escupe los acentos rotos —la misma trampa que corrompió el `.csproj` en la v1.8.5—.
+>
+> Comprobado con fallos reales: con un test roto a propósito el hook aborta el push, y con
+> `System.Net.Http` 4.3.0 (GHSA-7jgj-8wvc-jh57) la verificación falla por partida doble —el `-warnaserror`
+> la convierte en el error NU1903 y el paso dedicado la detecta igual—.
+
+**2. La ruta más compleja del código ya tiene pruebas (T2-15).** El protocolo del worker elevado —named
+pipe, JSON por línea, autenticación por token, canal acotado de progreso, evento de cancelación— no tenía
+ni una, porque probarlo de verdad exigía levantar un proceso elevado. Separado el bucle de la tubería
+(ahora toma un `TextReader`), la conversación entera cabe en un `StringReader`: 15 tests.
+
+> **Un cambio de comportamiento a propósito:** un token incorrecto ya no lanza. Antes tiraba una excepción
+> que acababa en el `catch (Exception)` genérico del llamador y se reportaba como «error de lectura de
+> sesión»; ahora devuelve un lote sin autenticar con su motivo. La regla que sí se mantiene intacta: sin
+> `hello` válido no se procesa **nada**, ni un solo resultado; pero una línea que no sea JSON se ignora y
+> se sigue leyendo, porque el ruido de un proceso elevado no debe costar el lote entero.
+>
+> Ambas comprobadas saboteando: quitar la comparación del token, o hacer que la línea corrupta relance,
+> hace fallar exactamente esos 6 tests y ninguno más.
+
+**3. Un solo sitio donde declarar versiones (T2-14).** `Directory.Build.props` y `Directory.Packages.props`
+con gestión centralizada: los `.csproj` dicen **qué** paquetes usan, el `.props` con qué versión. Los dos
+proyectos de test habían divergido en `Microsoft.NET.Test.Sdk` y `xunit.runner.visualstudio`, con lo que un
+mismo test podía comportarse distinto según dónde viviera; y los UI tests apuntaban a un TFM más viejo que
+el resto, que era divergencia y no decisión.
+
+**4. Lo que se omite queda escrito, y el PAT ya no se queda puesto (T2-17, T2-18).** `-SkipTests`,
+`-SkipUiTests` y `-AllowDirty` avisaban solo por consola: meses después no había forma de saber si una
+versión salió verificada. Ahora dejan un bloque de advertencia en las notas publicadas (y `-DryRun` las
+imprime, que resulta útil por sí mismo). Y el token que `release.ps1` saca de la credencial cacheada de git
+para `gh` se limpia en el `finally` —**solo si lo puso él**: un `GH_TOKEN` que ya estuviera en el entorno es
+del usuario, y borrárselo le rompería la sesión—.
+
+**5. La operación más destructiva ya está documentada (T2-16).** El README no mencionaba que tras
+desinstalar se abre sola una ventana que **propone borrar carpetas de forma recursiva e irreversible**.
+Ahora explica qué busca (rutas concretas derivadas del nombre y el Id, en seis directorios conocidos; no
+rastrea el disco), que nada viene marcado, y que el borrado no pasa por la papelera.
+
+**Verificado:** `.\verify.ps1 -Full` en verde —build 0 advertencias / 0 errores, **266/266** unitarias,
+**36/36** UI tests—.
 
 ---
 

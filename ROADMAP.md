@@ -188,10 +188,8 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
-**Progreso (2026-08-22): 39 de 70.** ✅ **T0 y T1 completos** (2 + 22). **T2 a 16 de 23**: cerrados
-rendimiento (T2-01 a T2-03, T2-21, T2-23), refactorización (T2-04 a T2-07), responsive/i18n (T2-08 a
-T2-11) y los sueltos de código (T2-19, T2-20, T2-22). Queda verificación local (T2-12 a T2-15) y
-T2-16 a T2-18.
+**Progreso (2026-08-22): 46 de 70.** ✅ **T0, T1 y T2 completos** (2 + 22 + 23). Siguiente frente:
+**T3** (17 tareas de pulido y mantenimiento) y **T4** (6, solo con decisión explícita).
 
 ---
 
@@ -771,7 +769,7 @@ T2-16 a T2-18.
 
 ### QA y DevOps
 
-- [ ] **[T2-15] Tests del protocolo del worker elevado**
+- [x] **[T2-15] Tests del protocolo del worker elevado**
   - **Área:** QA
   - **Ubicación:** `src/WingetUSoft/Services/WingetService.cs:472-598` y `:736-832`
   - **Qué hacer:** es la ruta más compleja del código (~200 líneas: named pipe, JSON por línea, autenticación
@@ -780,10 +778,23 @@ T2-16 a T2-18.
     JSON malformados que deben ignorarse, `result` y `summary`, y cancelación a mitad de lote.
   - **Criterio de aceptación:** un token incorrecto produce `UpgradeBatchResult` sin autenticar; una línea de
     JSON corrupta no aborta la lectura del resto.
+  - **Resultado:** el bucle del protocolo se separó de la tubería —ahora toma un `TextReader`— y se cubre
+    con 15 tests en `ElevatedWorkerProtocolTests`, con la conversación entera en un `StringReader`: no hace
+    falta elevación ni named pipe para ejercitarlo.
+  - **Desviación al implementarlo:** un token incorrecto **ya no lanza**. Antes tiraba una
+    `InvalidOperationException` que acababa cayendo en el `catch (Exception)` genérico del llamador y se
+    reportaba como error de lectura de sesión. Ahora devuelve directamente un `UpgradeBatchResult` sin
+    autenticar con el motivo (`winget.elevatedAuthFailed`), que es literalmente lo que pedía el criterio y
+    no depende de un catch-all para dar un mensaje correcto.
+  - **Verificado (2026-08-22):** los dos criterios, saboteando. Quitar la comparación del token hace fallar
+    `Hello_WithTheWrongToken_...`; hacer que la línea corrupta relance en vez de ignorarse hace fallar los
+    5 casos de `ACorruptLine_IsSkippedAndTheRestIsStillRead` —y **solo** esos 6—. También se cubre que sin
+    `hello` previo no se procesa nada, que un lote cancelado a mitad conserva los resultados ya recibidos y
+    marca el corte, y que un `progress` sin tamaño total no se retransmite (sería un porcentaje inventado).
   - **Esfuerzo:** alto
   - **Depende de:** ninguna
 
-- [ ] **[T2-12] Script de verificación local `verify.ps1` + hook de pre-push**
+- [x] **[T2-12] Script de verificación local `verify.ps1` + hook de pre-push**
   - **Área:** DevOps (local)
   - **Ubicación:** `verify.ps1` (raíz, nuevo) y `.githooks/pre-push` (nuevo)
   - **Qué hacer:** hoy la verificación completa solo ocurre al cortar una versión con `release.ps1`, o si
@@ -801,10 +812,21 @@ T2-16 a T2-18.
     de salida distinto de 0 si se rompe un test, el build emite advertencias o hay una dependencia
     vulnerable; un `git push` con un test roto se aborta; `release.ps1` ya no repite los pasos que
     `verify.ps1` cubre.
+  - **Resultado:** `verify.ps1` en la raíz, y `.githooks/pre-push` que lo invoca. Encadena compilación con
+    `-warnaserror`, unitarias y el chequeo de dependencias (T2-13); con `-Full` añade los UI tests, que son
+    justo lo que un runner hospedado nunca podría correr. `release.ps1` ya no repite ningún paso: llama a
+    `verify.ps1` y solo decide **cuánta** verificación exige (`-Full`, o `-SkipTests` al delegar).
+  - **Verificado (2026-08-22):** `.erify.ps1` termina en verde sobre el `main` actual; con un test roto a
+    propósito devuelve 1 y el hook aborta el push (`sh .githooks/pre-push` → código 1). Registrado con
+    `git config core.hooksPath .githooks`, que hay que ejecutar **una vez por clon** (está en la cabecera
+    del hook).
+  - **Desviación al implementarlo:** `dotnet format --verify-no-changes` **no** se añadió todavía —no hay
+    `.editorconfig` contra el que formatear hasta T3-09—; queda anotado en la cabecera de `verify.ps1`.
+    Y se añadió un `.gitattributes` con `.githooks/* text eol=lf`: con CRLF, `sh` rechaza el hook.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-13] Chequeo local de dependencias vulnerables y desactualizadas**
+- [x] **[T2-13] Chequeo local de dependencias vulnerables y desactualizadas**
   - **Área:** Seguridad / DevOps (local)
   - **Ubicación:** `verify.ps1` (T2-12) y `release.ps1`
   - **Qué hacer:** hoy hay **0 vulnerabilidades** (verificado 2026-08-20), pero es una foto de un instante y
@@ -815,10 +837,19 @@ T2-16 a T2-18.
     lo hereda al delegar en `verify.ps1`.
   - **Criterio de aceptación:** `.\verify.ps1` informa del resultado de ambos chequeos; una dependencia
     vulnerable simulada hace fallar la verificación y, por tanto, aborta el release.
+  - **Resultado:** dos pasos en `verify.ps1`. El de vulnerables aborta; el de desactualizados solo informa
+    (tiene un `-SkipOutdated` porque consulta NuGet y es el paso lento; el hook de pre-push lo usa).
+  - **Desviación al implementarlo:** `dotnet list package --vulnerable` devuelve **0 aunque encuentre
+    algo**, así que no vale con mirar el código de salida: se buscan las líneas de paquete afectado
+    (`^\s*>\s`) en la salida.
+  - **Verificado (2026-08-22):** con una dependencia vulnerable simulada (`System.Net.Http` 4.3.0,
+    GHSA-7jgj-8wvc-jh57) la verificación falla y, con ella, el release. Saltó por partida doble: el
+    `-warnaserror` del build ya la convierte en el error NU1903, y el paso dedicado la detecta también
+    (1 coincidencia). Hoy sigue habiendo **0 vulnerabilidades**; 7 referencias con versión más nueva.
   - **Esfuerzo:** bajo
   - **Depende de:** T2-12
 
-- [ ] **[T2-14] `Directory.Build.props` y versiones de paquetes alineadas**
+- [x] **[T2-14] `Directory.Build.props` y versiones de paquetes alineadas**
   - **Área:** DevOps
   - **Ubicación:** raíz del repositorio y los 3 `.csproj`
   - **Qué hacer:** los dos proyectos de test divergen (`Microsoft.NET.Test.Sdk` 17.12.0 frente a 17.14.1,
@@ -826,26 +857,44 @@ T2-16 a T2-18.
     `ImplicitUsings` y las versiones de paquetes.
   - **Criterio de aceptación:** una sola versión declarada por paquete en todo el repositorio; los 162 tests
     siguen en verde.
+  - **Resultado:** `Directory.Build.props` (TargetFramework, TargetPlatformMinVersion, Nullable,
+    ImplicitUsings) y `Directory.Packages.props` con gestión centralizada de versiones: los `.csproj`
+    declaran **qué** paquetes usan y el `.props`, con qué versión. Los dos que divergían quedan en la más
+    alta que ya usaba alguno (`Microsoft.NET.Test.Sdk` 17.14.1, `xunit.runner.visualstudio` 3.1.4).
+  - **Desviación al implementarlo:** los UI tests apuntaban a `net10.0-windows10.0.19041.0` y pasan a
+    22621 como el resto. Era divergencia, no decisión: la app ya exige 22621 y su
+    `TargetPlatformMinVersion` sigue siendo 19041.
+  - **Verificado (2026-08-22):** una sola declaración por paquete en todo el repositorio; 266 unitarios y
+    36 UI tests en verde (el criterio decía 162, escrito cuando la suite era más pequeña).
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-17] Registrar en las notas del release qué se omitió**
+- [x] **[T2-17] Registrar en las notas del release qué se omitió**
   - **Área:** DevOps
   - **Ubicación:** `release.ps1:136-161` y la generación de notas en `:164-196`
   - **Qué hacer:** `-SkipTests`, `-SkipUiTests` y `-AllowDirty` avisan por consola pero no dejan rastro
     permanente: meses después no hay forma de saber qué versión salió sin verificar. Añadir una línea a las
     notas del release cuando se use alguno.
   - **Criterio de aceptación:** un release con `-SkipUiTests` incluye la advertencia en sus notas de GitHub.
+  - **Resultado:** los tres flags dejan rastro en las notas publicadas, en un bloque de cita al final. Nunca
+    se modifica el archivo que pase el usuario con `-NotesFile`: se compone una copia temporal.
+  - **Verificado (2026-08-22):** `-DryRun` imprime ahora las notas que se publicarían (útil por sí mismo), y
+    con `-SkipTests -AllowDirty` aparecen los dos avisos bajo «⚠️ Verificación incompleta en este release».
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-18] Limpiar `GH_TOKEN` del entorno tras el release**
+- [x] **[T2-18] Limpiar `GH_TOKEN` del entorno tras el release**
   - **Área:** Seguridad / DevOps
   - **Ubicación:** `release.ps1:282-291`
   - **Qué hacer:** el PAT se toma de la credencial cacheada de git y se pone en `$env:GH_TOKEN`, donde
     persiste el resto de la sesión de PowerShell y lo hereda **todo** proceso hijo posterior. Limpiarlo en un
     `finally`.
   - **Criterio de aceptación:** al terminar `release.ps1`, `$env:GH_TOKEN` está vacío.
+  - **Resultado:** el `finally` limpia `GH_TOKEN` del entorno del proceso.
+  - **Desviación al implementarlo:** solo se limpia **si lo puso este script**. Un `GH_TOKEN` que ya
+    estuviera en el entorno es del usuario, lo puso a propósito para `gh`, y borrárselo le rompería la
+    sesión; el problema que la tarea describe es el PAT que el script saca de la credencial cacheada de git
+    y deja heredable por todo proceso hijo posterior, y ese sí desaparece siempre.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -895,7 +944,7 @@ T2-16 a T2-18.
 
 ### Documentación
 
-- [ ] **[T2-16] Documentar la limpieza de residuos en el README**
+- [x] **[T2-16] Documentar la limpieza de residuos en el README**
   - **Área:** Documentación
   - **Ubicación:** `README.md:78-79` (sección «Desinstalación»)
   - **Qué hacer:** la sección no menciona que tras desinstalar se abre automáticamente una ventana que propone
@@ -904,6 +953,11 @@ T2-16 a T2-18.
     que la eliminación no se puede deshacer.
   - **Criterio de aceptación:** la sección describe la ventana de limpieza; idealmente con la captura
     `docs/screenshots/` correspondiente si se regenera.
+  - **Resultado:** la sección «Desinstalación» explica ahora **qué busca** la ventana (rutas concretas
+    derivadas del nombre y el Id, en seis directorios conocidos; no rastrea el disco), que **nada viene
+    marcado** y que cerrarla no borra nada, y que el borrado es **recursivo, sin papelera e irreversible**.
+  - **Desviación al implementarlo:** sin captura nueva. Regenerar `docs/screenshots/` es un cambio aparte y
+    el texto se sostiene solo.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 

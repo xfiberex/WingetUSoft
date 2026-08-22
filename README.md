@@ -77,6 +77,17 @@ descargar e instalar, y tras actualizar aparece una sola vez el diálogo de **No
 
 ### Desinstalación
 - **Ventana de desinstalación** — lista todos los programas instalados con búsqueda y filtrado, y permite desinstalar cualquier paquete con confirmación previa.
+- **Limpieza de residuos** — cuando una desinstalación termina bien, se abre automáticamente una segunda
+  ventana que busca lo que el desinstalador haya dejado atrás y **propone borrarlo**. Conviene saber tres
+  cosas antes de usarla:
+  - **Qué busca.** Solo rutas concretas derivadas del nombre y el Id del paquete, dentro de
+    `%AppData%`, `%LocalAppData%`, `%LocalAppData%\Programs`, `%ProgramData%`, `Archivos de programa` y
+    `Archivos de programa (x86)`. **No** rastrea el disco ni recorre carpetas del sistema en busca de
+    coincidencias.
+  - **Nada viene marcado.** La lista es una propuesta: sale con todas las casillas vacías y no se borra
+    nada hasta que tú marcas y confirmas. Cerrar la ventana no borra nada.
+  - **El borrado no se puede deshacer.** Las carpetas se eliminan de forma **recursiva** y **no pasan por
+    la papelera**. Revisa las rutas antes de confirmar: es la operación más destructiva de la app.
 
 ### Gestión y configuración
 Todas las preferencias viven en un solo sitio, la ventana **Configuración**; el menú **Herramientas**
@@ -217,8 +228,17 @@ WingetUSoft/
 ├── tests/WingetUSoft.Tests/    # Tests unitarios (xUnit)
 ├── tests/WingetUSoft.UiTests/  # Tests de UI end-to-end (FlaUI + UIA3, xUnit)
 ├── tools/                      # capture-screenshots.ps1 (capturas del README)
-└── docs/screenshots/           # Capturas usadas en este README
+├── docs/screenshots/           # Capturas usadas en este README
+├── .githooks/pre-push          # Lanza verify.ps1 antes de cada push
+├── verify.ps1                  # Verificación completa en local (build + tests + dependencias)
+└── release.ps1                 # Corta una versión de principio a fin (delega en verify.ps1)
 ```
+
+> **Al clonar el repositorio**, para activar el hook de pre-push:
+> `git config core.hooksPath .githooks`
+>
+> Verificación a mano: `.erify.ps1` (rápida) o `.erify.ps1 -Full` (añade los UI tests de FlaUI, que
+> conducen la app real y necesitan una sesión de escritorio interactiva).
 
 ## Datos de usuario
 

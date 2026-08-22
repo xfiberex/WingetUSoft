@@ -754,6 +754,35 @@ public static class WingetService
 
         using var reader = new StreamReader(pipeServer, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: PipeReaderBufferSize, leaveOpen: true);
 
+        return await ReadElevatedWorkerMessagesAsync(reader, authToken, statusProgress, downloadProgress, cancellationToken);
+    }
+
+    /// <summary>
+    /// Interpreta el protocolo del worker elevado: un mensaje JSON por línea, con <c>hello</c> autenticado
+    /// por token como primer mensaje obligatorio.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Separado del <see cref="NamedPipeServerStream"/> a propósito (T2-15): la tubería solo aporta los
+    /// bytes, y montar un proceso elevado real para probar el protocolo no es viable. Con un
+    /// <see cref="TextReader"/> se puede ejercitar entero —token correcto e incorrecto, líneas corruptas,
+    /// resultados, resumen y cancelación a mitad de lote— sin pedir elevación ni abrir una tubería.
+    /// </para>
+    /// <para>
+    /// <b>Reglas de robustez, y por qué.</b> El primer mensaje tiene que ser <c>hello</c> con el token
+    /// exacto que se le pasó al worker por la línea de comandos; cualquier otra cosa corta la sesión sin
+    /// procesar un solo resultado —lo que llega por esa tubería decide lo que la app da por instalado—.
+    /// En cambio, una línea que no sea JSON válido **se ignora y se sigue leyendo**: el worker corre
+    /// elevado y cualquier ruido en su salida no debe costar el resultado del lote entero.
+    /// </para>
+    /// </remarks>
+    internal static async Task<UpgradeBatchResult> ReadElevatedWorkerMessagesAsync(
+        TextReader reader,
+        string authToken,
+        IProgress<UpgradeBatchStatusInfo>? statusProgress,
+        IProgress<WingetProgressInfo>? downloadProgress,
+        CancellationToken cancellationToken)
+    {
         bool authenticated = false;
         bool batchCancelled = false;
         string errorOutput = string.Empty;
@@ -780,9 +809,12 @@ public static class WingetService
 
             if (!authenticated)
             {
+                // Sin autenticar no se procesa **nada**: ni un resultado, ni el resumen. Se devuelve un
+                // lote vacío con el motivo, en vez de lanzar, para que el error llegue igual de claro
+                // tanto si el worker mintió el token como si nunca llegó a hablar.
                 if (!string.Equals(message.Type, "hello", StringComparison.Ordinal)
                     || !string.Equals(message.Token, authToken, StringComparison.Ordinal))
-                    throw new InvalidOperationException(L.T("winget.elevatedAuthFailed"));
+                    return new UpgradeBatchResult { ErrorOutput = L.T("winget.elevatedAuthFailed") };
 
                 authenticated = true;
                 continue;

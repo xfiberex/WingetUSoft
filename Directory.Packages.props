@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Gestión centralizada de versiones de NuGet (T2-14): los .csproj declaran QUÉ paquetes usan y este
+    archivo, con qué versión. Subir una dependencia se hace en un solo sitio y es imposible que dos
+    proyectos queden en versiones distintas del mismo paquete.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Aplicación -->
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
+    <PackageVersion Include="H.NotifyIcon.WinUI" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pruebas. Se alinean en la versión más alta que ya usaba alguno de los dos proyectos. -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageVersion Include="FlaUI.Core" Version="5.0.0" />
+    <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

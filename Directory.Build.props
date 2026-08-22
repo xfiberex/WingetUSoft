@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Propiedades comunes a los tres proyectos del repositorio (T2-14). Antes estaban copiadas en cada
+    .csproj y ya habían divergido: los dos proyectos de test apuntaban a versiones distintas de
+    Microsoft.NET.Test.Sdk y de xunit.runner.visualstudio, con lo que un mismo test podía comportarse
+    distinto según el proyecto en el que viviera.
+
+    Las versiones de los paquetes NO van aquí, sino en Directory.Packages.props (gestión centralizada
+    de versiones de NuGet): una sola declaración por paquete en todo el repositorio.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

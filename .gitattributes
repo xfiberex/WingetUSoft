@@ -1,0 +1,2 @@
+# Los hooks los ejecuta sh (Git for Windows): un CRLF los rompe con "bad interpreter".
+.githooks/* text eol=lf
