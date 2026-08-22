@@ -32,6 +32,7 @@ internal sealed class HistoryEntryViewModel
 public sealed partial class HistoryWindow : Window
 {
     private readonly List<HistoryEntry> _allHistory;
+    private readonly int _themeMode;
     private string _searchFilter = "";
     private HistoryStatusFilter _statusFilter = HistoryStatusFilter.All;
     private bool _initialized;
@@ -40,6 +41,7 @@ public sealed partial class HistoryWindow : Window
     {
         InitializeComponent();
         _allHistory = history;
+        _themeMode = themeMode;
 
         var (appWindow, _) = WindowChrome.Apply(
             this, AppTitleBar, themeMode,
@@ -51,8 +53,11 @@ public sealed partial class HistoryWindow : Window
         ApplyFilter();
     }
 
+    // El fallback solo entra en juego mientras Content todavía no es un FrameworkElement con tema
+    // resuelto. Pasar 0 ("seguir al sistema") era una reserva incorrecta: las otras cinco ventanas
+    // pasan el modo real, y con el tema forzado a oscuro esta habría pintado los botones de claro.
     private void UpdateTitleBarButtonColors(AppWindow appWindow) =>
-        TitleBarHelper.UpdateButtonColors(appWindow, Content, themeModeFallback: 0);
+        TitleBarHelper.UpdateButtonColors(appWindow, Content, _themeMode);
 
     private void ApplyLocalizedStrings()
     {

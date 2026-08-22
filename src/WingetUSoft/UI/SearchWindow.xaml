@@ -63,8 +63,7 @@
                                  PlaceholderText="Nombre, Id o palabra clave..."
                                  Width="320" Height="36"
                                  VerticalAlignment="Center"
-                                 KeyDown="TxtBuscar_KeyDown"
-                                 AutomationProperties.Name="Buscar en el catálogo de winget" />
+                                 KeyDown="TxtBuscar_KeyDown" />
                         <Button x:Name="btnBuscar" Style="{StaticResource AccentButtonStyle}"
                                 Content="Buscar"
                                 Click="BtnBuscar_Click"

@@ -225,10 +225,13 @@ public sealed partial class MainWindow : Window
                     await ShowDialogAsync(L.T("winget.unavailableTitle"), L.T("winget.unavailableBody"));
                     return;
                 }
+                // La reserva no inventa un número: si el ensamblado no declarase versión —cosa que no
+                // pasa, la estampa el .csproj— una cadena cableada solo podría mentir, y ya se había
+                // quedado en "v1.1.0" mientras la app iba por la 1.8.
                 var appVer = typeof(MainWindow).Assembly.GetName().Version;
                 _appVersionStr = appVer is not null
                     ? $"v{appVer.Major}.{appVer.Minor}.{appVer.Build}"
-                    : "v1.1.0";
+                    : "";
                 Title = L.T("app.titleBase");
                 TitleTextBlock.Text = Title;
                 txtEstado.Text = L.T("status.readyToStart");

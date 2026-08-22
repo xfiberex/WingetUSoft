@@ -967,20 +967,32 @@ decisión explícita.
 
 > Todo esfuerzo bajo y sin dependencias. Apto para rellenar huecos entre tareas mayores.
 
-- [ ] **[T3-01] Eliminar `InverseBoolConverter` (código muerto)**
+- [x] **[T3-01] Eliminar `InverseBoolConverter` (código muerto)**
   - **Área:** Refactorización · **Ubicación:** `src/WingetUSoft/UI/Converters.cs:25-32`
   - **Qué hacer:** declarado y no referenciado en ningún `.xaml` ni `.cs` (verificado por grep). Borrarlo.
+  - **Resultado:** borrado. Confirmado antes de tocarlo que no lo referencia ningún `.xaml` ni `.cs`, ni
+    en `src/` ni en `tests/`.
   - **Criterio de aceptación:** compila sin errores y ningún XAML lo referencia. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-02] Quitar el separador de menú duplicado**
+- [x] **[T3-02] Quitar el separador de menú duplicado**
   - **Área:** UI · **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:176-177`
   - **Qué hacer:** dos `<MenuFlyoutSeparator />` consecutivos dibujan una doble línea en el menú Herramientas.
+  - **Resultado:** uno de los dos `MenuFlyoutSeparator` fuera.
   - **Criterio de aceptación:** el menú muestra un único separador en esa posición. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-03] Actualizar los valores de versión por defecto obsoletos**
+- [x] **[T3-03] Actualizar los valores de versión por defecto obsoletos**
   - **Área:** Mantenimiento · **Ubicación:** `src/WingetUSoft/installer/installer.iss:11` (`"1.2.0"`), `src/WingetUSoft/UI/MainWindow.xaml.cs:243` (`"v1.1.0"`)
   - **Qué hacer:** son reservas que nunca se actualizaron; en el `.iss` puede producir un instalador mal
     versionado si alguien invoca `ISCC` sin `/DMyAppVersion`.
+  - **Resultado:** la reserva del `.iss` sube a `1.8.6` y se le añade un comentario que dice para qué
+    está: `build-installer.ps1` **siempre** pasa `/DMyAppVersion`, así que la fuente real de la versión
+    sigue siendo `<Version>` del `.csproj` y esto es solo la red por si alguien invoca `ISCC` a mano.
+  - **Desviación al implementarlo:** la de `MainWindow.xaml.cs` **no** se actualiza a la versión de hoy,
+    se sustituye por cadena vacía. Solo entraría en juego si el ensamblado no declarase versión —cosa que
+    no pasa, la estampa el `.csproj`— y entonces un número cableado únicamente puede mentir: es lo que ya
+    había ocurrido, se había quedado en «v1.1.0» con la app por la 1.8. El campo ya nace en `""` y el
+    único consumidor lo salta con `IsNullOrEmpty`, así que la cadena vacía es el valor natural de «no se
+    sabe» y actualizarla a mano no vuelve a hacer falta nunca.
   - **Criterio de aceptación:** ninguna reserva de versión anterior a la actual. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [x] **[T3-04] Sustituir los escapes `í` de un comentario XML por caracteres reales**
@@ -1025,10 +1037,19 @@ decisión explícita.
     `IsWingetInstalled` en `WingetService`.
   - **Criterio de aceptación:** la convención está escrita en `CONTEXT.md` §4. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-07] Quitar el nombre accesible en español cableado en XAML**
+- [x] **[T3-07] Quitar el nombre accesible en español cableado en XAML**
   - **Área:** i18n · **Ubicación:** `src/WingetUSoft/UI/SearchWindow.xaml:67`
   - **Qué hacer:** `AutomationProperties.Name="Buscar en el catálogo de winget"` se sobrescribe en tiempo de
     ejecución desde `SearchWindow.xaml.cs:106`. Funciona, pero es una cadena duplicada que se desincronizará.
+  - **Resultado:** fuera el `AutomationProperties.Name` del XAML; queda la asignación de
+    `ApplyLocalizedStrings`, que es la que sigue al idioma.
+  - **Verificado (2026-08-22):** `SearchWindowTests.SearchBox_HasAnAccessibleName`, comprobado saboteando.
+  - **Y el sabotaje corrigió el propio test, que es lo interesante:** la primera versión solo exigía «el
+    nombre no está vacío» y **pasaba igual con el arreglo quitado**. Sin nombre propio, WinUI le deduce
+    uno del `PlaceholderText` y el control reporta «Nombre o Id...» — que no es una etiqueta, es un
+    ejemplo de qué escribir; un lector de pantalla anunciaría el ejemplo como si fuera el nombre del
+    campo. El test fija ahora la cadena exacta. Vale la pena recordarlo para cualquier otro `TextBox`:
+    comprobar que el nombre accesible «existe» no demuestra nada.
   - **Criterio de aceptación:** el nombre accesible existe en una sola fuente. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-08] Alinear `ShowUpdateNotification` con lo que promete su ajuste**
@@ -1088,16 +1109,22 @@ decisión explícita.
     parametrizar los directorios base del escáner.
   - **Criterio de aceptación:** la suite no escribe fuera de un directorio temporal. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-14] Pasar el `themeMode` real en `HistoryWindow`**
+- [x] **[T3-14] Pasar el `themeMode` real en `HistoryWindow`**
   - **Área:** Código · **Ubicación:** `src/WingetUSoft/UI/HistoryWindow.xaml.cs:68`
   - **Qué hacer:** `UpdateTitleBarButtonColors` pasa siempre `themeModeFallback: 0` aunque el constructor
     recibe `themeMode` y no lo conserva. Sin efecto visible hoy, pero es una reserva incorrecta.
+  - **Resultado:** la ventana guarda el `themeMode` que recibe y se lo pasa a `UpdateButtonColors`. Las
+    otras cinco ventanas ya pasaban el suyo; esta era la única con un `0` literal.
+  - **Sobre el «sin efecto visible hoy»:** el fallback solo se usa mientras `Content` todavía no es un
+    `FrameworkElement` con tema resuelto, y ahí `0` significa «seguir al sistema». Con el tema **forzado**
+    a oscuro en un Windows claro, esa ventana habría pintado los botones de la barra de título en claro.
   - **Criterio de aceptación:** la ventana guarda y usa el `themeMode` recibido. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
-- [ ] **[T3-15] Corregir la descripción del historial en el README**
+- [x] **[T3-15] Corregir la descripción del historial en el README**
   - **Área:** Documentación · **Ubicación:** `README.md:87`
   - **Qué hacer:** dice «registra cada actualización»; desde el Tier E también registra instalaciones
     (`SearchWindow.xaml.cs:242-250`).
+  - **Resultado:** la línea menciona ahora las instalaciones además de las actualizaciones.
   - **Criterio de aceptación:** la descripción menciona ambos tipos de entrada. · **Esfuerzo:** bajo · **Depende de:** ninguna
 
 - [ ] **[T3-16] Validar el nombre del evento de cancelación del worker elevado**

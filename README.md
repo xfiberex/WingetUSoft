@@ -95,7 +95,7 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 
 - **Omitir una versión** — descarta *una versión concreta* de un paquete (menú contextual de la fila): la fila se atenúa y los lotes la saltan, pero **el paquete reaparece solo cuando salga una versión nueva**. Winget no sabe hacer esto: sus anclajes (`pin`) congelan el paquete también para las versiones futuras, así que se resuelve en la app.
 - **Lista de exclusiones** — excluye paquetes permanentemente de las actualizaciones automáticas (distinto de omitir: esto es para siempre y para todo el paquete).
-- **Historial** — registra cada actualización con fecha, versiones y resultado (máx. 500 entradas), con búsqueda, filtros y exportación a CSV.
+- **Historial** — registra cada actualización **y cada instalación** con fecha, versiones y resultado (máx. 500 entradas), con búsqueda, filtros y exportación a CSV.
 - **Exportación** — exporta la lista a CSV o TSV con neutralización de fórmulas (seguro para Excel/Calc).
 - **Tema claro / oscuro** — integrado con el sistema de temas de Windows y configurable manualmente.
 - **Idioma** — español, inglés, portugués, francés e italiano, aplicados en caliente.

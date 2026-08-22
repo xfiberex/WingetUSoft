@@ -40,6 +40,37 @@ public sealed class SearchWindowTests(AppFixture fixture)
     }
 
     /// <summary>
+    /// T3-07: el nombre accesible del cuadro de búsqueda estaba **dos veces** —cableado en español en el
+    /// XAML y puesto otra vez, ya traducido, desde <c>ApplyLocalizedStrings</c>—. Se quedó el segundo,
+    /// que es el que sigue al idioma; este test es el que garantiza que al quitar el primero el control
+    /// no se quedara sin nombre.
+    /// </summary>
+    [Fact]
+    public void SearchBox_HasAnAccessibleName()
+    {
+        MenuActions.ClickPath(Window, "btnHerramientas", "menuBuscarInstalar");
+
+        var searchWindow = WaitForWindow("btnBuscar");
+        try
+        {
+            var box = searchWindow.FindFirstDescendant(cf => cf.ByAutomationId("txtBuscar"));
+
+            Assert.NotNull(box);
+
+            // Se fija la cadena exacta, y no un "no está vacío", porque eso último **no** detectaba nada:
+            // sin nombre propio WinUI deduce uno del PlaceholderText y el control reporta "Nombre o
+            // Id...", que no es una etiqueta sino un ejemplo de lo que escribir. Comprobado quitando el
+            // SetName. La cadena es la de `search.placeholderAccessible` en español, el idioma con el que
+            // arranca la suite; si se retoca la traducción, hay que retocarla aquí.
+            Assert.Equal("Buscar en el catálogo de winget", box!.Name);
+        }
+        finally
+        {
+            searchWindow.AsWindow()?.Close();
+        }
+    }
+
+    /// <summary>
     /// La ventana es un <c>Window</c> propio (no un ContentDialog), así que se busca en el escritorio
     /// entre las ventanas del proceso de la app, no dentro del árbol de MainWindow.
     /// </summary>

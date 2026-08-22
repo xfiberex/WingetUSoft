@@ -8,7 +8,10 @@
 #define MyAppUpdatesURL "https://github.com/xfiberex/WingetUSoft/releases"
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.2.0"
+  ; Solo se usa si se invoca ISCC a mano sin /DMyAppVersion. build-installer.ps1 SIEMPRE lo pasa,
+  ; así que la fuente real de la versión es <Version> en WingetUSoft.csproj; esto es una red de
+  ; seguridad para que un ISCC suelto no produzca un instalador con una versión inventada.
+  #define MyAppVersion "1.8.6"
 #endif
 
 ; SourceDir es relativo al .iss --> ../publish (raiz del proyecto) salvo que se sobrescriba con /D.
