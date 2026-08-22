@@ -987,6 +987,10 @@ decisión explícita.
   - **Resultado:** la reserva del `.iss` sube a `1.8.6` y se le añade un comentario que dice para qué
     está: `build-installer.ps1` **siempre** pasa `/DMyAppVersion`, así que la fuente real de la versión
     sigue siendo `<Version>` del `.csproj` y esto es solo la red por si alguien invoca `ISCC` a mano.
+  - **Añadido al cortar la v1.8.7:** `release.ps1` actualiza también la reserva del `.iss` al subir la
+    versión. Sin eso quedaba vieja en el mismo momento de publicar —exactamente el defecto que esta
+    tarea venía a corregir— y solo se arreglaba si alguien se acordaba. Con el mismo cuidado de
+    codificación que el `.csproj`: el `.iss` es UTF-8 sin BOM y lleva acentos.
   - **Desviación al implementarlo:** la de `MainWindow.xaml.cs` **no** se actualiza a la versión de hoy,
     se sustituye por cadena vacía. Solo entraría en juego si el ensamblado no declarase versión —cosa que
     no pasa, la estampa el `.csproj`— y entonces un número cableado únicamente puede mentir: es lo que ya

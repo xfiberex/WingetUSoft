@@ -101,6 +101,7 @@ function Invoke-Native {
 $root          = $PSScriptRoot
 $csproj        = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
 $verifyScript  = Join-Path $root "verify.ps1"
+$issFile       = Join-Path $root "src\WingetUSoft\installer\installer.iss"
 $buildScript   = Join-Path $root "src\WingetUSoft\installer\build-installer.ps1"
 $outputDir     = Join-Path $root "src\WingetUSoft\installer\Output"
 
@@ -259,6 +260,21 @@ try {
         $newRaw = $newRaw -replace '<AssemblyVersion>.*?</AssemblyVersion>', "<AssemblyVersion>$asmVersion</AssemblyVersion>"
         $newRaw = $newRaw -replace '<FileVersion>.*?</FileVersion>', "<FileVersion>$asmVersion</FileVersion>"
         [System.IO.File]::WriteAllText($csproj, $newRaw, (New-Object System.Text.UTF8Encoding($false)))
+
+        # La reserva del installer.iss también, o se queda vieja en cuanto sale una versión. Solo la
+        # usa un ISCC invocado a mano —build-installer.ps1 siempre pasa /DMyAppVersion— pero una
+        # reserva que solo puede decaer es justo lo que T3-03 vino a arreglar.
+        #
+        # Mismo cuidado con la codificación que con el .csproj: el .iss es UTF-8 SIN BOM y lleva
+        # acentos (incluido MyAppPublisher, que acaba en el CompanyName del ejecutable).
+        if (Test-Path $issFile) {
+            $issRaw = Get-Content $issFile -Raw -Encoding UTF8
+            $issNew = $issRaw -replace '(#define\s+MyAppVersion\s+")[^"]*(")', "`${1}$Version`${2}"
+            if ($issNew -ne $issRaw) {
+                Info "Actualizando la reserva de versión de installer.iss..."
+                [System.IO.File]::WriteAllText($issFile, $issNew, (New-Object System.Text.UTF8Encoding($false)))
+            }
+        }
     }
 
     # ── 2. Compilar instalador ─────────────────────────────────────────────────
