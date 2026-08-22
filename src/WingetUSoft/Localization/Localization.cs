@@ -1,3 +1,7 @@
+using System;
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace WingetUSoft;
 
 public enum AppLang { Es, En, Pt, Fr, It }
@@ -50,6 +54,80 @@ public static class L
         AppLang.It => "it",
         _          => "es",
     };
+
+    /// <summary>
+    /// Cultura .NET del idioma activo. Se usa para formatear fechas y números: con la app en inglés,
+    /// <c>03/07/2026</c> se lee como 7 de marzo, así que el formato tiene que seguir al idioma elegido
+    /// y no a la configuración regional de Windows.
+    /// </summary>
+    public static CultureInfo Culture => CultureFor(Current);
+
+    /// <summary>Cultura .NET asociada a un idioma de la app. Lógica pura, para poder probarla.</summary>
+    public static CultureInfo CultureFor(AppLang lang)
+    {
+        string name = lang switch
+        {
+            AppLang.En => "en-US",
+            AppLang.Pt => "pt-BR",
+            AppLang.Fr => "fr-FR",
+            AppLang.It => "it-IT",
+            _          => "es-ES",
+        };
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(name);
+        }
+        catch (CultureNotFoundException)
+        {
+            // Modo de globalización invariante o datos ICU ausentes: mejor una fecha invariante que
+            // una excepción al pintar el historial.
+            return CultureInfo.InvariantCulture;
+        }
+    }
+
+    /// <summary>
+    /// Fecha y hora en el formato corto de la cultura activa. Un solo punto para que la tabla del
+    /// historial y su exportación a CSV no puedan divergir.
+    /// </summary>
+    public static string FormatDateTime(DateTime value) => FormatDateTime(value, Current);
+
+    /// <summary>Igual que <see cref="FormatDateTime(DateTime)"/> pero para un idioma dado. Lógica pura.</summary>
+    public static string FormatDateTime(DateTime value, AppLang lang)
+    {
+        var culture = CultureFor(lang);
+        string pattern = Pad(culture.DateTimeFormat.ShortDatePattern) + " " + Pad(culture.DateTimeFormat.ShortTimePattern);
+        return value.ToString(pattern, culture);
+    }
+
+    /// <summary>
+    /// Rellena con ceros los campos de un solo dígito del patrón (<c>d</c>→<c>dd</c>, <c>M</c>→<c>MM</c>,
+    /// <c>h</c>/<c>H</c>→<c>hh</c>/<c>HH</c>). Se toma el orden de la cultura —que es de lo que trata la
+    /// tarea— pero se conserva el ancho fijo: la columna de fechas del historial es una tabla y con
+    /// <c>3/7/2026</c> junto a <c>13/12/2026</c> deja de alinear.
+    /// </summary>
+    private static string Pad(string pattern)
+    {
+        foreach (char field in "dMhH")
+            pattern = Regex.Replace(pattern, $"(?<!{field}){field}(?!{field})", new string(field, 2));
+
+        return pattern;
+    }
+
+    /// <summary>
+    /// Nombre propuesto para un archivo exportado: prefijo traducido + fecha. La fecha va en
+    /// <c>yyyy-MM-dd</c> invariante a propósito: así los archivos se ordenan solos y el nombre no
+    /// depende del calendario de la cultura activa.
+    /// </summary>
+    /// <param name="prefixKey">Clave del prefijo, p. ej. <c>"export.fileHistory"</c>.</param>
+    public static string ExportFileName(string prefixKey) => ExportFileName(prefixKey, DateTime.Now, Current);
+
+    /// <summary>Igual que <see cref="ExportFileName(string)"/> con fecha e idioma explícitos. Lógica pura.</summary>
+    public static string ExportFileName(string prefixKey, DateTime date, AppLang lang)
+    {
+        string prefix = Map.TryGetValue(prefixKey, out var arr) && (int)lang < arr.Length ? arr[(int)lang] : prefixKey;
+        return prefix + "_" + date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
 
     public static string T(string key)
     {
@@ -337,6 +415,11 @@ public static class L
         ["confirm.openWingetRunTitle"] = ["Abrir en winget.run", "Open on winget.run", "Abrir no winget.run", "Ouvrir sur winget.run", "Apri su winget.run"],
         ["confirm.openWingetRunBody"] = ["Se abrirá la página del paquete en su navegador:\n\n{0}\n\nVerifique que el paquete es legítimo antes de instalar nada. ¿Desea continuar?", "The package page will open in your browser:\n\n{0}\n\nVerify the package is legitimate before installing anything. Do you want to continue?", "A página do pacote será aberta no seu navegador:\n\n{0}\n\nVerifique se o pacote é legítimo antes de instalar algo. Deseja continuar?", "La page du paquet s'ouvrira dans votre navigateur :\n\n{0}\n\nVérifiez que le paquet est légitime avant d'installer quoi que ce soit. Voulez-vous continuer ?", "La pagina del pacchetto si aprirà nel browser:\n\n{0}\n\nVerifica che il pacchetto sia legittimo prima di installare qualsiasi cosa. Vuoi continuare?"],
 
+        // Prefijos de los nombres de archivo propuestos al exportar. Sin acentos ni espacios: son
+        // nombres de fichero, y la fecha que se les añade va siempre en yyyy-MM-dd invariante.
+        ["export.fileUpdates"]   = ["actualizaciones", "updates", "atualizacoes", "mises-a-jour", "aggiornamenti"],
+        ["export.filePackages"]  = ["winget-paquetes", "winget-packages", "winget-pacotes", "winget-paquets", "winget-pacchetti"],
+        ["export.fileHistory"]   = ["historial", "history", "historico", "historique", "cronologia"],
         ["export.txtFormat"] = ["Texto", "Text", "Texto", "Texte", "Testo"],
         ["export.colCurrentVersion"] = ["Versión actual", "Current version", "Versão atual", "Version actuelle", "Versione attuale"],
 

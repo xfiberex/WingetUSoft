@@ -19,7 +19,7 @@ internal sealed class HistoryEntryViewModel
 
     public HistoryEntryViewModel(HistoryEntry entry)
     {
-        DateDisplay = entry.Date.ToString("dd/MM/yyyy HH:mm");
+        DateDisplay = L.FormatDateTime(entry.Date);
         PackageName = entry.PackageName;
         PackageId = entry.PackageId;
         FromVersion = entry.FromVersion;
@@ -160,7 +160,7 @@ public sealed partial class HistoryWindow : Window
         var picker = new FileSavePicker
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = $"historial_{DateTime.Now:yyyy-MM-dd}"
+            SuggestedFileName = L.ExportFileName("export.fileHistory")
         };
         picker.FileTypeChoices.Add("CSV", [".csv"]);
 
@@ -172,7 +172,7 @@ public sealed partial class HistoryWindow : Window
         sb.AppendLine(DelimitedTextExporter.BuildRow(',', L.T("history.colDate"), L.T("list.colName"), L.T("list.colId"), L.T("history.colVersionFrom"), L.T("history.colVersionTo"), L.T("history.colStatus")));
         foreach (var entry in filtered)
             sb.AppendLine(DelimitedTextExporter.BuildRow(',',
-                entry.Date.ToString("dd/MM/yyyy HH:mm"),
+                L.FormatDateTime(entry.Date),
                 entry.PackageName,
                 entry.PackageId,
                 entry.FromVersion,

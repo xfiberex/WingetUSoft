@@ -188,9 +188,10 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
-**Progreso (2026-08-21): 24 de 70.** ✅ **T0 y T1 completos** (2 + 22). Siguiente frente: **T2**, por
-bloques temáticos — rendimiento (T2-01 a T2-03, T2-21, T2-23), refactorización (T2-04 a T2-07),
-responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
+**Progreso (2026-08-22): 39 de 70.** ✅ **T0 y T1 completos** (2 + 22). **T2 a 16 de 23**: cerrados
+rendimiento (T2-01 a T2-03, T2-21, T2-23), refactorización (T2-04 a T2-07), responsive/i18n (T2-08 a
+T2-11) y los sueltos de código (T2-19, T2-20, T2-22). Queda verificación local (T2-12 a T2-15) y
+T2-16 a T2-18.
 
 ---
 
@@ -694,36 +695,58 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
 
 ### Accesibilidad, i18n y responsive
 
-- [ ] **[T2-08] Asociar las etiquetas de los filtros de la ventana principal**
+- [x] **[T2-08] Asociar las etiquetas de los filtros de la ventana principal**
   - **Área:** Accesibilidad
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:258-286`
   - **Qué hacer:** «Fuente:», «Excluidos:» y «Buscar:» son `TextBlock` sueltos sin `LabeledBy`, así que
     `cmbFuente`, `btnFiltroExcluidos` y `txtBuscar` no tienen nombre accesible fiable. Asociarlos.
   - **Criterio de aceptación:** los tres controles exponen un `Name` que coincide con su etiqueta visible, en
     los 5 idiomas.
+  - **Verificado (2026-08-22):** en `AccessibilityTests.MainWindowFilters_AreNamedAfterTheirVisibleLabel`,
+    un `[Theory]` con los tres pares control/etiqueta contra la app real. El nombre sale de `LabeledBy`, no de
+    una cadena nueva, así que sigue al idioma en los cinco sin claves de traducción adicionales y el test
+    compara `control.Name` con `label.Name`. Comprobado saboteando: quitar el `LabeledBy` de `cmbFuente` hace
+    fallar exactamente ese caso.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-09] Formato de fecha según la cultura del idioma activo**
+- [x] **[T2-09] Formato de fecha según la cultura del idioma activo**
   - **Área:** i18n
   - **Ubicación:** `src/WingetUSoft/UI/HistoryWindow.xaml.cs:22` y `:188`
   - **Qué hacer:** el historial y su exportación CSV usan `"dd/MM/yyyy HH:mm"` fijo. Un usuario con la app en
     inglés lee `03/07/2026` como 7 de marzo. Formatear con la `CultureInfo` correspondiente al idioma activo.
   - **Criterio de aceptación:** con la app en inglés el historial muestra el formato mes-primero; el CSV
     exportado usa el mismo formato que la tabla.
+  - **Resultado:** el formato ya no está cableado. `L.Culture` / `L.CultureFor(lang)` mapean cada idioma a su
+    cultura (`es-ES`, `en-US`, `pt-BR`, `fr-FR`, `it-IT`) y `L.FormatDateTime` compone el patrón corto de esa
+    cultura. La tabla y el CSV llaman al mismo método: no pueden divergir.
+  - **Desviación al implementarlo:** el patrón corto de las culturas latinas es `d/M/yyyy`, no `dd/MM/yyyy`,
+    así que tomarlo tal cual habría quitado el relleno con ceros que tenía el historial y roto la alineación de
+    la columna (`3/7/2026` junto a `13/12/2026`). Se toma el **orden** de la cultura y se conserva el ancho
+    fijo rellenando los campos de un dígito (`L.Pad`).
+  - **Verificado (2026-08-22):** `CultureFormattingTests` — con la app en inglés el 3 de julio se escribe
+    `07/03/2026` y en los otros cuatro idiomas `03/07/2026`; la hora sobrevive en los cinco.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-10] Localizar los nombres de archivo sugeridos al exportar**
+- [x] **[T2-10] Localizar los nombres de archivo sugeridos al exportar**
   - **Área:** i18n
   - **Ubicación:** `MainWindow.xaml.cs:1083` (`actualizaciones_`), `MainWindow.xaml.cs:1199` (`winget-paquetes_`), `HistoryWindow.xaml.cs:176` (`historial_`)
   - **Qué hacer:** los tres selectores de guardado proponen un nombre en español sea cual sea el idioma.
     Pasar el prefijo por `L.T`.
   - **Criterio de aceptación:** con la app en inglés, los tres diálogos proponen nombres en inglés.
+  - **Resultado:** tres claves nuevas (`export.fileUpdates`, `export.filePackages`, `export.fileHistory`) y un
+    solo componedor, `L.ExportFileName(clave)`.
+  - **Desviación al implementarlo:** la **fecha** del nombre no se localiza. Sigue en `yyyy-MM-dd` invariante
+    a propósito: es lo que hace que los archivos se ordenen solos, y con el formato de la cultura las barras
+    de `dd/MM/yyyy` serían separadores de ruta.
+  - **Verificado (2026-08-22):** `CultureFormattingTests` exige que los tres nombres, en los cinco idiomas,
+    encajen en `^[a-z0-9\-]+_2026-07-03$` —sin acentos, espacios ni caracteres prohibidos en Windows— y que
+    los tres prefijos sean distintos entre sí dentro de cada idioma.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-11] Hacer que la fila de filtros envuelva**
+- [x] **[T2-11] Hacer que la fila de filtros envuelva**
   - **Área:** Diseño responsivo
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:258-286`
   - **Qué hacer:** es un `StackPanel Orientation="Horizontal"` con anchos fijos (ComboBox 200 + TextBox 200)
@@ -734,6 +757,15 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
   - **Criterio de aceptación:** a 900×600 con 150 % de DPI e idioma francés, los cuatro controles son
     visibles y alcanzables. *(Hallazgo pendiente de verificación: se derivó de los anchos declarados, no de
     ejecutar la app.)*
+  - **Verificado (2026-08-22):** el hallazgo era correcto y ahora está comprobado contra la app real, no
+    derivado de los anchos declarados: `LayoutTests.FilterRow_RemainsVisible_WhenWindowIsNarrow`. Cada
+    etiqueta viaja con su control dentro de un `StackPanel` para que el par salte de fila junto.
+  - **Desviación al implementarlo (importante para futuros tests de recorte):** ni `IsOffscreen` ni comparar
+    el borde derecho con el de la ventana detectan esto. Se comprobó saboteando el arreglo: un control
+    recortado por el `ScrollViewer` se sigue reportando **en pantalla** y con su rectángulo pegado al borde
+    del recorte —el cuadro de búsqueda pasaba de 375 px a 74 sin salirse de la ventana—. La señal que sí
+    sirve es el **adelgazamiento**: el test mide cada control con la ventana ancha y exige que conserve su
+    ancho con la ventana en su mínimo. Además es independiente del DPI del monitor.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -819,17 +851,19 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
 
 ### Código
 
-- [ ] **[T2-19] Reutilizar el temporizador de rebote de la búsqueda**
+- [x] **[T2-19] Reutilizar el temporizador de rebote de la búsqueda**
   - **Área:** Código
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:1374-1381`
   - **Qué hacer:** se crea un `DispatcherTimer` nuevo y se suscribe una lambda nueva **en cada pulsación de
     tecla**. Usar una única instancia y limitarse a `Stop()` / `Start()`.
   - **Criterio de aceptación:** un solo `DispatcherTimer` por instancia de ventana; el rebote de 300 ms sigue
     funcionando igual.
+  - **Resultado:** el temporizador se crea una vez por ventana; cada pulsación solo hace `Stop()`/`Start()`.
+    Antes quedaban vivos tantos suscriptores de `Tick` como teclas se hubieran escrito.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-20] Corregir la fuga de `CancellationTokenSource` en la búsqueda reentrante**
+- [x] **[T2-20] Corregir la fuga de `CancellationTokenSource` en la búsqueda reentrante**
   - **Área:** Código
   - **Ubicación:** `src/WingetUSoft/UI/SearchWindow.xaml.cs:255`
   - **Qué hacer:** tras instalar con éxito se llama a `SearchAsync()`, que reemplaza `_cts` y lo pone a `null`
@@ -837,16 +871,25 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     Guardar la referencia local antes de la llamada reentrante, o mover la re-búsqueda fuera del `try`.
   - **Criterio de aceptación:** todo `CancellationTokenSource` creado en la ventana se libera exactamente una
     vez.
+  - **Resultado:** cada operación guarda su `CancellationTokenSource` en una variable local y libera **esa**,
+    y el campo `_cts` solo se borra si sigue apuntando al mismo (`ReferenceEquals`), para no dejar sin token
+    a una operación posterior. Además la re-búsqueda tras instalar sale del `try`: llamarla dentro era lo que
+    hacía que `_cts` ya fuera otro cuando el `finally` iba a liberarlo.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-22] Leer o no redirigir el `stderr` de `where.exe`**
+- [x] **[T2-22] Leer o no redirigir el `stderr` de `where.exe`**
   - **Área:** Código
   - **Ubicación:** `src/WingetUSoft/Services/WingetService.cs:1267-1285`
   - **Qué hacer:** el proceso se lanza con `RedirectStandardError = true` pero solo se lee `StandardOutput`
     antes de `WaitForExit()`: es el patrón clásico de interbloqueo si stderr llenara el búfer de la tubería.
     Poner `RedirectStandardError = false` o leer ambos flujos.
   - **Criterio de aceptación:** no queda ningún flujo redirigido sin consumir antes de `WaitForExit`.
+  - **Resultado:** `RedirectStandardError = false`. Se descartó leer ambos flujos porque `where.exe` no escribe
+    en stderr nada que la app use: heredar el del proceso padre es más simple y quita el riesgo de raíz.
+  - **Verificado (2026-08-22):** revisados los otros dos sitios que redirigen stderr (`CreateWingetStartInfo`);
+    ambos lo consumen —uno con una lectura asíncrona del `BaseStream`, otro con `ErrorDataReceived`— antes de
+    `WaitForExit`. No queda ningún flujo redirigido sin consumir.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 

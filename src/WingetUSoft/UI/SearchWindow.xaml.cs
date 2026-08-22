@@ -127,7 +127,8 @@ public sealed partial class SearchWindow : Window
             return;
         }
 
-        _cts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
+        _cts = cts;
         SetBusy(true);
         _results.Clear();
         txtContador.Text = "";
@@ -135,11 +136,11 @@ public sealed partial class SearchWindow : Window
 
         try
         {
-            var found = await WingetService.SearchPackagesAsync(query, _cts.Token);
+            var found = await WingetService.SearchPackagesAsync(query, cts.Token);
 
             // Cruce con lo ya instalado: winget search no lo dice, y sin esto el usuario intentaría
             // instalar algo que ya tiene (winget fallaría con un error poco claro).
-            var installedIds = await GetInstalledIdsAsync(_cts.Token);
+            var installedIds = await GetInstalledIdsAsync(cts.Token);
             foreach (var r in found)
                 r.IsInstalled = installedIds.Contains(r.Id);
 
@@ -163,8 +164,10 @@ public sealed partial class SearchWindow : Window
         finally
         {
             SetBusy(false);
-            _cts?.Dispose();
-            _cts = null;
+            cts.Dispose();
+            // Solo se borra el campo si sigue apuntando a este CTS: así una operación posterior
+            // que ya haya publicado el suyo no se queda sin token de cancelación.
+            if (ReferenceEquals(_cts, cts)) _cts = null;
             UpdateInstallButton();
         }
     }
@@ -221,7 +224,9 @@ public sealed partial class SearchWindow : Window
             L.T("search.confirmInstallBody", selected.Name, selected.Id, selected.Version));
         if (!confirmed) return;
 
-        _cts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
+        _cts = cts;
+        bool reSearch = false;
         SetBusy(true);
         txtEstado.Text = L.T("search.installing", selected.Name);
         AppendLog(L.T("search.logInstalling", selected.Name, selected.Id), LogLineKind.Accent);
@@ -232,7 +237,7 @@ public sealed partial class SearchWindow : Window
                 selected.Id,
                 _settings.SilentMode,
                 progress: null,
-                cancellationToken: _cts.Token,
+                cancellationToken: cts.Token,
                 logProgress: new Progress<string>(line =>
                 {
                     if (!string.IsNullOrWhiteSpace(line))
@@ -259,9 +264,7 @@ public sealed partial class SearchWindow : Window
                 // vuelve a listar. Es el único punto de la app que puede invalidarlo.
                 _installedIds = null;
 
-                // Repite la búsqueda para que la fila pase a "Instalado": dejarla como estaba invitaría a
-                // instalarlo otra vez.
-                await SearchAsync();
+                reSearch = true;
             }
             else
             {
@@ -284,10 +287,15 @@ public sealed partial class SearchWindow : Window
         finally
         {
             SetBusy(false);
-            _cts?.Dispose();
-            _cts = null;
+            cts.Dispose();
+            if (ReferenceEquals(_cts, cts)) _cts = null;
             UpdateInstallButton();
         }
+
+        // Repite la búsqueda para que la fila pase a "Instalado": dejarla como estaba invitaría a
+        // instalarlo otra vez. Va fuera del try porque SearchAsync publica su propio CTS en _cts: hacerlo
+        // dentro dejaba el de la instalación sin liberar.
+        if (reSearch) await SearchAsync();
     }
 
     private void BtnCancelar_Click(object sender, RoutedEventArgs e)

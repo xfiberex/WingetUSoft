@@ -1069,7 +1069,7 @@ public sealed partial class MainWindow : Window
         var picker = new FileSavePicker
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = $"actualizaciones_{DateTime.Now:yyyy-MM-dd}"
+            SuggestedFileName = L.ExportFileName("export.fileUpdates")
         };
         picker.FileTypeChoices.Add("CSV", [".csv"]);
         picker.FileTypeChoices.Add(L.T("export.txtFormat"), [".txt"]);
@@ -1185,7 +1185,7 @@ public sealed partial class MainWindow : Window
         var picker = new FileSavePicker
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = $"winget-paquetes_{DateTime.Now:yyyy-MM-dd}",
+            SuggestedFileName = L.ExportFileName("export.filePackages"),
         };
         picker.FileTypeChoices.Add("JSON", [".json"]);
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
@@ -1360,13 +1360,20 @@ public sealed partial class MainWindow : Window
         if (!_initialized) return;
         _searchFilter = txtBuscar.Text;
 
-        _searchDebounceTimer?.Stop();
-        _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-        _searchDebounceTimer.Tick += (_, _) =>
+        // Una sola instancia por ventana: crear un temporizador y suscribir una lambda nueva en cada
+        // pulsación dejaba tantos suscriptores vivos como teclas se hubieran escrito.
+        if (_searchDebounceTimer is null)
         {
-            _searchDebounceTimer.Stop();
-            LoadPackagesToGrid();
-        };
+            _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            _searchDebounceTimer.Tick += (_, _) =>
+            {
+                _searchDebounceTimer.Stop();
+                LoadPackagesToGrid();
+            };
+        }
+
+        // Reiniciar la cuenta: solo se filtra cuando pasan 300 ms sin escribir.
+        _searchDebounceTimer.Stop();
         _searchDebounceTimer.Start();
     }
 

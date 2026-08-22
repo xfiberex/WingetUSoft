@@ -12,9 +12,9 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.5** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.5), sin firmar) |
-| **En `main`, sin publicar** | arreglo de codificación de `release.ps1` + **refactorización estructural de T2** (tabla de winget, registro de actividad y arranque de ventanas) |
+| **En `main`, sin publicar** | arreglo de codificación de `release.ps1` + **refactorización estructural de T2** (tabla de winget, registro de actividad y arranque de ventanas) + **responsive/i18n y sueltos de código de T2** (filtros con nombre accesible y que envuelven, fechas y nombres de archivo por idioma) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-08-21 |
+| **Última actualización** | 2026-08-22 |
 
 ---
 
@@ -210,6 +210,55 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-22 — Auditoría T2: responsive, i18n y los sueltos de código (T2-08 a T2-11, T2-19, T2-20, T2-22, sin publicar)
+
+Tercer corte del Tier T2: **39 de 70** tareas, y **16 de 23** del tier.
+
+**1. Los filtros de la ventana principal no se anunciaban (T2-08).** «Fuente:», «Excluidos:» y
+«Buscar:» eran `TextBlock` sueltos: un lector de pantalla decía «cuadro combinado», «botón» y «cuadro
+de edición» sin decir de qué. Asociados con `LabeledBy`, igual que los interruptores de Configuración en
+T1-08: el nombre sale de la etiqueta visible, así que sigue al idioma en los cinco sin claves nuevas.
+
+**2. La fila de filtros no cabía en la ventana mínima (T2-11).** Era un `StackPanel` horizontal con dos
+anchos fijos de 200 px dentro de un `ScrollViewer` con `HorizontalScrollMode="Disabled"`: pedía unos
+850 px contra un mínimo de ventana de 900 DIP, y a 150 % de DPI o con etiquetas FR/IT el cuadro de
+búsqueda quedaba recortado **sin scroll con el que alcanzarlo**. Ahora es el mismo `WrapPanel` que la
+barra de acciones, con cada etiqueta emparejada con su control para que el par salte de fila junto.
+
+> **Cómo se detecta un recorte, que no es como parecía.** El primer test comparó `IsOffscreen` y el borde
+> derecho del control con el de la ventana, y **pasaba con el bug puesto**. Sabotear el arreglo lo
+> explicó: un control recortado por el `ScrollViewer` se sigue reportando en pantalla y con su
+> rectángulo pegado al borde del recorte —el cuadro de búsqueda pasaba de 375 px a 74 sin salirse de la
+> ventana—. La señal que sí sirve es el **adelgazamiento**: medir cada control con la ventana ancha y
+> exigir que conserve su ancho con la ventana en su mínimo. Además es independiente del DPI del monitor.
+> Anotado en el ROADMAP para los próximos tests de recorte.
+
+**3. Las fechas y los nombres de archivo seguían en español (T2-09, T2-10).** El historial y su CSV
+usaban `dd/MM/yyyy HH:mm` cableado —con la app en inglés, `03/07/2026` se lee como 7 de marzo— y los
+tres diálogos de guardado proponían `actualizaciones_`, `winget-paquetes_` e `historial_` fuera cual
+fuera el idioma. Ahora `L` expone `Culture`, `FormatDateTime` y `ExportFileName`, y tabla y CSV llaman
+al mismo método: no pueden divergir.
+
+> Dos decisiones que no son obvias. El patrón corto de las culturas latinas es `d/M/yyyy`, no
+> `dd/MM/yyyy`: tomarlo tal cual habría quitado el relleno con ceros y roto la alineación de la columna
+> de fechas, así que se toma el **orden** de la cultura y se conserva el ancho fijo. Y la fecha de los
+> **nombres de archivo** no se localiza: sigue en `yyyy-MM-dd` invariante porque es lo que los ordena
+> solos, y porque con el formato de la cultura las barras de `dd/MM/yyyy` serían separadores de ruta.
+
+**4. Tres sueltos de código (T2-19, T2-20, T2-22).** El rebote de la búsqueda creaba un `DispatcherTimer`
+y suscribía una lambda nueva **en cada pulsación**; ahora es uno por ventana. En la ventana de búsqueda,
+instalar con éxito llamaba a `SearchAsync()` desde dentro del `try`, y esa reemplazaba `_cts` y lo ponía
+a `null`, con lo que el `finally` externo ya no encontraba el CTS de la instalación para liberarlo: cada
+operación guarda ahora el suyo en una local y la re-búsqueda salió del `try`. Y `where.exe` se lanzaba
+con `RedirectStandardError = true` leyendo solo stdout antes de `WaitForExit`, el patrón clásico de
+interbloqueo: ya no se redirige.
+
+**Verificado:** build 0 advertencias / 0 errores, **251/251** unitarios (6 nuevos en
+`CultureFormattingTests`) y **36/36** UI tests. Los dos tests nuevos de UI se comprobaron saboteando el
+arreglo correspondiente: cada uno falla, y solo él.
 
 ---
 

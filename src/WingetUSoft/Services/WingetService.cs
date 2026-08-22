@@ -1222,11 +1222,13 @@ public static class WingetService
             FileName = whereExecutable,
             Arguments = "winget",
             RedirectStandardOutput = true,
-            RedirectStandardError = true,
+            // stderr NO se redirige: solo se lee stdout antes de WaitForExit, y una tubería redirigida
+            // que nadie vacía es el interbloqueo clásico si el proceso llena su búfer. where.exe no
+            // escribe nada en stderr que interese: basta con que herede el del proceso padre.
+            RedirectStandardError = false,
             UseShellExecute = false,
             CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
+            StandardOutputEncoding = Encoding.UTF8
         };
 
         process.Start();

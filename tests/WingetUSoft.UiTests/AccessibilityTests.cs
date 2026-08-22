@@ -119,6 +119,30 @@ public sealed class AccessibilityTests(AppFixture fixture)
         }
     }
 
+    /// <summary>
+    /// T2-08: los tres filtros de la ventana principal tenían su etiqueta en un TextBlock suelto, sin
+    /// asociar, así que se anunciaban como «cuadro combinado», «botón» y «cuadro de edición» a secas.
+    /// </summary>
+    /// <remarks>
+    /// El nombre sale de la etiqueta visible vía <c>LabeledBy</c>, no de una cadena nueva: por eso basta
+    /// con comparar los dos, y por eso sigue al idioma en los cinco sin claves de traducción adicionales.
+    /// </remarks>
+    [Theory]
+    [InlineData("cmbFuente", "txtFuenteLabel")]
+    [InlineData("btnFiltroExcluidos", "txtExcluidosLabel")]
+    [InlineData("txtBuscar", "txtBuscarLabel")]
+    public void MainWindowFilters_AreNamedAfterTheirVisibleLabel(string controlId, string labelId)
+    {
+        var control = Window.FindFirstDescendant(cf => cf.ByAutomationId(controlId));
+        var label = Window.FindFirstDescendant(cf => cf.ByAutomationId(labelId));
+
+        Assert.NotNull(control);
+        Assert.NotNull(label);
+        Assert.False(string.IsNullOrWhiteSpace(control!.Name),
+            $"'{controlId}' no tiene nombre accesible: se anuncia solo por su tipo de control.");
+        Assert.Equal(label!.Name, control.Name);
+    }
+
     // ── Apoyo (mismo enfoque que SettingsTests) ────────────────────────────
 
     private void SelectLanguageAndSave(int languageIndex)

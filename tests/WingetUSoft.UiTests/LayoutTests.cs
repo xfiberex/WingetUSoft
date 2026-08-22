@@ -131,4 +131,84 @@ public sealed class LayoutTests(AppFixture fixture)
                 ignoreException: true);
         }
     }
+
+    private static readonly string[] FilterControlIds =
+    [
+        "txtFuenteLabel", "cmbFuente", "txtExcluidosLabel", "btnFiltroExcluidos", "txtBuscarLabel", "txtBuscar"
+    ];
+
+    /// <summary>
+    /// T2-11: la fila de filtros era un StackPanel horizontal con dos anchos fijos de 200 px. Pedía unos
+    /// 850 px, el mínimo de ventana son 900 DIP y el ScrollViewer que la contiene lleva
+    /// <c>HorizontalScrollMode="Disabled"</c>: a 150 % de DPI o con etiquetas FR/IT el cuadro de búsqueda
+    /// se recortaba contra el borde **y no había scroll con el que alcanzarlo**. Ahora es un WrapPanel.
+    /// </summary>
+    /// <remarks>
+    /// Lo que se compara es el ancho de cada control con la ventana ancha frente al ancho que conserva con
+    /// la ventana en su mínimo. Ni <c>IsOffscreen</c> ni el borde derecho sirven aquí: se comprobó
+    /// saboteando el arreglo que un control recortado por el ScrollViewer sigue reportándose en pantalla y
+    /// con su rectángulo **pegado al borde del recorte** —el cuadro de búsqueda pasaba de 385 px a 74 sin
+    /// salirse de la ventana—. El adelgazamiento es la señal, y es independiente del DPI del monitor.
+    /// </remarks>
+    [Fact]
+    public void FilterRow_RemainsVisible_WhenWindowIsNarrow()
+    {
+        var transformPattern = fixture.MainWindow.Patterns.Transform;
+        Assert.True(transformPattern.IsSupported, "MainWindow no soporta TransformPattern (no se puede redimensionar por UIA).");
+
+        var transform = transformPattern.Pattern;
+        var originalBounds = fixture.MainWindow.BoundingRectangle;
+
+        var widthsWhenWide = FilterControlIds.ToDictionary(id => id, id => FindFilterControl(id).BoundingRectangle.Width);
+
+        try
+        {
+            // Igual que en el test de los botones: se pide menos del mínimo y Windows clampa al mínimo
+            // real, sin tener que calcular aquí el DPI del monitor de turno.
+            transform.Resize(400, Math.Max(originalBounds.Height, 600));
+
+            Retry.WhileTrue(
+                () => fixture.MainWindow.BoundingRectangle.Width == originalBounds.Width,
+                timeout: TimeSpan.FromSeconds(5),
+                interval: TimeSpan.FromMilliseconds(200),
+                ignoreException: true);
+
+            // El WrapPanel necesita su propio pase de Measure/Arrange tras el cambio de ancho.
+            Thread.Sleep(500);
+
+            foreach (var id in FilterControlIds)
+            {
+                var control = FindFilterControl(id);
+
+                Assert.False(control.BoundingRectangle.IsEmpty, $"El filtro '{id}' tiene BoundingRectangle vacío (recortado/oculto).");
+                Assert.False(control.IsOffscreen, $"El filtro '{id}' quedó fuera de pantalla al angostar la ventana.");
+
+                // 2 px de margen por el redondeo del escalado por DPI.
+                Assert.True(control.BoundingRectangle.Width >= widthsWhenWide[id] - 2,
+                    $"El filtro '{id}' se encogió de {widthsWhenWide[id]} a {control.BoundingRectangle.Width} px al angostar la "
+                    + "ventana: está recortado contra el borde, y la fila no tiene scroll horizontal con el que alcanzarlo.");
+            }
+        }
+        finally
+        {
+            transform.Resize(Math.Max(originalBounds.Width, 1180), Math.Max(originalBounds.Height, 820));
+            Retry.WhileTrue(
+                () => fixture.MainWindow.BoundingRectangle.Width < 900,
+                timeout: TimeSpan.FromSeconds(5),
+                interval: TimeSpan.FromMilliseconds(200),
+                ignoreException: true);
+        }
+    }
+
+    private AutomationElement FindFilterControl(string automationId)
+    {
+        var result = Retry.WhileNull(
+            () => fixture.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
+            timeout: TimeSpan.FromSeconds(5),
+            interval: TimeSpan.FromMilliseconds(250),
+            ignoreException: true);
+
+        Assert.True(result.Success && result.Result is not null, $"No se encontró el filtro '{automationId}'.");
+        return result.Result!;
+    }
 }
