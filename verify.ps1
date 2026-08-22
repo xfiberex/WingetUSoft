@@ -50,6 +50,18 @@ function Ok($m)   { Write-Host "[OK] $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "[!] $m" -ForegroundColor Yellow }
 function Fail($m) { Write-Host "[X] $m" -ForegroundColor Red; exit 1 }
 
+# Ver la nota extensa en release.ps1: en PowerShell 5.1, con la salida del script canalizada o
+# redirigida, un exe nativo que escriba en stderr revienta con NativeCommandError si
+# $ErrorActionPreference vale Stop, aunque termine con codigo 0. Aqui se comprueba $LASTEXITCODE
+# despues de cada llamada, asi que el modo Stop solo estorba en las nativas.
+function Invoke-Native {
+    param([Parameter(Mandatory)][scriptblock]$Command)
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Command } finally { $ErrorActionPreference = $previous }
+}
+
 $root          = $PSScriptRoot
 $solution      = Join-Path $root "WingetUSoft.slnx"
 $testProject   = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
@@ -60,7 +72,7 @@ if (-not (Test-Path $solution)) { Fail "No se encontró la solución: $solution"
 # ── 1. Compilación ─────────────────────────────────────────────────────────
 # -warnaserror: una advertencia nueva es una regresión. El repositorio compila hoy con cero.
 Info "Compilando la solución (advertencias = error)..."
-& dotnet build $solution --nologo -warnaserror
+Invoke-Native { & dotnet build $solution --nologo -warnaserror }
 if ($LASTEXITCODE -ne 0) { Fail "La compilación falló (o emitió advertencias)." }
 Ok "Compilación limpia."
 
@@ -69,7 +81,7 @@ if ($SkipTests) {
     Warn "Pruebas omitidas (-SkipTests)."
 } else {
     Info "Ejecutando pruebas unitarias..."
-    & dotnet test $testProject --nologo --no-build
+    Invoke-Native { & dotnet test $testProject --nologo --no-build }
     if ($LASTEXITCODE -ne 0) { Fail "Las pruebas unitarias fallaron." }
     Ok "Pruebas unitarias correctas."
 }
@@ -78,7 +90,7 @@ if ($SkipTests) {
 # 'dotnet list package --vulnerable' devuelve 0 aunque encuentre algo: hay que mirar la salida.
 # Las líneas de paquete afectado empiezan por '>' tras la sangría.
 Info "Buscando dependencias vulnerables (incluidas las transitivas)..."
-$vulnerable = & dotnet list $solution package --vulnerable --include-transitive 2>&1
+$vulnerable = Invoke-Native { & dotnet list $solution package --vulnerable --include-transitive 2>&1 }
 if ($LASTEXITCODE -ne 0) {
     $vulnerable | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
     Fail "No se pudo consultar las dependencias vulnerables."
@@ -96,7 +108,7 @@ if ($SkipOutdated) {
     # Informativo: estar desactualizado no rompe nada, pero es la señal temprana de la próxima
     # vulnerabilidad. NO aborta.
     Info "Comprobando paquetes desactualizados (informativo)..."
-    $outdated = & dotnet list $solution package --outdated 2>&1
+    $outdated = Invoke-Native { & dotnet list $solution package --outdated 2>&1 }
     $stale = $outdated | Where-Object { $_ -match '^\s*>\s' }
     if ($stale) {
         Warn "Hay $($stale.Count) referencia(s) de paquete con versión más nueva disponible:"
@@ -110,7 +122,7 @@ if ($SkipOutdated) {
 if ($Full) {
     if (-not (Test-Path $uiTestProject)) { Fail "No se encontró el proyecto de UI tests: $uiTestProject" }
     Info "Ejecutando UI tests (abren la app real: no toques el ratón ni el teclado)..."
-    & dotnet test $uiTestProject --nologo --no-build
+    Invoke-Native { & dotnet test $uiTestProject --nologo --no-build }
     if ($LASTEXITCODE -ne 0) { Fail "Los UI tests fallaron." }
     Ok "UI tests correctos."
 } elseif (-not $SkipTests) {

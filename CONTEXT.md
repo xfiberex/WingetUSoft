@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.6** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.6), sin firmar) |
-| **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
+| **En `main`, sin publicar** | endurecimiento de `release.ps1` y `verify.ps1` contra el `NativeCommandError` de PowerShell 5.1 |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-22 |
 
@@ -220,6 +220,35 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-22 — El release de la v1.8.6 murió a mitad: `NativeCommandError` en PowerShell 5.1 (sin publicar)
+
+La v1.8.6 se publicó, pero `release.ps1` no llegó al final por su cuenta: reventó justo después de
+`git push origin main`, con la rama ya subida y el tag sin subir. Hubo que rematar a mano el push del tag
+y el `gh release create`.
+
+**Qué pasó.** En PowerShell 5.1, cuando la salida del script se canaliza o se redirige
+(`.\release.ps1 ... 2>&1 | ...`, que es como lo invoca cualquier automatización), un ejecutable nativo
+que escriba en stderr se convierte en un **`NativeCommandError` terminante** si `$ErrorActionPreference`
+vale `Stop` — **aunque su código de salida sea 0**. Y git escribe *siempre* en stderr: el informe del
+push (`To https://github.com/...`), el progreso, y la salida de los hooks. No es que fallara el push:
+falló el hecho de que informara de su éxito.
+
+> El script ya conocía la trampa —tenía un baile manual de `$ErrorActionPreference` alrededor de
+> `gh auth status` y de `git credential fill`, con su comentario— pero solo en los dos sitios donde
+> alguien la había sufrido antes. Lo que faltaba era generalizarla.
+
+**El arreglo.** Un `Invoke-Native { ... }` en ambos scripts que baja `$ErrorActionPreference` a
+`Continue` solo mientras dura la llamada nativa. Los dos comprueban `$LASTEXITCODE` explícitamente
+después de cada una, así que el modo `Stop` no aporta nada ahí y sí rompe; se mantiene para los cmdlets,
+que es donde sí protege. Envueltas todas las llamadas a `git`, `gh`, `dotnet` y a los scripts hijos.
+
+**Verificado (2026-08-22):** reproducido y corregido en el mismo banco de pruebas. Con
+`$ErrorActionPreference = "Stop"` y la salida canalizada, `git push --dry-run` **lanza**
+`NativeCommandError`; con el envoltorio, la misma llamada sigue adelante y devuelve 0. Y `verify.ps1`
+completo, invocado con `2>&1 |` —la forma exacta que falló— termina en verde.
 
 ---
 

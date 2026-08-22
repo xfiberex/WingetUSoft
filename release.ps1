@@ -78,6 +78,25 @@ function Ok($m)    { Write-Host "[OK] $m" -ForegroundColor Green }
 function Warn($m)  { Write-Host "[!] $m" -ForegroundColor Yellow }
 function Die($m)   { Write-Host "[X] $m" -ForegroundColor Red; exit 1 }
 
+# Ejecuta un comando nativo (git, gh, dotnet) con $ErrorActionPreference bajado a Continue.
+#
+# POR QUE HACE FALTA. En PowerShell 5.1, cuando la salida del script se canaliza o se redirige
+# (`.\release.ps1 ... 2>&1 | ...`, que es como lo invoca cualquier automatizacion), un exe nativo que
+# escriba en stderr se convierte en un NativeCommandError *terminante* si $ErrorActionPreference vale
+# Stop -- aunque su codigo de salida sea 0. Y git escribe SIEMPRE en stderr: el informe del push, el
+# progreso, la salida de los hooks. El release de la v1.8.6 murio exactamente ahi, con la rama ya
+# subida y el tag sin subir, y hubo que rematarlo a mano.
+#
+# Este script comprueba $LASTEXITCODE explicitamente despues de cada llamada nativa, asi que el modo
+# Stop no aporta nada en ellas y si rompe. Se mantiene Stop para los cmdlets, que es donde si protege.
+function Invoke-Native {
+    param([Parameter(Mandatory)][scriptblock]$Command)
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try { & $Command } finally { $ErrorActionPreference = $previous }
+}
+
 # ── Rutas ──────────────────────────────────────────────────────────────────
 $root          = $PSScriptRoot
 $csproj        = Join-Path $root "src\WingetUSoft\WingetUSoft.csproj"
@@ -116,21 +135,21 @@ if (-not ($CertThumbprint -or $CertFile)) {
 # ── Validaciones de git ──────────────────────────────────────────────────────
 Push-Location $root
 try {
-    & git rev-parse --is-inside-work-tree *> $null
+    Invoke-Native { & git rev-parse --is-inside-work-tree *> $null }
     if ($LASTEXITCODE -ne 0) { Die "Este directorio no es un repositorio git." }
 
-    $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
+    $branch = (Invoke-Native { & git rev-parse --abbrev-ref HEAD }).Trim()
     Info "Rama: $branch"
 
     # ¿Tag ya existe? (local o remoto)
-    $localTag  = (& git tag --list $tag)
+    $localTag  = (Invoke-Native { & git tag --list $tag })
     if ($localTag) { Die "El tag $tag ya existe localmente. Usa otra versión o bórralo antes." }
-    $remoteTag = (& git ls-remote --tags origin $tag 2>$null)
+    $remoteTag = (Invoke-Native { & git ls-remote --tags origin $tag 2>$null })
     if ($remoteTag) { Die "El tag $tag ya existe en origin. Usa otra versión." }
 
     # ¿Hay archivos sin rastrear? (nuevos, no añadidos con git add)
     # Estos NO se incluirán en el commit del release — el usuario debe añadirlos explícitamente.
-    $untracked = (& git status --porcelain) | Where-Object { $_ -match '^\?\?' }
+    $untracked = (Invoke-Native { & git status --porcelain }) | Where-Object { $_ -match '^\?\?' }
     if ($untracked -and -not $AllowDirty) {
         Warn "Hay archivos nuevos sin rastrear (no se incluirán en el release):"
         $untracked | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
@@ -165,7 +184,7 @@ try {
     }
 
     Info "Verificando el repositorio (verify.ps1)..."
-    & $verifyScript @verifyArgs
+    Invoke-Native { & $verifyScript @verifyArgs }
     if ($LASTEXITCODE -ne 0) { Die "La verificación falló. Release abortado." }
     Ok "Repositorio verificado."
 
@@ -249,7 +268,7 @@ try {
     if ($CertFile)       { $buildArgs.CertFile       = $CertFile }
     if ($CertPassword)   { $buildArgs.CertPassword   = $CertPassword }
     if ($TimestampUrl)   { $buildArgs.TimestampUrl   = $TimestampUrl }
-    & $buildScript @buildArgs
+    Invoke-Native { & $buildScript @buildArgs }
     if ($LASTEXITCODE -ne 0) { Die "La compilación del instalador falló." }
     $setup = Join-Path $outputDir "WingetUSoft-Setup-$Version.exe"
     if (-not (Test-Path $setup)) { Die "No se encontró el instalador esperado: $setup" }
@@ -267,27 +286,27 @@ try {
     # Añade todos los archivos rastreados modificados/eliminados (tracked changes).
     # Los archivos nuevos sin rastrear requieren 'git add' manual previo.
     Info "Preparando commit de release..."
-    & git add -u
+    Invoke-Native { & git add -u }
     if ($LASTEXITCODE -ne 0) { Die "git add -u falló." }
-    $staged = (& git diff --cached --name-only)
+    $staged = (Invoke-Native { & git diff --cached --name-only })
     if ($staged) {
         Info "Archivos incluidos en el commit:"
         $staged | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
-        & git commit -m "release: v$Version"
+        Invoke-Native { & git commit -m "release: v$Version" }
         if ($LASTEXITCODE -ne 0) { Die "git commit falló." }
         Ok "Commit de release creado."
     } else {
         Info "Sin cambios que commitear; se etiqueta el HEAD actual."
     }
     Info "Creando tag $tag..."
-    & git tag -a $tag -m "WingetUSoft $tag"
+    Invoke-Native { & git tag -a $tag -m "WingetUSoft $tag" }
     if ($LASTEXITCODE -ne 0) { Die "git tag falló." }
 
     # ── 4. Push ──────────────────────────────────────────────────────────────
     Info "Push de la rama y el tag a origin..."
-    & git push origin $branch
+    Invoke-Native { & git push origin $branch }
     if ($LASTEXITCODE -ne 0) { Die "git push de la rama falló." }
-    & git push origin $tag
+    Invoke-Native { & git push origin $tag }
     if ($LASTEXITCODE -ne 0) { Die "git push del tag falló." }
     Ok "Rama y tag publicados."
 
@@ -303,20 +322,12 @@ try {
     if (-not $gh) { Die "gh (GitHub CLI) no está instalado. Instálalo: winget install GitHub.cli  — el tag YA está publicado; crea el release manualmente o reintenta." }
 
     # Asegurar autenticación: si gh no está logueado, reutilizar la credencial cacheada de git.
-    # PS 5.1: 2>$null en exes nativos con ErrorActionPreference=Stop genera NativeCommandError;
-    # se baja a SilentlyContinue solo durante las llamadas que necesitan suprimir stderr.
-    $eap = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
-    & $gh auth status 2>$null
+    Invoke-Native { & $gh auth status 2>$null }
     $authOk = $LASTEXITCODE -eq 0
-    $ErrorActionPreference = $eap
 
     if (-not $authOk) {
         Warn "gh no autenticado; reutilizando la credencial de git cacheada (local, no se muestra)."
-        $eap = $ErrorActionPreference
-        $ErrorActionPreference = "SilentlyContinue"
-        $cred = "protocol=https`nhost=github.com`n`n" | & git credential fill 2>$null
-        $ErrorActionPreference = $eap
+        $cred = Invoke-Native { "protocol=https`nhost=github.com`n`n" | & git credential fill 2>$null }
         $pwdLine = $cred | Where-Object { $_ -like 'password=*' } | Select-Object -First 1
         if ($pwdLine) {
             # A partir de aquí el PAT vive en el entorno del proceso y lo hereda TODO hijo posterior,
@@ -328,7 +339,7 @@ try {
     }
 
     Info "Creando el GitHub Release..."
-    & $gh release create $tag --title "WingetUSoft $tag" --notes-file $notesPath $setup $setupHash
+    Invoke-Native { & $gh release create $tag --title "WingetUSoft $tag" --notes-file $notesPath $setup $setupHash }
     if ($LASTEXITCODE -ne 0) { Die "gh release create falló (el tag ya está publicado; puedes reintentar el release)." }
 
     if ($tempNotes) { Remove-Item $tempNotes -Force -ErrorAction SilentlyContinue }
