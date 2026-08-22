@@ -11,8 +11,8 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.8.6** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.6), sin firmar) |
-| **En `main`, sin publicar** | el `NativeCommandError` de `release.ps1`/`verify.ps1` y **el Tier T3 completo** |
+| **Versión publicada** | **1.8.7** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.7), sin firmar) |
+| **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-22 |
 
@@ -89,7 +89,7 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **Tests unitarios** | **279/279** |
 | **UI tests (FlaUI)** | **37/37** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
 | **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **63 de 70** — T0, T1, T2 y T3 completos |
-| **Publicado** | hasta la **v1.8.6**. `main` y el último tag coinciden |
+| **Publicado** | hasta la **v1.8.7**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
 
@@ -152,7 +152,7 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 - **Instalador (Inno Setup):** `AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}` — **no cambiar nunca**
   (permite actualización in-place). `PrivilegesRequired=admin`, `CloseApplications=yes`. **Único
   empaquetador**: nada de MSIX/ClickOnce.
-- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.8.6`); `release.ps1` sube
+- **Versionado:** fuente única en `WingetUSoft.csproj` `<Version>` (hoy `1.8.7`); `release.ps1` sube
   `<Version>`, `<AssemblyVersion>` y `<FileVersion>` a la vez — la app y el updater leen `AssemblyVersion`.
 - **Scripts PowerShell con acentos o `—`: guardar siempre con BOM UTF-8.** Windows PowerShell 5.1 asume
   el codepage ANSI para `.ps1` sin BOM y el tokenizer se rompe ("Falta el paréntesis de cierre"). Mismo
@@ -227,6 +227,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-08-22 | **1.8.7** | **Tier T3 completo** — el ajuste de notificaciones ya no oculta el resumen del lote, arreglo del flujo de auto-actualización, `.editorconfig` con comprobación de estilo y diagnósticos que por fin van a algún sitio |
 | 2026-08-22 | **1.8.6** | **Tier T2 completo** — filtros accesibles y que envuelven, fechas y nombres de archivo por idioma, `verify.ps1` + hook de pre-push, y pruebas del protocolo del worker elevado |
 | 2026-08-21 | **1.8.5** | **Rendimiento (T2)** — instalador −37 % (fuera el runtime de IA sin usar), registro fuera del hilo de UI, purga de logs, caché en la búsqueda |
 | 2026-08-21 | **1.8.4** | **Auditoría T1 completo** — TOCTOU del instalador, registro de fallos que no se pisa, fallos clasificados por código, accesibilidad e i18n |
@@ -243,7 +244,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
-### 2026-08-22 — Tier T3 cerrado: el estilo deja de depender de la disciplina (T3-01 a T3-17, sin publicar)
+### 2026-08-22 — Tier T3 cerrado: el estilo deja de depender de la disciplina (T3-01 a T3-17, release v1.8.7)
 
 **63 de 70.** T0, T1, T2 y T3 completos; solo queda T4, que no se abre sin decisión explícita.
 
@@ -306,7 +307,7 @@ T3-07, T3-09, T3-10 y T3-16 comprobados saboteando su arreglo.
 
 ---
 
-### 2026-08-22 — El release de la v1.8.6 murió a mitad: `NativeCommandError` en PowerShell 5.1 (sin publicar)
+### 2026-08-22 — El release de la v1.8.6 murió a mitad: `NativeCommandError` en PowerShell 5.1 (release v1.8.7)
 
 La v1.8.6 se publicó, pero `release.ps1` no llegó al final por su cuenta: reventó justo después de
 `git push origin main`, con la rama ya subida y el tag sin subir. Hubo que rematar a mano el push del tag
