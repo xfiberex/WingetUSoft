@@ -18,22 +18,9 @@ public sealed partial class SettingsWindow : Window
         _settings = settings;
         InitializeComponent();
 
-        // Window sizing
-        var hWnd = WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        WindowSizer.Apply(appWindow, hWnd, designWidthDip: 760, designHeightDip: 560, minWidthDip: 640, minHeightDip: 480);
-
-        if (Content is FrameworkElement root)
-        {
-            root.RequestedTheme = settings.ThemeMode switch { 1 => ElementTheme.Light, 2 => ElementTheme.Dark, _ => ElementTheme.Default };
-            root.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors(appWindow);
-        }
-
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+        var (appWindow, _) = WindowChrome.Apply(
+            this, AppTitleBar, settings.ThemeMode,
+            designWidthDip: 760, designHeightDip: 560, minWidthDip: 640, minHeightDip: 480);
         UpdateTitleBarButtonColors(appWindow);
 
         ApplyLocalizedStrings();

@@ -12,7 +12,7 @@
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
 | **Versión publicada** | **1.8.5** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.5), sin firmar) |
-| **En `main`, sin publicar** | arreglo del bug de codificación de `release.ps1` que salió al cortar la 1.8.5 |
+| **En `main`, sin publicar** | arreglo de codificación de `release.ps1` + **refactorización estructural de T2** (tabla de winget, registro de actividad y arranque de ventanas) |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
 | **Última actualización** | 2026-08-21 |
 
@@ -210,6 +210,51 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-21 — Auditoría T2: refactorización estructural (T2-04, T2-05, T2-07, sin publicar)
+
+Segundo corte del Tier T2: **32 de 70** tareas. Tres bloques que estaban copiados entre 2 y 6 veces.
+
+**1. `ParseUpgradeOutput` troceaba la tabla por su cuenta (T2-04).** Encontrar la línea de guiones,
+deducir dónde empieza cada columna y recortar por posición estaba escrito **dos veces, idéntico**: en
+`WingetTable` y en `WingetService`. Un cambio de formato de winget —que ya pasó una vez— obligaba a
+acordarse de tocar los dos sitios. Ahora `WingetService` consume `WingetTable.ParseRows` y se queda
+solo con lo suyo: qué columna es cada cosa y cuándo una fila es un paquete. Los 8 tests de
+`ParseUpgradeOutput` siguen en verde **sin tocarlos**, que era el criterio.
+
+> `ParseRows` es nuevo y devuelve también la línea original de cada fila. Hace falta porque el plan B
+> de `WingetService` —separar por dos o más espacios cuando el recorte por posición no cuadra— necesita
+> la línea cruda; sin ella habría que parsear la salida dos veces.
+
+**2. Cuatro registros de actividad, cuatro comportamientos (T2-05).** Había cuatro `AppendLog`, con
+tres estrategias de color y tres límites de recorte. Las diferencias no eran decisiones: la ventana de
+búsqueda no coloreaba las líneas normales, dos ventanas conservaban RGB que el Tier C ya había retirado
+de la principal por ilegibles, y solo la principal repintaba lo escrito al cambiar de tema. Nuevo
+`UI/ActivityLog.xaml`, que las cuatro consumen.
+
+> Lo que **no** se unificó, a propósito: el límite de líneas (es de cada ventana) y, en la principal,
+> deducir el tipo de línea por su prefijo y volcar a disco — no son cosa del widget, son de la única
+> ventana que retransmite la salida cruda de winget.
+>
+> **La regresión que salió, y quién la cazó.** Al mover el registro al control, el nombre accesible se
+> quedó en el `UserControl` y el `RichTextBlock` interior —donde aterriza un lector de pantalla— se
+> quedó sin ninguno. Lo detectó `AccessibilityTests.ActivityLog_HasAnAccessibleName`, escrito el mismo
+> día para verificar T1-07. Se arregló **el código, no el test**: el control expone
+> `SetAccessibleName` y cada ventana se lo pasa junto a su encabezado ya traducido, así que además
+> ahora sigue al idioma.
+
+**3. El arranque de las seis ventanas (T2-07).** Icono, barra de título extendida, fondo Mica, tamaño
+por DPI y tema estaban copiados en las seis, con las diferencias justas para no poder fiarse de
+ninguna: unas aplicaban el tema antes de extender la barra y otras después, unas cualificaban
+`MicaBackdrop` y otras no. Nuevo `UI/WindowChrome.cs`; cada ventana queda en una llamada. El tamaño de
+diseño y los mínimos siguen siendo de cada una — meterlos ahí solo trasladaría la divergencia.
+
+**`LogPaletteTests` se reescribió, no se relajó.** Guardaba «las cuatro ventanas usan `LogPalette`»,
+premisa que T2-05 elimina. Ahora exige que el registro se pinte en **un solo sitio** y que ningún
+archivo de UI vuelva a colorear líneas por su cuenta. Comprobado saboteando: reintroducir un RGB
+cableado en una ventana lo hace fallar.
 
 ---
 

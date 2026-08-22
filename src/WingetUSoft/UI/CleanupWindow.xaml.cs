@@ -15,7 +15,6 @@ public sealed partial class CleanupWindow : Window
     private readonly IReadOnlyList<WingetPackage> _uninstalledPackages;
     private readonly ObservableCollection<CleanupItemViewModel> _items = [];
     private CancellationTokenSource? _cts;
-    private int _logLineCount;
 
     private AppWindow _appWindow = null!;
     private IntPtr _hWnd;
@@ -30,27 +29,9 @@ public sealed partial class CleanupWindow : Window
         _settings = settings;
         _uninstalledPackages = [.. uninstalledPackages];
 
-        var hWnd     = WindowNative.GetWindowHandle(this);
-        _hWnd = hWnd;
-        var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-        _appWindow   = AppWindow.GetFromWindowId(windowId);
-        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 960, designHeightDip: 700, minWidthDip: 720, minHeightDip: 520);
-
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
-
-        if (Content is FrameworkElement contentRoot)
-        {
-            contentRoot.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors();
-            contentRoot.RequestedTheme = _settings.ThemeMode switch
-            {
-                1 => ElementTheme.Light,
-                2 => ElementTheme.Dark,
-                _ => ElementTheme.Default
-            };
-        }
+        (_appWindow, _hWnd) = WindowChrome.Apply(
+            this, AppTitleBar, _settings.ThemeMode,
+            designWidthDip: 960, designHeightDip: 700, minWidthDip: 720, minHeightDip: 520);
 
         lvItems.ItemsSource = _items;
 
@@ -86,6 +67,7 @@ public sealed partial class CleanupWindow : Window
         colTamano.Text = L.T("cleanup.colSize");
         colPrograma.Text = L.T("cleanup.colProgram");
         txtLogHeader.Text = L.T("log.activity");
+        activityLog.SetAccessibleName(L.T("log.activity"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
     }
 
@@ -258,43 +240,10 @@ public sealed partial class CleanupWindow : Window
 
     // ---- Logging ------------------------------------------------------------
 
-    private void ClearLog()
-    {
-        rtbLog.Blocks.Clear();
-        _logLineCount = 0;
-    }
+    private void ClearLog() => activityLog.Clear();
 
-    /// <summary>
-    /// El tema se lee del propio control, no de <c>Application.Current</c>: el tema se fuerza por
-    /// elemento, así que con "Claro" sobre un Windows oscuro la aplicación seguiría diciendo "oscuro" y
-    /// el registro saldría con los colores contrarios (mismo motivo que en MainWindow, Tier C #4).
-    /// </summary>
-    private bool IsDarkTheme() => rtbLog.ActualTheme == ElementTheme.Dark;
-
-    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        // Los colores salen de LogPalette, no de RGB cableados aquí. Los que había (#387A4D verde,
-        // #BA4636 rojo) son exactamente los que el Tier C #4 retiró de MainWindow por ilegibles sobre
-        // la tarjeta oscura: medían 2,74:1 y 2,71:1 contra el 4,5:1 que exige WCAG AA. La corrección se
-        // aplicó entonces solo a MainWindow y esta ventana se quedó atrás — justo la que informa de qué
-        // archivos se borraron y cuáles fallaron. LogPaletteTests mide el contraste de cada tono.
-        var brush = new SolidColorBrush(LogPalette.For(kind, IsDarkTheme()));
-
-        var paragraph = new Paragraph();
-        paragraph.Inlines.Add(new Run { Text = text, Foreground = brush });
-        rtbLog.Blocks.Add(paragraph);
-        _logLineCount++;
-
-        if (_logLineCount > 200 && rtbLog.Blocks.Count > 1)
-        {
-            rtbLog.Blocks.RemoveAt(0);
-            _logLineCount--;
-        }
-
-        scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
-    }
+    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal) =>
+        activityLog.Append(text, kind);
 
     // ---- Theme --------------------------------------------------------------
 

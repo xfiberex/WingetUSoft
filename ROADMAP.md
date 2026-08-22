@@ -646,7 +646,7 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T2-05] Extraer un `ActivityLog` compartido**
+- [x] **[T2-05] Extraer un `ActivityLog` compartido**
   - **Área:** Refactorización
   - **Ubicación:** `MainWindow.xaml.cs:1689`, `CleanupWindow.xaml.cs:255`, `UninstallWindow.xaml.cs:257`, `SearchWindow.xaml.cs:307`
   - **Qué hacer:** hay **cuatro** implementaciones de `AppendLog` con tres estrategias de color distintas y
@@ -654,10 +654,22 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
     recorte, autoscroll y repintado al cambiar de tema, y que las cuatro ventanas lo consuman.
   - **Criterio de aceptación:** una sola implementación de `AppendLog`; el comportamiento visible de las
     cuatro ventanas no cambia (mismo recorte, mismo autoscroll) y T1-06 sigue en verde.
+  - **Cómo quedó:** el control (`UI/ActivityLog.xaml`) se queda con pintar, recortar, autoscroll y
+    repintado por tema; cada ventana conserva su `MaxLines` (400/200/200/400) porque es decisión suya.
+    `MainWindow` mantiene un `AppendLog` propio de dos cosas que tampoco son del widget: deducir el tipo
+    de línea por su prefijo (es la única que retransmite la salida cruda de winget) y volcar a disco.
+  - **Dos divergencias se unificaron a propósito**, ambas invisibles: la ventana de búsqueda no coloreaba
+    las líneas `Normal` (y `LogPalette` devuelve para `Normal` justo el color de texto por defecto), y solo
+    ella hacía `UpdateLayout()` antes de mover el scroll — que es lo correcto, porque si no
+    `ScrollableHeight` es todavía el de antes de añadir la línea. Ahora lo hacen las cuatro.
+  - **T1-06 se reescribió, no se relajó:** guardaba «las 4 ventanas usan `LogPalette`», premisa que este
+    refactor elimina. Ahora exige que el registro se pinte en **un solo sitio** y que ningún archivo de UI
+    vuelva a colorear líneas por su cuenta. Verificado saboteando: reintroducir un RGB cableado en una
+    ventana lo hace fallar.
   - **Esfuerzo:** medio
   - **Depende de:** T2-06, T1-04, T1-05
 
-- [ ] **[T2-04] `ParseUpgradeOutput` debe consumir `WingetTable`**
+- [x] **[T2-04] `ParseUpgradeOutput` debe consumir `WingetTable`**
   - **Área:** Refactorización
   - **Ubicación:** `src/WingetUSoft/Services/WingetService.cs:1054-1129` frente a `src/WingetUSoft/Core/WingetTable.cs:28-83`
   - **Qué hacer:** `GetColumnStarts` está escrito dos veces, idéntico, y la búsqueda de la línea de guiones y
@@ -669,7 +681,7 @@ responsive/i18n (T2-08 a T2-11) y verificación local (T2-12 a T2-15).
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[T2-07] Extraer un `WindowChrome` compartido**
+- [x] **[T2-07] Extraer un `WindowChrome` compartido**
   - **Área:** Refactorización
   - **Ubicación:** `MainWindow`, `CleanupWindow`, `UninstallWindow`, `SearchWindow`, `SettingsWindow`, `HistoryWindow`
   - **Qué hacer:** icono, `ExtendsContentIntoTitleBar`, `MicaBackdrop`, el `switch` sobre `ThemeMode`,

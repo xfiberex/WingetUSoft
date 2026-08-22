@@ -25,9 +25,26 @@ public static class WingetTable
     /// Divide la salida en filas de celdas. Devuelve lista vacía si no hay tabla (p. ej. "no se
     /// encontró ningún paquete", que winget imprime como texto suelto y también traduce).
     /// </summary>
-    public static List<string[]> Parse(string? output)
+    /// <summary>
+    /// Una fila de la tabla: sus celdas ya recortadas y la **línea original** de la que salieron.
+    /// </summary>
+    /// <remarks>
+    /// La línea cruda viaja con las celdas porque hay consumidores que necesitan un plan B cuando el
+    /// recorte por posición no cuadra — <c>WingetService</c> reintenta separando por dos o más espacios
+    /// cuando una fila sale incompleta. Sin la línea, ese plan B obligaría a parsear la salida dos veces.
+    /// </remarks>
+    /// <param name="Cells">Celdas recortadas, una por columna de la cabecera.</param>
+    /// <param name="Line">La línea tal cual la imprimió winget.</param>
+    public readonly record struct Row(string[] Cells, string Line);
+
+    /// <summary>Celdas de cada fila de datos. Lista vacía si la salida no trae una tabla reconocible.</summary>
+    public static List<string[]> Parse(string? output) =>
+        [.. ParseRows(output).Select(r => r.Cells)];
+
+    /// <summary>Como <see cref="Parse"/>, pero conservando la línea original de cada fila.</summary>
+    public static List<Row> ParseRows(string? output)
     {
-        var rows = new List<string[]>();
+        var rows = new List<Row>();
         if (string.IsNullOrWhiteSpace(output))
             return rows;
 
@@ -64,14 +81,20 @@ public static class WingetTable
                 int end = c + 1 < starts.Count ? starts[c + 1] : line.Length;
                 cells[c] = Cut(line, start, end);
             }
-            rows.Add(cells);
+            rows.Add(new Row(cells, line));
         }
 
         return rows;
     }
 
-    /// <summary>Posición donde empieza cada columna de la cabecera (primer carácter tras un espacio).</summary>
-    private static List<int> GetColumnStarts(string header)
+    /// <summary>
+    /// Posición donde empieza cada columna de la cabecera (primer carácter tras un espacio).
+    /// </summary>
+    /// <remarks>
+    /// Estuvo escrita dos veces, idéntica, aquí y en <c>WingetService</c>. Un cambio de formato de
+    /// winget —que ya pasó una vez— obligaba a acordarse de tocar los dos sitios.
+    /// </remarks>
+    internal static List<int> GetColumnStarts(string header)
     {
         var starts = new List<int>();
         for (int i = 0; i < header.Length; i++)

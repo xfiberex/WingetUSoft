@@ -46,12 +46,10 @@ public sealed class SearchResultViewModel(WingetSearchResult result)
 /// </remarks>
 public sealed partial class SearchWindow : Window
 {
-    private const int LogMaxLines = 400;
 
     private readonly AppSettings _settings;
     private readonly ObservableCollection<SearchResultViewModel> _results = [];
     private CancellationTokenSource? _cts;
-    private int _logLineCount;
 
     private AppWindow _appWindow = null!;
     private IntPtr _hWnd;
@@ -68,26 +66,9 @@ public sealed partial class SearchWindow : Window
         LiveRegion.TrackStatusText(txtEstado);
         _settings = settings;
 
-        _hWnd = WindowNative.GetWindowHandle(this);
-        var windowId = Win32Interop.GetWindowIdFromWindow(_hWnd);
-        _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 980, designHeightDip: 720, minWidthDip: 720, minHeightDip: 520);
-
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        SystemBackdrop = new MicaBackdrop();
-
-        if (Content is FrameworkElement contentRoot)
-        {
-            contentRoot.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors();
-            contentRoot.RequestedTheme = _settings.ThemeMode switch
-            {
-                1 => ElementTheme.Light,
-                2 => ElementTheme.Dark,
-                _ => ElementTheme.Default
-            };
-        }
+        (_appWindow, _hWnd) = WindowChrome.Apply(
+            this, AppTitleBar, _settings.ThemeMode,
+            designWidthDip: 980, designHeightDip: 720, minWidthDip: 720, minHeightDip: 520);
 
         lvResults.ItemsSource = _results;
         ApplyLocalizedStrings();
@@ -113,6 +94,7 @@ public sealed partial class SearchWindow : Window
         btnCancelar.Content = L.T("btn.cancel");
         txtListHeader.Text = L.T("search.results");
         txtLogHeader.Text = L.T("log.header");
+        activityLog.SetAccessibleName(L.T("log.header"));
         colNombre.Text = L.T("list.colName");
         colId.Text = L.T("list.colId");
         colVersion.Text = L.T("list.colVersion");
@@ -331,32 +313,7 @@ public sealed partial class SearchWindow : Window
     private Task ShowInfoAsync(string title, string body) =>
         WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, body);
 
-    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal)
-    {
-        var paragraph = new Paragraph();
-        var run = new Run { Text = text };
+    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal) =>
+        activityLog.Append(text, kind);
 
-        if (kind != LogLineKind.Normal)
-            run.Foreground = new SolidColorBrush(LogPalette.For(kind, IsDarkTheme()));
-
-        paragraph.Inlines.Add(run);
-        rtbLog.Blocks.Add(paragraph);
-        _logLineCount++;
-
-        if (_logLineCount > LogMaxLines)
-        {
-            rtbLog.Blocks.RemoveAt(0);
-            _logLineCount--;
-        }
-
-        scrollLog.UpdateLayout();
-        scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
-    }
-
-    /// <summary>
-    /// El tema se lee del propio control, no de <c>Application.Current</c>: el tema se fuerza por
-    /// elemento, así que con "Claro" sobre un Windows oscuro la aplicación seguiría diciendo "oscuro" y
-    /// el registro saldría con los colores contrarios (mismo motivo que en MainWindow, Tier C #4).
-    /// </summary>
-    private bool IsDarkTheme() => rtbLog.ActualTheme == ElementTheme.Dark;
 }

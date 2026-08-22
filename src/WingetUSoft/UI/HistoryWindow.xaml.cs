@@ -41,22 +41,9 @@ public sealed partial class HistoryWindow : Window
         InitializeComponent();
         _allHistory = history;
 
-        // Window sizing
-        var hWnd = WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hWnd);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        WindowSizer.Apply(appWindow, hWnd, designWidthDip: 1000, designHeightDip: 620, minWidthDip: 760, minHeightDip: 480);
-
-        if (Content is FrameworkElement root)
-        {
-            root.RequestedTheme = themeMode switch { 1 => ElementTheme.Light, 2 => ElementTheme.Dark, _ => ElementTheme.Default };
-            root.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors(appWindow);
-        }
-
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+        var (appWindow, _) = WindowChrome.Apply(
+            this, AppTitleBar, themeMode,
+            designWidthDip: 1000, designHeightDip: 620, minWidthDip: 760, minHeightDip: 480);
         UpdateTitleBarButtonColors(appWindow);
 
         ApplyLocalizedStrings();

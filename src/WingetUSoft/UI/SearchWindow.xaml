@@ -190,17 +190,9 @@
                                    Text="Actividad"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="4,0,0,8" />
-                        <ScrollViewer Grid.Row="1"
-                                      x:Name="scrollLog"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Auto">
-                            <RichTextBlock x:Name="rtbLog"
-                                           AutomationProperties.LabeledBy="{Binding ElementName=txtLogHeader}"
-                                           FontFamily="Consolas"
-                                           FontSize="12"
-                                           IsTextSelectionEnabled="True"
-                                           TextWrapping="NoWrap" />
-                        </ScrollViewer>
+                        <local:ActivityLog x:Name="activityLog"
+                                             Grid.Row="1"
+                                             MaxLines="400" />
                     </Grid>
                 </Border>
             </Grid>

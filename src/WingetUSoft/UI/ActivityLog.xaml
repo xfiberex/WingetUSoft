@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WingetUSoft.ActivityLog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer x:Name="scrollLog"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+        <RichTextBlock x:Name="rtbLog"
+                       FontFamily="Consolas"
+                       FontSize="12"
+                       IsTextSelectionEnabled="True"
+                       TextWrapping="NoWrap" />
+    </ScrollViewer>
+</UserControl>

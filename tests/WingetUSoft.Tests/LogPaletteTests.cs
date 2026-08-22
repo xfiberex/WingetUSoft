@@ -71,28 +71,38 @@ public sealed class LogPaletteTests
     /// </para>
     /// <para>
     /// Por eso este test no mide colores: lee el código fuente y comprueba **quién** decide el color.
-    /// El alcance son los archivos de <c>UI/</c> que tienen registro (<c>rtbLog</c>);
     /// <c>TitleBarHelper</c> queda fuera a propósito, porque sus literales son para la API de barra de
     /// título de Win32, que no tiene nada que ver con la paleta del registro.
     /// </para>
+    /// <para>
+    /// <b>Desde T2-05 el alcance cambió, no se relajó.</b> Antes exigía que las cuatro ventanas con
+    /// registro usaran <c>LogPalette</c>; ahora el registro es un único control compartido
+    /// (<c>ActivityLog</c>), así que lo que se exige es que **siga siendo uno solo** y que ningún
+    /// archivo de UI vuelva a pintar líneas de registro por su cuenta. Si alguien reintroduce un
+    /// registro por ventana con colores cableados, este test lo ve igual que antes.
+    /// </para>
     /// </remarks>
     [Fact]
-    public void EveryWindowWithAnActivityLog_TakesItsColorsFromLogPalette()
+    public void TheActivityLog_IsTheOnlyPlaceThatColorsLogLines()
     {
         string uiDirectory = Path.Combine(FindRepositoryRoot(), "src", "WingetUSoft", "UI");
         Assert.True(Directory.Exists(uiDirectory), "No existe el directorio de UI: " + uiDirectory);
 
         var offenders = new List<string>();
-        int scanned = 0;
+        var logRenderers = new List<string>();
 
         foreach (string file in Directory.EnumerateFiles(uiDirectory, "*.cs", SearchOption.AllDirectories))
         {
             string code = File.ReadAllText(file);
-            if (!code.Contains("rtbLog", StringComparison.Ordinal))
-                continue;
-
-            scanned++;
             string name = Path.GetFileName(file);
+
+            // Un archivo "pinta el registro" si toca el RichTextBlock del log o resuelve colores por tipo
+            // de línea. Cualquiera de las dos cosas basta para que le apliquen las reglas de abajo.
+            bool rendersLog = code.Contains("rtbLog", StringComparison.Ordinal)
+                           || code.Contains("LogPalette.For", StringComparison.Ordinal);
+            if (!rendersLog) continue;
+
+            logRenderers.Add(name);
 
             if (code.Contains("Color.FromArgb", StringComparison.Ordinal))
                 offenders.Add($"{name}: cablea un color con Color.FromArgb en vez de usar LogPalette");
@@ -103,13 +113,19 @@ public sealed class LogPaletteTests
                 offenders.Add($"{name}: lee un pincel de Application.Current.Resources (ignora el tema por elemento)");
 
             if (!code.Contains("LogPalette.", StringComparison.Ordinal))
-                offenders.Add($"{name}: tiene registro pero no usa LogPalette");
+                offenders.Add($"{name}: pinta el registro pero no usa LogPalette");
         }
 
-        Assert.True(scanned >= 4, $"El escaneo solo encontró {scanned} ventanas con registro; se esperaban al menos 4.");
         Assert.True(offenders.Count == 0,
             "Los colores del registro deben salir de LogPalette (es lo único que los tests de contraste "
                 + "cubren):\n  " + string.Join("\n  ", offenders));
+
+        // La duplicación era la causa mecánica del bug original: cuatro copias, y la corrección se
+        // aplicó a una. Que haya exactamente una es lo que impide que vuelva a pasar.
+        Assert.True(
+            logRenderers.Count == 1 && logRenderers[0] == "ActivityLog.xaml.cs",
+            "El registro debe pintarse en un único sitio (ActivityLog.xaml.cs). Encontrado en: "
+                + string.Join(", ", logRenderers));
     }
 
     /// <summary>

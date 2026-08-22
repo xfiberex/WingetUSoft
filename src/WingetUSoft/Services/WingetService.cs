@@ -1061,102 +1061,38 @@ public static class WingetService
         return new ProcessResult(process.ExitCode, output.ToString(), error.ToString());
     }
 
+    /// <summary>
+    /// Convierte la tabla de <c>winget upgrade</c> / <c>winget list</c> en paquetes.
+    /// </summary>
+    /// <remarks>
+    /// El troceado de la tabla —encontrar la línea de guiones, deducir dónde empieza cada columna y
+    /// recortar por posición— vive en <see cref="WingetTable"/> y no aquí. Estaba duplicado carácter por
+    /// carácter en los dos sitios, así que un cambio de formato de winget (que ya ocurrió una vez)
+    /// obligaba a acordarse de tocar ambos. Aquí queda solo lo propio de este comando: qué columna es
+    /// cada cosa y cuándo una fila es un paquete de verdad.
+    /// </remarks>
     internal static List<WingetPackage> ParseUpgradeOutput(string output)
     {
         var packages = new List<WingetPackage>();
 
-        if (string.IsNullOrWhiteSpace(output))
-            return packages;
-
-        string[] lines = output.Replace("\r", string.Empty).Split('\n');
-
-        // Find the separator line (----) and use the line before it as header
-        int separatorIndex = -1;
-        for (int i = 0; i < lines.Length; i++)
+        foreach (WingetTable.Row row in WingetTable.ParseRows(output))
         {
-            string trimmed = lines[i].Trim();
-            if (trimmed.StartsWith("--") && trimmed.Length > 10)
-            {
-                separatorIndex = i;
-                break;
-            }
-        }
-
-        if (separatorIndex < 1)
-            return packages;
-
-        string header = lines[separatorIndex - 1];
-
-        List<int> columnStarts = GetColumnStarts(header);
-        if (columnStarts.Count < 4)
-            return packages;
-
-        int namePos = columnStarts[0];
-        int idPos = columnStarts[1];
-        int versionPos = columnStarts[2];
-        int availablePos = columnStarts[3];
-        int sourcePos = columnStarts.Count > 4 ? columnStarts[4] : -1;
-
-        for (int i = separatorIndex + 1; i < lines.Length; i++)
-        {
-            string line = lines[i];
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-            if (line.Length <= idPos)
+            // Nombre, Id, Versión y Disponible son obligatorias; Origen puede no venir.
+            if (row.Cells.Length < 4)
                 continue;
 
-            WingetPackage? package = TryParseFixedWidthPackageLine(line, namePos, idPos, versionPos, availablePos, sourcePos)
-                ?? TryParseDelimitedPackageLine(line);
+            WingetPackage? package = CreatePackageIfValid(
+                    row.Cells[0], row.Cells[1], row.Cells[2], row.Cells[3],
+                    row.Cells.Length > 4 ? row.Cells[4] : "")
+                // Plan B para las filas que el recorte por posición no cuadra: separar por dos o más
+                // espacios. Salva los nombres tan largos que se comen el hueco entre columnas.
+                ?? TryParseDelimitedPackageLine(row.Line);
 
-            if (package is null)
-                continue;
-
-            packages.Add(package);
+            if (package is not null)
+                packages.Add(package);
         }
 
         return packages;
-    }
-
-    private static string SafeSubstring(string s, int start, int length)
-    {
-        if (start >= s.Length) return "";
-        if (length < 0) length = 0;
-        if (start + length > s.Length) length = s.Length - start;
-        return s.Substring(start, length);
-    }
-
-    private static List<int> GetColumnStarts(string header)
-    {
-        var starts = new List<int>();
-
-        for (int i = 0; i < header.Length; i++)
-        {
-            if (!char.IsWhiteSpace(header[i]) && (i == 0 || char.IsWhiteSpace(header[i - 1])))
-                starts.Add(i);
-        }
-
-        return starts;
-    }
-
-    private static WingetPackage? TryParseFixedWidthPackageLine(
-        string line,
-        int namePos,
-        int idPos,
-        int versionPos,
-        int availablePos,
-        int sourcePos)
-    {
-        string name = SafeSubstring(line, namePos, idPos - namePos).Trim();
-        string id = SafeSubstring(line, idPos, versionPos - idPos).Trim();
-        string version = SafeSubstring(line, versionPos, availablePos - versionPos).Trim();
-        string available = sourcePos >= 0
-            ? SafeSubstring(line, availablePos, sourcePos - availablePos).Trim()
-            : SafeSubstring(line, availablePos, line.Length - availablePos).Trim();
-        string source = sourcePos >= 0
-            ? SafeSubstring(line, sourcePos, line.Length - sourcePos).Trim()
-            : "";
-
-        return CreatePackageIfValid(name, id, version, available, source);
     }
 
     private static WingetPackage? TryParseDelimitedPackageLine(string line)

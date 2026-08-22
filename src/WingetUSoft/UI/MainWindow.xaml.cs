@@ -76,7 +76,6 @@ public sealed class PackageViewModel : INotifyPropertyChanged
 
 public sealed partial class MainWindow : Window
 {
-    private const int LogMaxLines = 400;
 
     /// <summary>Estado de la consulta, que decide qué muestra el panel superpuesto a la tabla.</summary>
     private enum ListState { Initial, Loading, Ready, Cancelled, Error }
@@ -111,7 +110,6 @@ public sealed partial class MainWindow : Window
     private bool _cancelStopsCurrentProcess = true;
     /// <summary>Escritor del registro a disco. Encola y escribe fuera del hilo de UI (T2-01).</summary>
     private readonly FileLog _fileLog;
-    private int _logLineCount;
     private bool _initialized;
     private int _excludedFilter = 0;
     private string _searchFilter = "";
@@ -174,38 +172,19 @@ public sealed partial class MainWindow : Window
         ctxMenuRow.Items.Add(ctxOmitirVersion);
         ctxMenuRow.Items.Add(ctxExcluir);
 
-        // Set up window
-        var hWnd = WindowNative.GetWindowHandle(this);
-        _hWnd = hWnd;
-        var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-        _appWindow = AppWindow.GetFromWindowId(windowId);
-        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
-        _appWindow.SetIcon(iconPath);
-        // El mismo icono, dentro de la barra de titulo personalizada: al extender el contenido sobre
-        // la barra (ExtendsContentIntoTitleBar) Windows deja de dibujar el icono del sistema, asi que
-        // hay que pintarlo a mano o la ventana queda con titulo pero sin marca.
-        TitleBarIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(iconPath));
-        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600);
+        // RecolorLog va como trabajo extra del cambio de tema: los colores del registro son por
+        // tema (ver LogPalette) y esta es la unica ventana que repinta lo ya escrito.
+        (_appWindow, _hWnd) = WindowChrome.Apply(
+            this, AppTitleBar, _settings.ThemeMode,
+            designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600,
+            onThemeChanged: RecolorLog);
 
-        // Set title bar
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
+        // El mismo icono, dentro de la barra de titulo personalizada: al extender el contenido
+        // sobre la barra Windows deja de dibujar el icono del sistema, asi que hay que pintarlo a
+        // mano o la ventana queda con titulo pero sin marca.
+        TitleBarIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(WindowChrome.IconPath));
 
-        // Mica backdrop
-        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
-
-        // Window closing handler for minimize-to-tray
         _appWindow.Closing += OnAppWindowClosing;
-
-        // Keep caption button colors in sync with the actual (resolved) theme
-        if (Content is FrameworkElement contentRoot)
-        {
-            contentRoot.ActualThemeChanged += (_, _) =>
-            {
-                UpdateTitleBarButtonColors();
-                RecolorLog();   // los colores del registro son por tema (ver LogPalette)
-            };
-        }
 
         lvPackages.ItemsSource = _packageViewModels;
 
@@ -1057,6 +1036,7 @@ public sealed partial class MainWindow : Window
         colExcl.Text = L.T("list.colExcluded");
         UpdateSortIndicators();   // relee el nombre accesible de cada cabecera en el idioma nuevo
         txtLogHeader.Text = L.T("log.header");
+        activityLog.SetAccessibleName(L.T("log.header"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
         UpdateSelectionDetails();
         UpdateSelectionSummary();
@@ -1681,71 +1661,34 @@ public sealed partial class MainWindow : Window
 
     // --- Logging ---
 
+    private void ClearLog() => activityLog.Clear();
+
     /// <summary>
-    /// Tipo de cada l\u00ednea ya pintada, en paralelo a <c>rtbLog.Blocks</c> (mismo \u00edndice, se recortan a
-    /// la vez). Un <c>Run</c> no guarda de qu\u00e9 tipo era, y sin eso <see cref="RecolorLog"/> no podr\u00eda
-    /// repintar el registro ya escrito cuando cambia el tema.
+    /// Añade una línea al registro y la vuelca al archivo del día.
     /// </summary>
-    private readonly List<LogLineKind> _logLineKinds = [];
-
-    private void ClearLog()
-    {
-        rtbLog.Blocks.Clear();
-        _logLineKinds.Clear();
-        _logLineCount = 0;
-    }
-
+    /// <remarks>
+    /// Pintar, recortar y seguir el scroll es cosa de <see cref="ActivityLog"/>. Lo que se queda aquí
+    /// es lo propio de esta ventana: deducir el tipo de línea por su prefijo —solo esta retransmite la
+    /// salida cruda de winget, donde el tipo no viene dado— y el volcado a disco.
+    /// </remarks>
     private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
         if (kind == LogLineKind.Normal)
         {
-            if (text.StartsWith("  \u2714", StringComparison.Ordinal)) kind = LogLineKind.Success;
-            else if (text.StartsWith("  \u2716", StringComparison.Ordinal) ||
-                     text.StartsWith("  \u2718", StringComparison.Ordinal)) kind = LogLineKind.Error;
+            if (text.StartsWith("  ✔", StringComparison.Ordinal)) kind = LogLineKind.Success;
+            else if (text.StartsWith("  ✖", StringComparison.Ordinal) ||
+                     text.StartsWith("  ✘", StringComparison.Ordinal)) kind = LogLineKind.Error;
             else if (text.Length > 0 && text[0] == '[') kind = LogLineKind.Accent;
         }
 
-        var paragraph = new Paragraph();
-        var run = new Run { Text = text, Foreground = LogBrush(kind) };
-        paragraph.Inlines.Add(run);
-        rtbLog.Blocks.Add(paragraph);
-        _logLineKinds.Add(kind);
-        _logLineCount++;
-
-        // Trim log if too large
-        while (_logLineCount > LogMaxLines && rtbLog.Blocks.Count > 1)
-        {
-            rtbLog.Blocks.RemoveAt(0);
-            _logLineKinds.RemoveAt(0);
-            _logLineCount--;
-        }
-
-        // Scroll to bottom
-        scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
+        activityLog.Append(text, kind);
         AppendLogFile(text);
     }
 
-    /// <summary>
-    /// Color de una línea según el tema REALMENTE en uso. Se mira <c>ActualTheme</c> y no
-    /// <c>Application.Current.RequestedTheme</c> porque el tema de la app se fuerza por elemento
-    /// (<see cref="ApplyTheme"/>): con "Claro" elegido sobre un Windows oscuro, el tema de la
-    /// aplicación sigue diciendo "oscuro" y el registro saldría con los colores del tema contrario.
-    /// </summary>
-    private SolidColorBrush LogBrush(LogLineKind kind) =>
-        new(LogPalette.For(kind, rtbLog.ActualTheme == ElementTheme.Dark));
-
-    /// <summary>Repinta el registro ya escrito cuando cambia el tema; sin esto conservaría los colores del anterior.</summary>
-    private void RecolorLog()
-    {
-        int count = Math.Min(rtbLog.Blocks.Count, _logLineKinds.Count);
-        for (int i = 0; i < count; i++)
-        {
-            if (rtbLog.Blocks[i] is Paragraph { Inlines: [Run run, ..] })
-                run.Foreground = LogBrush(_logLineKinds[i]);
-        }
-    }
+    /// <summary>Repinta el registro cuando cambia el tema (lo engancha WindowChrome).</summary>
+    private void RecolorLog() => activityLog.Recolor();
 
     private static string FormatBytes(long bytes)
     {
@@ -1775,19 +1718,9 @@ public sealed partial class MainWindow : Window
         string bar = BuildProgressBar(percent);
         string line = $"  \u2193  {dl} / {total}  {bar}{speed}{eta}";
 
-        // Update or add download progress line
-        if (rtbLog.Blocks.Count > 0 && rtbLog.Blocks[^1] is Paragraph lastPara
-            && lastPara.Inlines.Count > 0 && lastPara.Inlines[0] is Run lastRun
-            && lastRun.Text.StartsWith("  \u2193", StringComparison.Ordinal))
-        {
-            lastRun.Text = line;
-        }
-        else
-        {
-            AppendLog(line, LogLineKind.Warning);
-        }
-
-        scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
+        // La barra de descarga se reescribe en su sitio en vez de dejar cientos de líneas casi
+        // iguales; el prefijo es lo que identifica a la suya.
+        activityLog.AppendOrReplaceLast("  ↓", line, LogLineKind.Warning);
     }
 
     private void AppendLogFile(string text)
@@ -1834,12 +1767,7 @@ public sealed partial class MainWindow : Window
     {
         if (Content is FrameworkElement rootElement)
         {
-            rootElement.RequestedTheme = themeMode switch
-            {
-                1 => ElementTheme.Light,
-                2 => ElementTheme.Dark,
-                _ => ElementTheme.Default   // 0 = follow system
-            };
+            rootElement.RequestedTheme = WindowChrome.ToElementTheme(themeMode);
         }
         UpdateTitleBarButtonColors();
     }

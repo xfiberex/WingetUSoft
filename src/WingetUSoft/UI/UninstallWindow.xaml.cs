@@ -17,7 +17,6 @@ public sealed partial class UninstallWindow : Window
     private string _searchFilter = "";
     private CancellationTokenSource? _cts;
     private bool _initialized;
-    private int _logLineCount;
 
     private AppWindow _appWindow = null!;
     private IntPtr _hWnd;
@@ -31,28 +30,9 @@ public sealed partial class UninstallWindow : Window
         LiveRegion.TrackStatusText(txtEstado);
         _settings = settings;
 
-        var hWnd = WindowNative.GetWindowHandle(this);
-        _hWnd = hWnd;
-        var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-        _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        WindowSizer.Apply(_appWindow, _hWnd, designWidthDip: 900, designHeightDip: 700, minWidthDip: 720, minHeightDip: 520);
-
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
-
-        if (Content is FrameworkElement contentRoot)
-        {
-            contentRoot.ActualThemeChanged += (_, _) => UpdateTitleBarButtonColors();
-            // Apply same theme as main settings
-            contentRoot.RequestedTheme = _settings.ThemeMode switch
-            {
-                1 => ElementTheme.Light,
-                2 => ElementTheme.Dark,
-                _ => ElementTheme.Default
-            };
-        }
+        (_appWindow, _hWnd) = WindowChrome.Apply(
+            this, AppTitleBar, _settings.ThemeMode,
+            designWidthDip: 900, designHeightDip: 700, minWidthDip: 720, minHeightDip: 520);
 
         lvPackages.ItemsSource = _packageViewModels;
 
@@ -88,6 +68,7 @@ public sealed partial class UninstallWindow : Window
         colVersion.Text = L.T("list.colVersion");
         colFuente.Text = L.T("list.colSource");
         txtLogHeader.Text = L.T("log.activity");
+        activityLog.SetAccessibleName(L.T("log.activity"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
     }
 
@@ -250,40 +231,10 @@ public sealed partial class UninstallWindow : Window
 
     // --- Logging ---
 
-    private void ClearLog()
-    {
-        rtbLog.Blocks.Clear();
-        _logLineCount = 0;
-    }
+    private void ClearLog() => activityLog.Clear();
 
-    /// <summary>
-    /// El tema se lee del propio control, no de <c>Application.Current</c>: el tema se fuerza por
-    /// elemento, así que con "Claro" sobre un Windows oscuro la aplicación seguiría diciendo "oscuro" y
-    /// el registro saldría con los colores contrarios (mismo motivo que en MainWindow, Tier C #4).
-    /// </summary>
-    private bool IsDarkTheme() => rtbLog.ActualTheme == ElementTheme.Dark;
-
-    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        // Ver la nota equivalente en CleanupWindow: estos RGB cableados eran los que el Tier C #4 ya
-        // había retirado de MainWindow por no llegar al 4,5:1 de WCAG AA sobre la tarjeta oscura.
-        var brush = new SolidColorBrush(LogPalette.For(kind, IsDarkTheme()));
-
-        var paragraph = new Paragraph();
-        paragraph.Inlines.Add(new Run { Text = text, Foreground = brush });
-        rtbLog.Blocks.Add(paragraph);
-        _logLineCount++;
-
-        if (_logLineCount > 200 && rtbLog.Blocks.Count > 1)
-        {
-            rtbLog.Blocks.RemoveAt(0);
-            _logLineCount--;
-        }
-
-        scrollLog.ChangeView(null, scrollLog.ScrollableHeight, null);
-    }
+    private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal) =>
+        activityLog.Append(text, kind);
 
     // --- Theme ---
 
