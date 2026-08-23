@@ -86,9 +86,9 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **279/279** |
+| **Tests unitarios** | **292/292** |
 | **UI tests (FlaUI)** | **37/37** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **65 de 70** — T0, T1, T2 y T3 completos, más T4-05 |
+| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **70 de 70 — completo** |
 | **Publicado** | hasta la **v1.8.7**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
@@ -149,6 +149,32 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 - **Publicación:** `dotnet publish -r win-x64 --self-contained false` (**framework-dependent**, pese a
   `WindowsAppSDKSelfContained=true`: esa propiedad empaqueta el Windows App SDK, no el runtime de .NET).
   El instalador detecta y descarga **VC++ Redist** y **.NET 10 Desktop Runtime** solo si faltan.
+- **Windows App SDK: se queda en 1.8 — la 2.x está descartada (T4-01, probado el 2026-08-23).** No es
+  desconfianza a ojo: se hizo el spike completo en una rama y **funciona** (compila con cero
+  advertencias, arranca y pasa los 37 UI tests). Se descarta por lo que cuesta, no por lo que rompe.
+
+  El único incentivo que la tarea le veía era que 2.x reorganiza el empaquetado *self-contained* y
+  podría ahorrar los ~41 MB del runtime de IA sin usar. Ese incentivo **ya no existe**: eso lo resolvió
+  T2-03 sobre la 1.8. Y en 2.4.0 el arreglo de T2-03 **deja de aplicarse**, así que el peso vuelve:
+
+  | `publish` (Release, win-x64, framework-dependent) | Tamaño |
+  |---|---:|
+  | Windows App SDK 1.8.260317003 (hoy) | **101 MB** |
+  | Windows App SDK 2.4.0 | **150 MB** |
+
+  En 2.4.0 reaparecen en el publish `onnxruntime.dll`, `DirectML.dll` y toda la familia
+  `Microsoft.Windows.AI.*`; en 1.8 solo quedan ~0,5 MB de DLLs de proyección pequeñas. Son **+49 MB que
+  cada usuario se descargaría en cada actualización** a cambio de ninguna función nueva.
+
+  La causa está localizada: el `Target RemoveUnusedAIRuntime` del `.csproj` engancha en
+  `AddMicrosoftWindowsAppSDKPayloadFilesFromMsix;AddMicrosoftWindowsAppSDKPayloadFilesFromComponents`, y
+  en los targets de la 2.x **el primero ya no existe** (solo sobrevive `…FromComponents`). MSBuild ignora
+  en silencio un `AfterTargets` que nombra un target inexistente, así que el filtro deja de correr sin
+  avisar de nada.
+
+  **Qué haría falta para reabrirlo:** rehacer T2-03 contra la composición de carga útil de la 2.x y
+  volver a medir el `publish`. Mientras 1.8 siga recibiendo servicing y la app no use Windows AI
+  Foundation, la migración es coste sin retorno.
 - **Instalador (Inno Setup):** `AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}` — **no cambiar nunca**
   (permite actualización in-place). `PrivilegesRequired=admin`, `CloseApplications=yes`. **Único
   empaquetador**: nada de MSIX/ClickOnce.
@@ -195,9 +221,10 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ## 6. Pendientes / ideas
 
-- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 65 de 70.** T0, T1, T2 y T3 cerrados, más
-  **T4-05** (`SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`). Quedan **5 de T4**, que por definición no
-  se abren sin decisión explícita. Recordar en cada corte:
+- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 70 de 70, cerrado.** No queda nada
+  pendiente del plan. Lo próximo que se aborde vendrá de uso real o de reportes, no de la auditoría.
+  Recordar en cada corte: el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app
+  no puede verificar un instalador sin firmar y **rechaza la actualización**. Recordar en cada corte:
   el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app no puede verificar un
   instalador sin firmar y **rechaza la actualización**.
 - **Certificado de firma de código (OV/EV) — descartado por ahora.** Consecuencia asumida: SmartScreen
@@ -228,6 +255,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-08-23 | **1.8.8** | **Tier T4 y cierre del plan de auditoría** — MainWindow dividido, el flujo de lotes por fin probable, cobertura en local, y SECURITY/CONTRIBUTING/CHANGELOG |
 | 2026-08-22 | **1.8.7** | **Tier T3 completo** — el ajuste de notificaciones ya no oculta el resumen del lote, arreglo del flujo de auto-actualización, `.editorconfig` con comprobación de estilo y diagnósticos que por fin van a algún sitio |
 | 2026-08-22 | **1.8.6** | **Tier T2 completo** — filtros accesibles y que envuelven, fechas y nombres de archivo por idioma, `verify.ps1` + hook de pre-push, y pruebas del protocolo del worker elevado |
 | 2026-08-21 | **1.8.5** | **Rendimiento (T2)** — instalador −37 % (fuera el runtime de IA sin usar), registro fuera del hilo de UI, purga de logs, caché en la búsqueda |
@@ -242,6 +270,62 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-08-23 — Tier T4 y cierre del plan de auditoría (release v1.8.8)
+
+**70 de 70.** El plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II queda completo. Build 0/0,
+**292/292 unitarios**, **37/37 UI tests**, cobertura **25,2 %** de líneas.
+
+Ninguna de estas tareas cambia lo que el usuario ve, salvo la documentación: es un corte de estructura
+y de herramienta. Los 37 UI tests pasan igual antes y después, que es exactamente lo que se le pide a un
+refactor.
+
+**1. `MainWindow.xaml.cs` deja de ser un archivo de 2 115 líneas (T4-02).** Acumulaba una decena de
+responsabilidades. Se reparte en parciales por tema —lote, menús, tabla, registro, auto-actualización,
+bandeja— y `PackageViewModel` sale a su propio archivo. Ningún archivo de `UI/` pasa ya de **745**
+líneas. No se movió una sola línea de lógica: el reparto lo hizo un script que recorta bloques enteros,
+para que cualquier diferencia de comportamiento fuera un fallo del recorte y no una decisión escondida.
+De paso, `AppSettings.Load()` sale del inicializador de campo: ahí la E/S ocurría **antes** del cuerpo
+del constructor y de `InitializeComponent`, así que un fallo de disco reventaba con la ventana a medio
+construir y sin dónde mostrar el aviso.
+
+**2. El corazón del producto por fin se puede probar (T4-03).** El bucle que actualiza un lote —cuenta
+aciertos, clasifica fallos y decide cuándo parar— vivía dentro de `MainWindow`, atado a la barra de
+progreso y llamando a la clase estática `WingetService`. La única forma de ejercitarlo era arrancar la
+app con FlaUI y dejar que lanzara procesos de verdad. Ahora es `Core/UpgradeBatchRunner`, que habla con
+`IWingetService` y cuenta lo que pasa por `IUpgradeBatchObserver`; la ventana implementa el observador.
+**14 tests nuevos** cubren el camino feliz, los fallos que no detienen el lote, y las dos formas de
+cancelar: la excepción y el token ya cancelado al volver de winget.
+
+Un detalle que los tests destaparon: `Progress<T>` **no** invoca al observador en el acto, sino que lo
+publica en el `SynchronizationContext` capturado. En la app ese contexto es la cola de la UI, que es
+justo lo que hace falta porque winget reporta desde un hilo de fondo. En un test no hay contexto y los
+callbacks llegaban tarde. Se resolvió instalando un contexto síncrono **en el test**, no relajando el
+código: el despacho asíncrono es correcto y necesario.
+
+**3. Cobertura medida, en local y sin puerta (T4-04).** `verify.ps1 -Full` recolecta con
+`coverlet.collector` en la misma pasada de tests y genera un HTML navegable en `coverage/report`, con
+`reportgenerator` declarado como herramienta local. Base: **25,2 %** global, que es un número honesto y
+poco informativo por sí solo — `UI/` no lo puede cubrir un test unitario. Lo que importa es el desglose:
+`Core` y `Settings` van del **83 % al 100 %** (`HistoryFilter`, `LogPalette`, `ReleaseNotes`,
+`Throughput`, `WindowSizing` y `UpgradeBatchRunner` al 100 %). **No hay umbral mínimo a propósito**: un
+mínimo invita a escribir tests que tocan líneas sin comprobar nada, que es peor que no tenerlos.
+
+**4. Windows App SDK 2.x: probado y descartado (T4-01).** El spike completo está hecho y **funciona**
+—compila sin advertencias y pasa los 37 UI tests—, pero el `publish` sube de **101 a 150 MB** porque el
+arreglo de T2-03 deja de aplicarse: en los targets de la 2.x ya no existe
+`AddMicrosoftWindowsAppSDKPayloadFilesFromMsix`, y MSBuild ignora en silencio un `AfterTargets` que
+nombra un target inexistente. El razonamiento y lo que haría falta para reabrirlo, en §4.
+
+**5. Cara pública del repositorio (T4-05) y vuelta atrás (T4-06).** `SECURITY.md` con canal privado de
+reporte y alcance explícito —qué cuenta como fallo y qué es una limitación ya declarada—, más
+`CONTRIBUTING.md` y un `CHANGELOG.md` que apunta a los dos registros que ya existen en vez de crear un
+tercero. El README explica cómo volver a una versión anterior y por qué funciona (`AppId` fijo y
+`UsePreviousAppDir`), que los datos de usuario sobreviven, y que el aviso de actualización reaparecerá
+porque la propia app no tiene «omitir versión». Con ello suben cinco dependencias con salto mayor
+pendiente, incluida `H.NotifyIcon.WinUI` 2.2.0 → 2.4.1.
 
 ---
 

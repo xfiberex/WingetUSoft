@@ -188,8 +188,9 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
-**Progreso (2026-08-23): 65 de 70.** ✅ **T0, T1, T2 y T3 completos** (2 + 22 + 23 + 17), más **T4-05**
-(cara pública del repositorio). Quedan **5 de T4**, que por definición solo se abren con decisión explícita.
+**Progreso (2026-08-23): 70 de 70 — plan de auditoría completo.** ✅ T0, T1, T2, T3 y T4.
+T4-01 se cierra **descartando** la migración a Windows App SDK 2.x, con el spike hecho y medido
+(ver `CONTEXT.md` §4): el criterio de aceptación contemplaba esa salida.
 
 ---
 
@@ -1225,7 +1226,7 @@ decisión explícita.
 > decisión deliberada. Dos de ellas (T4-05 y T4-06) rozan decisiones ya cerradas en la Parte I y se
 > anotan aquí solo para que la auditoría no deje huecos, no para reabrirlas.
 
-- [ ] **[T4-01] Evaluar la migración a Windows App SDK 2.x**
+- [x] **[T4-01] Evaluar la migración a Windows App SDK 2.x**
   - **Área:** Arquitectura / stack
   - **Ubicación:** `src/WingetUSoft/WingetUSoft.csproj:26`
   - **Qué hacer:** hoy `1.8.260317003`; `dotnet list package --outdated` reporta **2.4.0** disponible
@@ -1237,7 +1238,7 @@ decisión explícita.
   - **Esfuerzo:** alto
   - **Depende de:** T2-03
 
-- [ ] **[T4-02] Dividir `MainWindow.xaml.cs`**
+- [x] **[T4-02] Dividir `MainWindow.xaml.cs`**
   - **Área:** Arquitectura
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs` (2 151 líneas, 28 campos de instancia)
   - **Qué hacer:** la clase acumula ~10 responsabilidades: menú contextual, sizing, tema, localización,
@@ -1250,7 +1251,7 @@ decisión explícita.
   - **Esfuerzo:** alto
   - **Depende de:** T2-05, T2-07
 
-- [ ] **[T4-03] Interfaces para los servicios estáticos**
+- [x] **[T4-03] Interfaces para los servicios estáticos**
   - **Área:** Arquitectura / testabilidad
   - **Ubicación:** `Services/WingetService.cs`, `Services/GitHubUpdateService.cs`, `Services/CleanupScanner.cs`
   - **Qué hacer:** las tres son clases estáticas, así que no hay nada que sustituir en un test: la lógica de
@@ -1263,7 +1264,7 @@ decisión explícita.
   - **Esfuerzo:** alto
   - **Depende de:** T4-02
 
-- [ ] **[T4-04] Medición de cobertura de tests**
+- [x] **[T4-04] Medición de cobertura de tests**
   - **Área:** QA
   - **Ubicación:** `tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj`
   - **Qué hacer:** no hay `coverlet` ni ninguna configuración de cobertura. La auditoría **no midió
@@ -1288,7 +1289,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[T4-06] Documentar la reversión de una actualización fallida**
+- [x] **[T4-06] Documentar la reversión de una actualización fallida**
   - **Área:** DevOps / documentación
   - **Ubicación:** `README.md` (sección «Actualizaciones de la propia app»)
   - **Qué hacer:** no hay rollback: si una actualización deja la app inservible, el usuario tiene que buscar
@@ -1318,8 +1319,8 @@ decisión explícita.
 | T1 — Alta | 22 | **22** | 0 | **100 %** |
 | T2 — Sustancial | 23 | **23** | 0 | **100 %** |
 | T3 — Pulido | 17 | **17** | 0 | **100 %** |
-| T4 — Futuro | 6 | 1 | 5 | 17 % |
-| **Total** | **70** | **65** | **5** | **93 %** |
+| T4 — Futuro | 6 | **6** | 0 | **100 %** |
+| **Total** | **70** | **70** | **0** | **100 %** |
 
 ### Registro de tareas completadas
 
@@ -1396,7 +1397,12 @@ decisión explícita.
 | 2026-08-22 | T3-16 | Validar el nombre del evento de cancelación del worker elevado | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
 | 2026-08-22 | T3-13 | Aislar `CleanupScannerTests` del perfil real del usuario | corte v1.8.7 (unitarios + UI tests) | `319034f` | 1.8.7 |
 | 2026-08-22 | T3-17 | Limpiar los artefactos de compilación del árbol de trabajo | corte v1.8.7 (unitarios + UI tests) | `319034f` | 1.8.7 |
-| 2026-08-23 | T4-05 | `SECURITY.md`, `CONTRIBUTING.md` y `CHANGELOG.md` | los tres existen en la raíz y el README enlaza los dos primeros | *(sin commitear)* | *(sin publicar)* |
+| 2026-08-23 | T4-04 | Cobertura local desde `verify.ps1 -Full` | informe HTML en `coverage/report`; base **25,2 %** | `bb097c1` | *(en el corte)* |
+| 2026-08-23 | T4-05 | `SECURITY.md`, `CONTRIBUTING.md` y `CHANGELOG.md` | los tres existen y el README enlaza los dos primeros | `bb097c1` | *(en el corte)* |
+| 2026-08-23 | T4-06 | Vuelta atrás documentada y dependencias mayores al día | README §Actualizaciones; 5 paquetes subidos, 292/292 + 37/37 | `bb097c1` | *(en el corte)* |
+| 2026-08-23 | T4-01 | Migración a Windows App SDK 2.x evaluada y **descartada** | spike real: compila y pasa los UI tests, pero el `publish` sube de 101 a 150 MB | *(en el corte)* | *(en el corte)* |
+| 2026-08-23 | T4-02 | `MainWindow.xaml.cs` dividido | ningún archivo de `UI/` pasa de **745** líneas (era 2 115); 37/37 UI tests | *(en el corte)* | *(en el corte)* |
+| 2026-08-23 | T4-03 | `IWingetService` + `UpgradeBatchRunner` probables | 14 tests del flujo de lotes con un doble, sin lanzar procesos | *(en el corte)* | *(en el corte)* |
 
 ### Línea base de la auditoría (2026-08-20)
 
@@ -1404,18 +1410,20 @@ Para poder comparar al cerrar tareas:
 
 | Métrica | Valor | Cómo se obtuvo |
 |---|---|---|
-| Tests unitarios | 162 / 162 al auditar · **279 / 279 con T0–T3 cerrados** | `dotnet test tests/WingetUSoft.Tests/…` |
-| Tests de UI | 27 / 27 en la 1.8.3 · **37 / 37 hoy** | `dotnet test tests/WingetUSoft.UiTests/…` (el conteo estático de 16 de la auditoría eran métodos, no casos) |
+| Tests unitarios | 162 / 162 al auditar · **292 / 292 con el plan completo** | `dotnet test tests/WingetUSoft.Tests/…` |
+| Tests de UI | 27 / 27 en la 1.8.3 · **37 / 37 hoy** (sin cambios con T4-02: el refactor no tocó comportamiento) | `dotnet test tests/WingetUSoft.UiTests/…` (el conteo estático de 16 de la auditoría eran métodos, no casos) |
 | Dependencias vulnerables | 0 | `dotnet list package --vulnerable --include-transitive` |
 | Paquetes con versión superior | 6 | `dotnet list package --outdated` |
 | Claves de localización | 363 × 5 idiomas al auditar · **388 hoy** (T1-03, T1-15 a T1-17, T2-10) | conteo sobre `Localization.cs` |
 | LOC C# (src + tests) | 10 360 al auditar · **12 959 hoy** | `wc -l` excluyendo `bin`/`obj`/`publish` |
-| Tamaño del `publish` | 142 MB | `du -sh src/WingetUSoft/publish` |
+| Tamaño del `publish` | 142 MB al auditar · **101 MB hoy** (T2-03) | `du -sh src/WingetUSoft/publish` |
 | Tamaño del instalador | 35,8 MB en la 1.8.2 · **−37 % en la 1.8.5** (T2-03, fuera el runtime de IA sin usar) | `WingetUSoft-Setup-*.exe` en `installer/Output/` |
 | Contraste del registro (tema oscuro) | ~~2,74:1 éxito · 2,71:1 error en 2 de 4 ventanas~~ → **≥ 4,5:1 en las 4** (T1-04/05) | fórmula WCAG 2.x; ahora medido por `LogPaletteTests` |
 | `AutomationProperties.LiveSetting` | 0 usos | `grep -rn` sobre `src/` |
 | `AutomationProperties.LabeledBy` | 0 usos | `grep -rn` sobre `src/` |
 | TODO / FIXME / HACK en el código | 0 | `grep -rn` sobre `src/`, `tests/`, `tools/` |
+| Cobertura de tests | no medida en la auditoría · **25,2 % de líneas** (T4-04) | `verify.ps1 -Full` → `coverage/report` |
+| Archivo de UI más largo | 2 115 líneas (`MainWindow.xaml.cs`) · **745 hoy** (T4-02) | `wc -l src/WingetUSoft/UI/*.cs` |
 
 ### Zonas que la auditoría no pudo cubrir
 
