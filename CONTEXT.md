@@ -14,7 +14,7 @@
 | **Versión publicada** | **1.8.7** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.7), sin firmar) |
 | **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-08-22 |
+| **Última actualización** | 2026-08-23 |
 
 ---
 
@@ -88,7 +88,7 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
 | **Tests unitarios** | **279/279** |
 | **UI tests (FlaUI)** | **37/37** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **63 de 70** — T0, T1, T2 y T3 completos |
+| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **65 de 70** — T0, T1, T2 y T3 completos, más T4-05 |
 | **Publicado** | hasta la **v1.8.7**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
@@ -195,8 +195,9 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ## 6. Pendientes / ideas
 
-- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 63 de 70.** T0, T1, T2 y T3 cerrados. Solo
-  queda **T4** (6 tareas), que por definición no se abre sin decisión explícita. Recordar en cada corte:
+- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 65 de 70.** T0, T1, T2 y T3 cerrados, más
+  **T4-05** (`SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`). Quedan **5 de T4**, que por definición no
+  se abren sin decisión explícita. Recordar en cada corte:
   el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app no puede verificar un
   instalador sin firmar y **rechaza la actualización**.
 - **Certificado de firma de código (OV/EV) — descartado por ahora.** Consecuencia asumida: SmartScreen

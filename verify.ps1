@@ -10,7 +10,8 @@
       2. Estilo: 'dotnet format style/analyzers' contra el .editorconfig.
       3. Pruebas unitarias.
       4. Dependencias vulnerables (aborta) y desactualizadas (solo informa).
-      5. Con -Full: además los UI tests de FlaUI, que conducen la app real.
+      5. Con -Full: además los UI tests de FlaUI, que conducen la app real, y un informe de
+         cobertura en local (HTML navegable en coverage\report, ignorada por git).
 
     POR QUÉ NO ES CI. Decisión cerrada del proyecto (ver ROADMAP.md, T2-12): nada de GitHub
     Actions ni runners hospedados. La verificación baja al equipo de desarrollo, y con ella
@@ -38,6 +39,10 @@
 .PARAMETER SkipFormat
     Omite la comprobación de estilo.
 
+.PARAMETER SkipCoverage
+    Omite la medición de cobertura de -Full. La cobertura es informativa: nunca hace fallar la
+    verificación, pero recolectarla y generar el HTML añade tiempo al ciclo.
+
 .EXAMPLE
     .\verify.ps1
     .\verify.ps1 -Full
@@ -47,7 +52,8 @@ param(
     [switch]$Full,
     [switch]$SkipTests,
     [switch]$SkipOutdated,
-    [switch]$SkipFormat
+    [switch]$SkipFormat,
+    [switch]$SkipCoverage
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,6 +79,8 @@ $root          = $PSScriptRoot
 $solution      = Join-Path $root "WingetUSoft.slnx"
 $testProject   = Join-Path $root "tests\WingetUSoft.Tests\WingetUSoft.Tests.csproj"
 $uiTestProject = Join-Path $root "tests\WingetUSoft.UiTests\WingetUSoft.UiTests.csproj"
+$coverageDir   = Join-Path $root "coverage"
+$coverageReport = Join-Path $coverageDir "report"
 
 if (-not (Test-Path $solution)) { Fail "No se encontró la solución: $solution" }
 
@@ -101,11 +109,21 @@ if ($SkipFormat) {
 }
 
 # ── 3. Pruebas unitarias ───────────────────────────────────────────────────
+$collectCoverage = $Full -and -not $SkipTests -and -not $SkipCoverage
+
 if ($SkipTests) {
     Warn "Pruebas omitidas (-SkipTests)."
 } else {
     Info "Ejecutando pruebas unitarias..."
-    Invoke-Native { & dotnet test $testProject --nologo --no-build }
+    if ($collectCoverage) {
+        # Se recolecta en ESTA pasada, no en una segunda: correr la suite dos veces para medir lo
+        # mismo solo alargaría el ciclo. Los resultados viejos se borran para que reportgenerator no
+        # mezcle la medición de hoy con la de la semana pasada.
+        if (Test-Path $coverageDir) { Remove-Item $coverageDir -Recurse -Force }
+        Invoke-Native { & dotnet test $testProject --nologo --no-build --collect:"XPlat Code Coverage" --results-directory $coverageDir }
+    } else {
+        Invoke-Native { & dotnet test $testProject --nologo --no-build }
+    }
     if ($LASTEXITCODE -ne 0) { Fail "Las pruebas unitarias fallaron." }
     Ok "Pruebas unitarias correctas."
 }
@@ -151,6 +169,47 @@ if ($Full) {
     Ok "UI tests correctos."
 } elseif (-not $SkipTests) {
     Warn "UI tests no ejecutados (usa -Full). No se ha verificado nada contra la app real."
+}
+
+# ── 6. Cobertura (informativa) ─────────────────────────────────────────────
+# NUNCA hace fallar la verificación: la cobertura es una brújula, no una puerta. Un umbral mínimo
+# invitaría a escribir tests que tocan líneas sin comprobar nada, que es peor que no tenerlos.
+#
+# Sin servicio externo al que subir nada (decisión del proyecto, ver T2-12): el HTML se queda en
+# coverage\report, que .gitignore ya excluye. La cifra base se anota a mano en ROADMAP.md.
+if ($collectCoverage) {
+    $cobertura = Get-ChildItem -Path $coverageDir -Filter "coverage.cobertura.xml" -Recurse -ErrorAction SilentlyContinue |
+                 Select-Object -First 1
+    if (-not $cobertura) {
+        Warn "No se encontró coverage.cobertura.xml; no se puede informar de la cobertura."
+    } else {
+        # El porcentaje sale del propio XML: así hay cifra aunque reportgenerator no esté disponible.
+        [xml]$xml = Get-Content $cobertura.FullName -Encoding UTF8
+        $lineRate   = [double]$xml.coverage.'line-rate'
+        $branchRate = [double]$xml.coverage.'branch-rate'
+        Info ("Cobertura: {0:P1} de líneas · {1:P1} de ramas" -f $lineRate, $branchRate)
+
+        Info "Generando el informe HTML (reportgenerator)..."
+        Invoke-Native { & dotnet tool restore }
+        if ($LASTEXITCODE -ne 0) {
+            Warn "No se pudieron restaurar las herramientas locales; queda el XML en $($cobertura.FullName)."
+        } else {
+            Invoke-Native {
+                & dotnet tool run reportgenerator `
+                    "-reports:$($cobertura.FullName)" `
+                    "-targetdir:$coverageReport" `
+                    "-reporttypes:Html;TextSummary" `
+                    "-assemblyfilters:+WingetUSoft" *> $null
+            }
+            if ($LASTEXITCODE -ne 0) {
+                Warn "reportgenerator falló; queda el XML en $($cobertura.FullName)."
+            } else {
+                Ok "Informe de cobertura: $coverageReport\index.html"
+            }
+        }
+    }
+} elseif ($Full -and $SkipCoverage) {
+    Warn "Cobertura omitida (-SkipCoverage)."
 }
 
 Write-Host ""

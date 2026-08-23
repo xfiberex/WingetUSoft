@@ -188,8 +188,8 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 sin dependencias) → el resto de T1 → T2 por bloques temáticos → T3 en cualquier hueco → T4 solo con
 decisión explícita.
 
-**Progreso (2026-08-22): 63 de 70.** ✅ **T0, T1, T2 y T3 completos** (2 + 22 + 23 + 17). Queda
-**T4** (6 tareas), que por definición solo se abre con decisión explícita.
+**Progreso (2026-08-23): 65 de 70.** ✅ **T0, T1, T2 y T3 completos** (2 + 22 + 23 + 17), más **T4-05**
+(cara pública del repositorio). Quedan **5 de T4**, que por definición solo se abren con decisión explícita.
 
 ---
 
@@ -816,7 +816,7 @@ decisión explícita.
     `-warnaserror`, unitarias y el chequeo de dependencias (T2-13); con `-Full` añade los UI tests, que son
     justo lo que un runner hospedado nunca podría correr. `release.ps1` ya no repite ningún paso: llama a
     `verify.ps1` y solo decide **cuánta** verificación exige (`-Full`, o `-SkipTests` al delegar).
-  - **Verificado (2026-08-22):** `.erify.ps1` termina en verde sobre el `main` actual; con un test roto a
+  - **Verificado (2026-08-22):** `.\verify.ps1` termina en verde sobre el `main` actual; con un test roto a
     propósito devuelve 1 y el hook aborta el push (`sh .githooks/pre-push` → código 1). Registrado con
     `git config core.hooksPath .githooks`, que hay que ejecutar **una vez por clon** (está en la cabecera
     del hook).
@@ -1276,7 +1276,7 @@ decisión explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** T2-12
 
-- [ ] **[T4-05] Añadir `SECURITY.md`, `CONTRIBUTING.md` y `CHANGELOG.md`**
+- [x] **[T4-05] Añadir `SECURITY.md`, `CONTRIBUTING.md` y `CHANGELOG.md`**
   - **Área:** Documentación
   - **Ubicación:** raíz del repositorio
   - **Qué hacer:** el proyecto es de autor único, lo que justifica no tener guía de contribución, pero el
@@ -1315,11 +1315,11 @@ decisión explícita.
 | Tier | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | T0 — Crítico | 2 | **2** | 0 | **100 %** |
-| T1 — Alta | 22 | 11 | 11 | 50 % |
-| T2 — Sustancial | 23 | 1 | 22 | 4 % |
-| T3 — Pulido | 17 | 0 | 17 | 0 % |
-| T4 — Futuro | 6 | 0 | 6 | 0 % |
-| **Total** | **70** | **14** | **56** | **20 %** |
+| T1 — Alta | 22 | **22** | 0 | **100 %** |
+| T2 — Sustancial | 23 | **23** | 0 | **100 %** |
+| T3 — Pulido | 17 | **17** | 0 | **100 %** |
+| T4 — Futuro | 6 | 1 | 5 | 17 % |
+| **Total** | **70** | **65** | **5** | **93 %** |
 
 ### Registro de tareas completadas
 
@@ -1340,20 +1340,78 @@ decisión explícita.
 | 2026-08-21 | T1-19 | `CONTEXT.md` §1, §3, §5 y §6 al día | ninguna referencia a 1.7.0 describe el estado actual | *(en el corte)* | 1.8.3 |
 | 2026-08-21 | T1-20 | Changelog de 1.8.0, 1.8.1, 1.8.2 y 1.8.3 | la tabla llega hasta la 1.8.3, cada versión con fecha | *(en el corte)* | 1.8.3 |
 
+> Las filas de la **1.8.4 en adelante** se reconstruyeron el 2026-08-23 desde el historial de git: se
+> cerraron en otro equipo y la tabla se quedó atrás. Los IDs salen de los mensajes de commit y los
+> títulos, de este mismo documento. La columna *Verificado con* recoge el corte que las publicó porque
+> es lo que consta: `release.ps1` ejecuta unitarios **y** UI tests y aborta si alguno falla, así que
+> ninguna salió sin pasar por ahí. Las notas por tarea no se registraron en su momento y no se inventan.
+
+| 2026-08-21 | T1-07 | Región activa (`LiveSetting`) en la barra de estado y el registro | corte v1.8.4 (unitarios + UI tests) | `37f0b9c` | 1.8.4 |
+| 2026-08-21 | T1-08 | Nombre accesible para los `ToggleSwitch` de Configuración | corte v1.8.4 (unitarios + UI tests) | `37f0b9c` | 1.8.4 |
+| 2026-08-21 | T1-09 | Nombre accesible en las filas y casillas de `CleanupWindow` | corte v1.8.4 (unitarios + UI tests) | `37f0b9c` | 1.8.4 |
+| 2026-08-21 | T1-10 | Listar las rutas en la confirmación de borrado | corte v1.8.4 (unitarios + UI tests) | `37f0b9c` | 1.8.4 |
+| 2026-08-21 | T1-15 | Extraer las cadenas en español cableadas de `MainWindow` | corte v1.8.4 (unitarios + UI tests) | `ac9ed8d` | 1.8.4 |
+| 2026-08-21 | T1-16 | Extraer las cadenas en español cableadas de `AppSettings` | corte v1.8.4 (unitarios + UI tests) | `ac9ed8d` | 1.8.4 |
+| 2026-08-21 | T1-17 | Extraer las cadenas en español cableadas de `WingetService` | corte v1.8.4 (unitarios + UI tests) | `ac9ed8d` | 1.8.4 |
+| 2026-08-21 | T1-02 | Clasificar los fallos por código de salida, no por texto traducido | corte v1.8.4 (unitarios + UI tests) | `bc90958` | 1.8.4 |
+| 2026-08-21 | T1-11 | Cerrar la ventana TOCTOU entre verificar y ejecutar el instalador | corte v1.8.4 (unitarios + UI tests) | `bc90958` | 1.8.4 |
+| 2026-08-21 | T1-12 | Dejar de tragar en silencio todas las excepciones no controladas | corte v1.8.4 (unitarios + UI tests) | `bc90958` | 1.8.4 |
+| 2026-08-21 | T1-18 | Sacar la contraseña del `.pfx` de la línea de comandos | corte v1.8.4 (unitarios + UI tests) | `bc90958` | 1.8.4 |
+| 2026-08-21 | T2-01 | Sacar el logging a archivo del hilo de UI | corte v1.8.5 (unitarios + UI tests) | `c4a6e0c` | 1.8.5 |
+| 2026-08-21 | T2-02 | Retención de los logs diarios | corte v1.8.5 (unitarios + UI tests) | `c4a6e0c` | 1.8.5 |
+| 2026-08-21 | T2-03 | Investigar la exclusión del runtime de IA del paquete publicado | corte v1.8.5 (unitarios + UI tests) | `c4a6e0c` | 1.8.5 |
+| 2026-08-21 | T2-21 | Cachear los ids instalados en la ventana de búsqueda | corte v1.8.5 (unitarios + UI tests) | `c4a6e0c` | 1.8.5 |
+| 2026-08-21 | T2-23 | Borrar archivos en segundo plano en la ventana de limpieza | corte v1.8.5 (unitarios + UI tests) | `c4a6e0c` | 1.8.5 |
+| 2026-08-22 | T2-04 | `ParseUpgradeOutput` debe consumir `WingetTable` | corte v1.8.6 (unitarios + UI tests) | `5486aff` | 1.8.6 |
+| 2026-08-22 | T2-05 | Extraer un `ActivityLog` compartido | corte v1.8.6 (unitarios + UI tests) | `5486aff` | 1.8.6 |
+| 2026-08-22 | T2-07 | Extraer un `WindowChrome` compartido | corte v1.8.6 (unitarios + UI tests) | `5486aff` | 1.8.6 |
+| 2026-08-22 | T2-08 | Asociar las etiquetas de los filtros de la ventana principal | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-09 | Formato de fecha según la cultura del idioma activo | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-10 | Localizar los nombres de archivo sugeridos al exportar | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-11 | Hacer que la fila de filtros envuelva | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-19 | Reutilizar el temporizador de rebote de la búsqueda | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-20 | Corregir la fuga de `CancellationTokenSource` en la búsqueda reentrante | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-22 | Leer o no redirigir el `stderr` de `where.exe` | corte v1.8.6 (unitarios + UI tests) | `7bc5fdd` | 1.8.6 |
+| 2026-08-22 | T2-12 | Script de verificación local `verify.ps1` + hook de pre-push | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-13 | Chequeo local de dependencias vulnerables y desactualizadas | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-14 | `Directory.Build.props` y versiones de paquetes alineadas | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-15 | Tests del protocolo del worker elevado | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-16 | Documentar la limpieza de residuos en el README | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-17 | Registrar en las notas del release qué se omitió | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T2-18 | Limpiar `GH_TOKEN` del entorno tras el release | corte v1.8.6 (unitarios + UI tests) | `2f5338b` | 1.8.6 |
+| 2026-08-22 | T3-04 | Sustituir los escapes `í` de un comentario XML por caracteres reales | corte v1.8.7 (unitarios + UI tests) | `adb0727` | 1.8.7 |
+| 2026-08-22 | T3-05 | Restaurar los acentos en los comentarios sin tildar | corte v1.8.7 (unitarios + UI tests) | `adb0727` | 1.8.7 |
+| 2026-08-22 | T3-06 | Fijar una convención de idioma para los comentarios | corte v1.8.7 (unitarios + UI tests) | `adb0727` | 1.8.7 |
+| 2026-08-22 | T3-09 | Añadir `.editorconfig` | corte v1.8.7 (unitarios + UI tests) | `adb0727` | 1.8.7 |
+| 2026-08-22 | T3-01 | Eliminar `InverseBoolConverter` (código muerto) | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` | 1.8.7 |
+| 2026-08-22 | T3-02 | Quitar el separador de menú duplicado | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` | 1.8.7 |
+| 2026-08-22 | T3-07 | Quitar el nombre accesible en español cableado en XAML | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` | 1.8.7 |
+| 2026-08-22 | T3-14 | Pasar el `themeMode` real en `HistoryWindow` | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` | 1.8.7 |
+| 2026-08-22 | T3-15 | Corregir la descripción del historial en el README | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` | 1.8.7 |
+| 2026-08-22 | T3-03 | Actualizar los valores de versión por defecto obsoletos | corte v1.8.7 (unitarios + UI tests) | `b7d46ed` + `1cae138` | 1.8.7 |
+| 2026-08-22 | T3-08 | Alinear `ShowUpdateNotification` con lo que promete su ajuste | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
+| 2026-08-22 | T3-10 | Uniformar el uso de `ConfigureAwait` en `Services` | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
+| 2026-08-22 | T3-11 | No invocar un `async void` como si fuera un método | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
+| 2026-08-22 | T3-12 | Dar salida a los `Trace` o retirarlos | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
+| 2026-08-22 | T3-16 | Validar el nombre del evento de cancelación del worker elevado | corte v1.8.7 (unitarios + UI tests) | `ae3e5e6` | 1.8.7 |
+| 2026-08-22 | T3-13 | Aislar `CleanupScannerTests` del perfil real del usuario | corte v1.8.7 (unitarios + UI tests) | `319034f` | 1.8.7 |
+| 2026-08-22 | T3-17 | Limpiar los artefactos de compilación del árbol de trabajo | corte v1.8.7 (unitarios + UI tests) | `319034f` | 1.8.7 |
+| 2026-08-23 | T4-05 | `SECURITY.md`, `CONTRIBUTING.md` y `CHANGELOG.md` | los tres existen en la raíz y el README enlaza los dos primeros | *(sin commitear)* | *(sin publicar)* |
+
 ### Línea base de la auditoría (2026-08-20)
 
 Para poder comparar al cerrar tareas:
 
 | Métrica | Valor | Cómo se obtuvo |
 |---|---|---|
-| Tests unitarios | 162 / 162 al auditar · **196 / 196 tras T0 + accesibilidad + i18n** | `dotnet test tests/WingetUSoft.Tests/…` |
-| Tests de UI | 16 métodos (13 `[Fact]` + 3 `[Theory]`) | conteo estático — **no ejecutados** en la auditoría |
+| Tests unitarios | 162 / 162 al auditar · **279 / 279 con T0–T3 cerrados** | `dotnet test tests/WingetUSoft.Tests/…` |
+| Tests de UI | 27 / 27 en la 1.8.3 · **37 / 37 hoy** | `dotnet test tests/WingetUSoft.UiTests/…` (el conteo estático de 16 de la auditoría eran métodos, no casos) |
 | Dependencias vulnerables | 0 | `dotnet list package --vulnerable --include-transitive` |
 | Paquetes con versión superior | 6 | `dotnet list package --outdated` |
-| Claves de localización | 363 × 5 idiomas al auditar · **366 tras T1-03** | conteo sobre `Localization.cs` |
-| LOC C# (src + tests) | 10 360 | `wc -l` excluyendo `bin`/`obj`/`publish` |
+| Claves de localización | 363 × 5 idiomas al auditar · **388 hoy** (T1-03, T1-15 a T1-17, T2-10) | conteo sobre `Localization.cs` |
+| LOC C# (src + tests) | 10 360 al auditar · **12 959 hoy** | `wc -l` excluyendo `bin`/`obj`/`publish` |
 | Tamaño del `publish` | 142 MB | `du -sh src/WingetUSoft/publish` |
-| Tamaño del instalador | 35,8 MB | `WingetUSoft-Setup-1.8.2.exe` (línea base; la 1.8.3 se corta desde aquí) |
+| Tamaño del instalador | 35,8 MB en la 1.8.2 · **−37 % en la 1.8.5** (T2-03, fuera el runtime de IA sin usar) | `WingetUSoft-Setup-*.exe` en `installer/Output/` |
 | Contraste del registro (tema oscuro) | ~~2,74:1 éxito · 2,71:1 error en 2 de 4 ventanas~~ → **≥ 4,5:1 en las 4** (T1-04/05) | fórmula WCAG 2.x; ahora medido por `LogPaletteTests` |
 | `AutomationProperties.LiveSetting` | 0 usos | `grep -rn` sobre `src/` |
 | `AutomationProperties.LabeledBy` | 0 usos | `grep -rn` sobre `src/` |
@@ -1364,16 +1422,19 @@ Para poder comparar al cerrar tareas:
 Pendientes de verificación con acceso a un entorno adecuado; no invalidan ningún hallazgo, pero acotan
 hasta dónde llega la evidencia:
 
-- **UI tests (FlaUI):** no ejecutados — requieren sesión de escritorio interactiva y desatendida.
+- ~~**UI tests (FlaUI):** no ejecutados~~ **resuelto el 2026-08-21.** Ejecutados en escritorio real:
+  27/27 al cortar la 1.8.3 y **37/37** hoy. `release.ps1` los exige en cada corte.
 - **Rendimiento medido:** sin *profiler*. Arranque, memoria y tiempo hasta la primera fila sin medir.
-- **Responsividad real (T2-11):** derivada de los anchos declarados en XAML, no de ejecutar la app.
+- ~~**Responsividad real (T2-11):**~~ **resuelto en la 1.8.6.** La fila de filtros envuelve, y la
+  comprobación ya no sale de leer el XAML.
 - ~~**Explotabilidad de T0-01:**~~ **resuelto el 2026-08-20.** Ya no es hipótesis: el test
   `ScanAsync_NameEscapesTheBaseDirectory_ProducesNoCandidate` demuestra que, sin la corrección, un
   paquete llamado `C:\Windows` hacía que el escáner ofreciera **`C:\Windows`** como residuo
   eliminable. Lo que sigue sin comprobarse es el eslabón previo: que un instalador real escriba un
   `DisplayName` así en Agregar o quitar programas.
-- **Lector de pantalla real (T1-07, T1-08, T1-09):** análisis del árbol de automatización por código, sin
-  sesión de escucha con Narrador o NVDA.
+- **Lector de pantalla real (T1-07, T1-08, T1-09):** *parcialmente cubierto.* Desde la 1.8.5 hay tests
+  FlaUI que leen el árbol de automatización de la app real (`0c6aae7`), que es lo que consume un lector.
+  Lo que sigue sin hacerse es escuchar una sesión con Narrador o NVDA.
 - **Contraste fuera del registro:** solo se midieron `LogPalette` y los RGB cableados; el resto sale de
   `ThemeResource` de Windows, que se asume conforme.
 - **Instalador end-to-end:** no ejecutado en una VM limpia sin .NET ni VC++ Redist.

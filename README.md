@@ -50,6 +50,34 @@ descargar e instalar, y tras actualizar aparece una sola vez el diálogo de **No
 > mismo release, así que esto detecta manipulación o corrupción en tránsito, pero no protegería frente
 > a un compromiso de la cuenta de GitHub del proyecto — para eso hace falta la firma Authenticode.
 
+### Volver a una versión anterior
+
+No hay botón de «deshacer»: si una actualización te deja la app inservible, la vuelta atrás es manual,
+pero es sencilla y **no pierdes tu configuración**.
+
+1. Abre **[Releases](https://github.com/xfiberex/WingetUSoft/releases)** y busca la versión a la que
+   quieres volver (todas siguen publicadas).
+2. Descarga su `WingetUSoft-Setup-x.y.z.exe` y ejecútalo **encima de la instalación actual**. No
+   desinstales antes.
+3. Al terminar, la app arranca en la versión antigua.
+
+Funciona porque todos los instaladores comparten el mismo `AppId` y reutilizan el directorio de la
+instalación previa (`UsePreviousAppDir=yes`), así que instalar una versión anterior **sustituye** la
+actual en el mismo sitio en vez de dejar dos copias.
+
+Tus datos viven fuera del directorio de instalación, en `%LocalAppData%\WingetUSoft\`, y el instalador no
+los toca: preferencias, historial y exclusiones siguen ahí después de volver atrás.
+
+> **Qué esperar después:** al arrancar, la app comprueba GitHub, verá la versión más nueva y mostrará el
+> aviso de actualización. Es una barra informativa que **se cierra con su aspa y no vuelve a molestar en
+> esa sesión**: no es un diálogo modal ni se instala nada sin que lo pidas. Aun así, si vuelves atrás,
+> vuelve a aparecer en cada arranque hasta que publique la siguiente versión — hoy no hay forma de
+> silenciar el aviso de la propia app (*«Omitir esta versión»* solo existe para los paquetes de winget).
+>
+> Y cuéntame qué falló, en un [issue](https://github.com/xfiberex/WingetUSoft/issues): volver atrás te
+> desatasca a ti, pero el fallo sigue ahí para todos los demás. Si la app ni siquiera abre, adjunta
+> `%LocalAppData%\WingetUSoft\crash.log`.
+
 ## Características
 
 ### Instalar software nuevo
@@ -117,6 +145,10 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 
 > 📋 Consulta la **[hoja de ruta](ROADMAP.md)** para ver las características implementadas y las próximas
 > (organizadas por *tiers*).
+>
+> 🔐 ¿Has encontrado un fallo de seguridad? No abras un issue público: hay un canal privado en
+> **[SECURITY.md](SECURITY.md)**. Para compilar, verificar o proponer un cambio,
+> **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ## Requisitos
 
@@ -231,13 +263,17 @@ WingetUSoft/
 ├── docs/screenshots/           # Capturas usadas en este README
 ├── .githooks/pre-push          # Lanza verify.ps1 antes de cada push
 ├── verify.ps1                  # Verificación completa en local (build + tests + dependencias)
-└── release.ps1                 # Corta una versión de principio a fin (delega en verify.ps1)
+├── release.ps1                 # Corta una versión de principio a fin (delega en verify.ps1)
+│
+├── SECURITY.md                 # Cómo reportar una vulnerabilidad (canal privado) y qué está en alcance
+├── CONTRIBUTING.md             # Compilar, verificar y las convenciones que el repo comprueba
+└── CHANGELOG.md                # Dónde vive el registro de cambios (Releases + CONTEXT.md)
 ```
 
 > **Al clonar el repositorio**, para activar el hook de pre-push:
 > `git config core.hooksPath .githooks`
 >
-> Verificación a mano: `.erify.ps1` (rápida) o `.erify.ps1 -Full` (añade los UI tests de FlaUI, que
+> Verificación a mano: `.\verify.ps1` (rápida) o `.\verify.ps1 -Full` (añade los UI tests de FlaUI, que
 > conducen la app real y necesitan una sesión de escritorio interactiva).
 
 ## Datos de usuario
