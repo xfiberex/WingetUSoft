@@ -11,10 +11,12 @@
 > desinstalar, y exportar/importar la lista de paquetes. *(Ampliado en el Tier E; hasta la v1.7.0 era solo
 > "actualizaciones y desinstalaciones".)*
 >
-> 📐 **Este archivo tiene dos partes.** La **Parte I** (abajo) es el histórico de características por
+> 📐 **Este archivo tiene tres partes.** La **Parte I** (abajo) es el histórico de características por
 > Tiers A–E: qué se construyó y dónde vive. La **[Parte II](#parte-ii--plan-de-acción-de-auditoría-t0t4)**
 > es el plan de acción ejecutable salido de la auditoría técnica del **2026-08-20**, organizado en
-> Tiers T0–T4 con tareas marcables. Las dos numeraciones son independientes y no se solapan.
+> Tiers T0–T4 con tareas marcables. La **[Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)** es el
+> **Tier F**, en curso: la auditoría Fluent y UI/UX del **2026-09-14**, verificada en la app real, con
+> tareas `F-xx`. Las tres numeraciones son independientes y no se solapan.
 
 ## Estado
 
@@ -25,9 +27,10 @@
 | **C** | Auditoría de UI/UX (flujo, datos, color, accesibilidad) | ✅ Completado | 1.5.0 / 1.6.0 |
 | **D** | Cara pública (licencia in-app, README, capturas) | ✅ Completado | 1.7.0 |
 | **E** | Gestión completa de software ⚠️ *cambio de alcance* | ✅ Completado | 1.8.0 |
+| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | ⏳ Pendiente (0 de 26) | — |
 
-No hay ninguna tier en curso ni ideas abiertas: las decisiones ya tomadas (y lo que se descartó a
-propósito) están al final.
+El único tier abierto es el **F**, con sus tareas en la Parte III. Las decisiones ya tomadas (y lo que se
+descartó a propósito) están al final de la Parte I.
 
 ---
 
@@ -1444,10 +1447,501 @@ hasta dónde llega la evidencia:
   FlaUI que leen el árbol de automatización de la app real (`0c6aae7`), que es lo que consume un lector.
   Lo que sigue sin hacerse es escuchar una sesión con Narrador o NVDA.
 - **Contraste fuera del registro:** solo se midieron `LogPalette` y los RGB cableados; el resto sale de
-  `ThemeResource` de Windows, que se asume conforme.
+  `ThemeResource` de Windows, que se asume conforme. *(2026-09-14: medido en el Tier F — el botón de
+  peligro de Desinstalar y Limpieza y las filas atenuadas **no** llegan a 4,5:1; ver F-05 y F-06.)*
 - **Instalador end-to-end:** no ejecutado en una VM limpia sin .NET ni VC++ Redist.
 - **Comportamiento en ARM64:** el instalador solo distribuye `win-x64` aunque el `.csproj` declare
   `win-arm64`; no verificado en hardware ARM.
 - **Configuración del repositorio en GitHub:** *topics* y ramas protegidas no son accesibles desde el
   árbol de archivos. (Las alertas de seguridad del repositorio quedan fuera de alcance por decisión de
   proyecto: la vigilancia de dependencias es local, ver T2-13.)
+
+---
+---
+
+# Parte III — Tier F (auditoría Fluent y UI/UX)
+
+> **Origen:** revisión de UI/UX del **2026-09-14** sobre la **v1.8.8**, hecha con la skill `winui-design`
+> (Fluent Design, theming, elección de controles, accesibilidad y maquetación) y **verificada en la app
+> real**: tres pasadas por UI Automation (tema claro forzado sobre Windows en oscuro, y tema oscuro;
+> consulta con 26 actualizaciones, Historial con 104 entradas, Desinstalar con 113 programas), capturas con
+> `PrintWindow`, contraste con la fórmula WCAG 2.x y APIs contrastadas con Microsoft Learn y la WinUI Gallery.
+>
+> **Qué cubre.** Solo lo que **no** cubrieron el Tier C ni el plan T0–T4. Mismo formato que la Parte II
+> (tareas marcables, independientes y verificables), con numeración propia `F-xx`. Respeta las
+> *Decisiones cerradas* de la Parte I: nada de toasts, MSIX ni CI.
+>
+> **Sin tocar los datos del usuario:** `settings.json`, su `.bak` y `logs/` se respaldaron antes de cada
+> pasada y quedaron **idénticos** (comprobado por hash). Solo se lanzaron consultas de lectura
+> (`winget upgrade`, `winget list`, `winget show`): no se actualizó, instaló ni desinstaló nada.
+
+## Índice del Tier F
+
+| Bloque | Qué entra aquí | Tareas | Esfuerzo bajo | medio | alto |
+|---|---|---:|---:|---:|---:|
+| **F·1** — Defectos verificados | Scroll de la tabla, accesibilidad, tema de diálogos, confirmaciones, contraste, ventanas duplicadas, bandeja | **10** | 8 | 2 | 0 |
+| **F·2** — Alineación con Fluent / WinUI 3 | Mica, diálogos XAML, barra de título, estilos compartidos, etiquetas, Configuración | **6** | 4 | 2 | 0 |
+| **F·3** — Experiencia de uso | Densidad, estados vacíos, feedback de lotes, textos, atajos | **7** | 3 | 4 | 0 |
+| **F·4** — Verificación pendiente y QA | Contraste alto, respaldo de ajustes en los UI tests | **2** | 1 | 1 | 0 |
+| **F·5** — Opcional / estructural | Ventana única con `NavigationView` | **1** | 0 | 0 | 1 |
+| | **Total** | **26** | **16** | **9** | **1** |
+
+**Orden de ejecución recomendado:** **F-25 primero** (los UI tests que validarán este tier no deben
+tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F-06, F-07, F-08, F-09 y
+F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
+explícita.
+
+**Progreso (2026-09-14): 0 de 26.**
+
+---
+
+## 🔴 F·1 — Defectos verificados en la app real
+
+> Todos reproducidos conduciendo la v1.8.8. La evidencia de cada uno va en la propia tarea.
+
+- [ ] **[F-01] La tabla principal debe desplazarse por sí misma, no la página**
+  - **Área:** Responsive / rendimiento / UX
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:60-74` (`ContentScroller` y el `MinHeight` atado a `ViewportHeight`)
+  - **Qué hacer:** el `ScrollViewer` de página mide su contenido con alto infinito, así que la fila `*`
+    se comporta como `Auto`: el `ListView` se mide entero, no desplaza por sí mismo y pierde la
+    virtualización. Atar `Height` (no solo `MinHeight`) al `ViewportHeight` y calcular el mínimo en
+    `SizeChanged` (alto real de las filas 0–2 + los 300 de la tabla + padding). Como `MinHeight` manda
+    sobre `Height`, la página solo desplaza por debajo de ese mínimo, que es el caso de snap de ¼ para el
+    que existe `ContentScroller` (Tier B #7).
+  - **Criterio de aceptación:** a 1180×820 y con más filas de las que caben, `lvPackages` expone
+    `VerticallyScrollable=True` y `ContentScroller` `False`, la tarjeta del registro queda dentro de la
+    ventana y las cabeceras de columna siguen visibles al desplazar la lista. `SnapLayoutTests` y
+    `LayoutTests` siguen en verde.
+  - **Evidencia (2026-09-14):** con 26 actualizaciones, lista `VerticallyScrollable=False`
+    (`VerticalViewSize` 100 %) y página `True` (44,7 %); `txtLogHeader` fuera de la ventana; al bajar la
+    página desaparecen los botones y las cabeceras de columna.
+  - **Esfuerzo:** medio
+  - **Depende de:** ninguna
+
+- [ ] **[F-02] Nombre accesible en las filas de Historial y Desinstalar**
+  - **Área:** Accesibilidad (WCAG 2.2 AA · 4.1.2 Nombre, función, valor)
+  - **Ubicación:** `src/WingetUSoft/UI/HistoryWindow.xaml:125-148` (y `HistoryEntryViewModel` en `HistoryWindow.xaml.cs:10-30`); `src/WingetUSoft/UI/UninstallWindow.xaml:167-185` (las filas son `WingetPackage` sin envolver, `UninstallWindow.xaml.cs:15`)
+  - **Qué hacer:** es el mismo bug que se corrigió en la tabla principal y en Búsqueda (Tier E) y en
+    Limpieza (T1-09): sin `AutomationProperties.Name`, el `ListViewItem` hereda el `ToString()` del objeto.
+    Añadir un `RowLabel` localizado (fecha, nombre, versión origen → destino y estado en Historial; nombre,
+    versión y origen en Desinstalar, con un ViewModel como `SearchResultViewModel`) y enlazarlo en la
+    plantilla.
+  - **Criterio de aceptación:** cada fila expone un `Name` legible en los 5 idiomas; un test de
+    `AccessibilityTests` lo exige en ambas ventanas; `LocalizationTests` sigue en verde.
+  - **Evidencia (2026-09-14):** UI Automation devuelve literalmente `WingetUSoft.HistoryEntryViewModel` y
+    `WingetUSoft.WingetPackage` como nombre de las filas.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-03] Los diálogos genéricos deben seguir el tema elegido**
+  - **Área:** Theming
+  - **Ubicación:** `src/WingetUSoft/UI/WindowDialogHelper.cs:20-49` y `src/WingetUSoft/UI/SettingsWindow.xaml.cs:171-185`
+  - **Qué hacer:** el tema se fuerza por elemento y un `ContentDialog` no lo hereda; por eso `MainWindow`
+    fija `RequestedTheme` en Acerca de, Licencia, Novedades y Exportar. `WindowDialogHelper` no lo hace, y
+    por él pasan todas las confirmaciones y los errores. Tomar el tema de `xamlRoot.Content` en un único
+    punto de preparación de diálogos (que aplique también F-12) y usarlo en todos.
+  - **Criterio de aceptación:** con la app en Claro sobre Windows oscuro (y al revés), todos los diálogos
+    salen en el tema de la app; un test estructural falla si aparece un `new ContentDialog` fuera de ese
+    punto de preparación.
+  - **Evidencia (2026-09-14):** con la app en Claro sobre Windows oscuro, «No hay programas para
+    actualizar» se pinta **oscuro** mientras «Acerca de» se pinta claro.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-04] Confirmaciones con verbo y sin un Enter que ejecute lo destructivo**
+  - **Área:** UX / seguridad
+  - **Ubicación:** `src/WingetUSoft/UI/WindowDialogHelper.cs:32-49` (`DefaultButton = Primary` en `:45`); llamadas en `UninstallWindow.xaml.cs:132-134`, `CleanupWindow.xaml.cs:258-260`, `MainWindow.xaml.cs:598-599`, `MainWindow.Menus.cs:287`, `MainWindow.Batch.cs:43`, `MainWindow.Grid.cs:238-240` y `SearchWindow.xaml.cs:222-224`; textos en `Localization/Localization.cs:177-178` y `:518`
+  - **Qué hacer:** todas las confirmaciones responden «Sí / No» («Sí, eliminar / No» en Limpieza) y el
+    primario es el botón por defecto, así que **Enter** desinstala o borra de forma recursiva. La guía de
+    Microsoft pide que los botones digan la respuesta concreta. Pasar el verbo como primario
+    («Desinstalar», «Eliminar 3 elementos», «Actualizar 12 programas», «Importar», «Instalar», «Abrir») y
+    «Cancelar» como cierre, y añadir un parámetro `destructive` que deje sin botón por defecto a
+    Desinstalar y Limpieza. Con el verbo en el botón sobra el «¿Desea continuar?» de los cuerpos (F-20).
+  - **Criterio de aceptación:** `btn.yes`, `btn.no` y `btn.yesDelete` dejan de usarse y se retiran; un
+    test fija que las confirmaciones destructivas no tienen `DefaultButton = Primary`, **sin** conducir una
+    desinstalación real.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-05] Un `DangerButtonStyle` real: contraste AA, estados completos y distinto del acento**
+  - **Área:** Accesibilidad (WCAG 2.2 AA · 1.4.1 Uso del color y 1.4.3 Contraste mínimo) / theming
+  - **Ubicación:** `src/WingetUSoft/UI/UninstallWindow.xaml:72-89` y `src/WingetUSoft/UI/CleanupWindow.xaml:75-92` (dos copias idénticas); el `DangerButtonStyle` que cita `MainWindow.xaml:152-154` no existe; acentos vecinos en `UninstallWindow.xaml:63` y `CleanupWindow.xaml:67`
+  - **Qué hacer:** definir el estilo una sola vez en `App.xaml` (`BasedOn` el de botón por defecto), con
+    diccionarios Light, Dark **y** HighContrast y los recursos de reposo, hover, pulsado y deshabilitado.
+    Paleta ya medida, a partir de los `SystemFillColorCritical` que usa `LogPalette`: en claro, texto
+    blanco sobre `#C42B1C` / `#B0271A` / `#9C2217` (5,66 / 6,66 / 7,91:1); en oscuro, texto `#1A1A1A` sobre
+    `#FF99A4` / `#FFB0B8` / `#E8858F` (8,57 / 10,07 / 6,78:1). Añadir el glifo de papelera para no depender
+    solo del color, y quitar el acento a «Actualizar lista» y «Volver a escanear», que no son la acción
+    principal de su ventana.
+  - **Criterio de aceptación:** un test mide los tres estados en ambos temas (≥ 4,5:1); ningún XAML de
+    ventana declara `SolidColorBrush` con color literal; con un acento rojo en Windows, la acción
+    destructiva se distingue a simple vista.
+  - **Evidencia (2026-09-14):** blanco sobre `#D55C4C` (oscuro, reposo) = **3,84:1**; hover `#E06858` =
+    **3,34:1**; claro hover `#D05040` = **4,28:1**; sin estado pulsado ni diccionario HighContrast. Con el
+    acento rojo del sistema, «Actualizar lista» y «Desinstalar seleccionado» son dos rojos casi iguales
+    (capturado).
+  - **Esfuerzo:** medio
+  - **Depende de:** ninguna
+
+- [ ] **[F-06] Filas excluidas y omitidas legibles, sin `Opacity`**
+  - **Área:** Accesibilidad (WCAG 2.2 AA · 1.4.3)
+  - **Ubicación:** `src/WingetUSoft/UI/Converters.cs:25-32` (`0.4`), aplicado en `MainWindow.xaml:462`
+  - **Qué hacer:** la opacidad atenúa por igual texto, casilla e icono y hunde el contraste. Pintar las
+    celdas de texto con `TextFillColorSecondaryBrush`, conservar el icono de estado que ya distingue
+    excluido de omitido y retirar `BoolToOpacityConverter` si queda sin uso.
+  - **Criterio de aceptación:** el texto de las filas atenuadas llega a ≥ 4,5:1 en ambos temas, medido en
+    un test con los valores de los pinceles (como hace `LogPaletteTests`).
+  - **Evidencia (2026-09-14):** con `Opacity 0.4`, **2,50:1** en claro y **3,59:1** en oscuro; con
+    `TextFillColorSecondaryBrush`, 6,17:1 y 9,09:1.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-07] Alinear las cabeceras con las celdas de las tablas**
+  - **Área:** Consistencia visual
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:453-457`, `SearchWindow.xaml:138-141`, `UninstallWindow.xaml:162-165` y `HistoryWindow.xaml:120-123`; la referencia correcta está en `CleanupWindow.xaml:164-169`
+  - **Qué hacer:** el `ListViewItem` trae `Padding="16,0,12,0"` por defecto y las cabeceras no lo
+    replican. Llevar a las otras cuatro tablas el `ItemContainerStyle` con `Padding=0` que ya usa
+    Limpieza, idealmente como estilo compartido (F-14).
+  - **Criterio de aceptación:** un UI test compara la X de cada cabecera con la de la primera celda de su
+    columna (≤ 2 px) en la ventana principal y en Historial.
+  - **Evidencia (2026-09-14):** la primera columna va **+16 px** y el resto **−12 px** respecto a su
+    cabecera, en Principal, Búsqueda, Desinstalar e Historial.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-08] Una sola instancia por ventana secundaria**
+  - **Área:** UX / integridad de datos
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.Menus.cs:133-188`
+  - **Qué hacer:** cada clic en el menú crea una ventana nueva. Con dos Configuraciones abiertas sobre el
+    mismo `AppSettings` gana la última en guardar y la principal reaplica los cambios dos veces. Guardar
+    la referencia de cada ventana y, si sigue abierta, restaurarla y activarla.
+  - **Criterio de aceptación:** invocar dos veces Configuración, Historial, Desinstalar o Buscar deja una
+    sola ventana de cada; UI test para Configuración.
+  - **Evidencia (2026-09-14):** dos invocaciones seguidas dejan **2** ventanas de Configuración abiertas.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-09] Menú en el icono de bandeja, con «Salir»**
+  - **Área:** UX
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.Tray.cs:28-53` y `:72-92`
+  - **Qué hacer:** el icono solo tiene `DoubleClickCommand`. Con «Minimizar a la bandeja al cerrar»
+    activo, cerrar oculta la ventana y **no queda ninguna forma de salir** desde la interfaz. H.NotifyIcon
+    ya soporta `ContextFlyout` (`ContextMenuMode`) y `LeftClickCommand`: menú localizado Abrir · Consultar
+    actualizaciones · Salir, y clic simple para restaurar. «Salir» debe saltarse la intercepción de
+    `OnAppWindowClosing` y seguir liberando el icono y vaciando `FileLog`. No es una notificación, así que
+    no reabre la decisión cerrada sobre los toasts.
+  - **Criterio de aceptación:** con la opción activa, «Salir» termina el proceso y el registro a disco
+    queda completo (verificación manual: el menú nativo de la bandeja no está al alcance de los UI tests).
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-10] Sin salto de maquetación al seleccionar una fila**
+  - **Área:** UX
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:301-330` y `src/WingetUSoft/UI/MainWindow.Grid.cs:102-151`
+  - **Qué hacer:** el panel de información pasa de `Collapsed` a `Visible` dentro de la tarjeta de
+    filtros y empuja la tabla hacia abajo. Reservar su hueco (alto fijo con texto de marcador) o llevar el
+    detalle a un panel lateral que no desplace la lista.
+  - **Criterio de aceptación:** un UI test comprueba que la Y de `lvPackages` no cambia (±1 px) al
+    seleccionar y deseleccionar una fila.
+  - **Evidencia (2026-09-14):** la tabla baja **36 px** al seleccionar la primera fila.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+---
+
+## 🟠 F·2 — Alineación con Fluent / WinUI 3
+
+- [ ] **[F-11] Hacer visible Mica (o dejar de pedirlo)**
+  - **Área:** Fluent / theming
+  - **Ubicación:** `src/WingetUSoft/UI/WindowChrome.cs:57`; fondo opaco en la raíz de las seis ventanas (`MainWindow.xaml:9`, `SearchWindow.xaml:9`, `HistoryWindow.xaml:9`, `UninstallWindow.xaml:9`, `CleanupWindow.xaml:9`, `SettingsWindow.xaml:8`)
+  - **Qué hacer:** `ApplicationPageBackgroundThemeBrush` es opaco y tapa por completo el `MicaBackdrop`.
+    Poner la raíz en `Transparent` cuando `MicaController.IsSupported()` sea cierto y conservar el pincel
+    sólido si no (Windows 10 no tiene Mica y la app admite 19041). Las tarjetas ya usan
+    `CardBackgroundFillColorDefaultBrush`, pensado para ir sobre Mica. Revisar la referencia de fondo de
+    `LogPalette` (`Core/LogPalette.cs:24-25`), que hoy se calcula sobre ese fondo opaco.
+  - **Criterio de aceptación:** en Windows 11 los márgenes de la ventana dejan de ser `#F3F3F3` / `#202020`
+    planos; con Mica no disponible el fondo sigue siendo sólido; `LogPaletteTests` en verde.
+  - **Evidencia (2026-09-14):** en las capturas de `docs/screenshots` (copia literal de la pantalla),
+    todos los márgenes muestreados son `#F3F3F3` (claro) y `#202020` (oscuro) exactos.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-12] Estilo moderno en los diálogos definidos en XAML**
+  - **Área:** Fluent
+  - **Ubicación:** `src/WingetUSoft/UI/AboutDialog.xaml:2-17`, `WhatsNewDialog.xaml:2-17` y `LegalTextDialog.xaml:2-12`
+  - **Qué hacer:** el estilo implícito de `ContentDialog` no alcanza a las subclases, así que estos tres
+    diálogos usan la plantilla antigua (de ahí, probablemente, los `CornerRadius` parcheados). Aplicar
+    `Style="{StaticResource DefaultContentDialogStyle}"`, como hace la WinUI Gallery, y retirar los parches
+    de esquinas y de estilos de botón. De paso, «Ver en GitHub» no debería llevar acento en Acerca de: no
+    es la acción principal del diálogo.
+  - **Criterio de aceptación:** en un mismo tema, los tres muestran la franja de contenido y la de botones
+    igual que los diálogos creados por código; no queda ningún `CornerRadius` ni estilo de botón local.
+  - **Evidencia (2026-09-14):** en tema oscuro, el diálogo genérico tiene el contenido en `#2B2B2B` y los
+    botones en `#202020`; Acerca de es `#202020` uniforme de arriba abajo.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-13] Barra de título con `PreferredTheme` en vez de colores cableados**
+  - **Área:** Theming
+  - **Ubicación:** `src/WingetUSoft/UI/TitleBarHelper.cs:9-38` y `src/WingetUSoft/UI/WindowChrome.cs:59-66`
+  - **Qué hacer:** `TitleBarHelper` fija a mano el blanco o el negro y los colores de hover, pulsado e
+    inactivo. Desde Windows App SDK 1.7 (la app va en 1.8) basta con
+    `AppWindow.TitleBar.PreferredTheme = TitleBarTheme.Light | Dark | UseDefaultAppMode` según el ajuste,
+    reaplicado en `ActualThemeChanged`. Valorar también el control `TitleBar` (1.7+), que unifica icono,
+    título y zonas de arrastre (hoy el icono se pinta a mano en `MainWindow.xaml.cs:134`).
+  - **Criterio de aceptación:** `TitleBarHelper` desaparece o se reduce a `PreferredTheme`; los botones de
+    la barra son correctos en claro, en oscuro y al cambiar de tema en caliente; `SnapLayoutTests` en verde.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-14] Estilos compartidos en `App.xaml`**
+  - **Área:** Mantenibilidad / consistencia visual
+  - **Ubicación:** `src/WingetUSoft/App.xaml:6-12` (solo fusiona `XamlControlsResources`); tarjetas repetidas en los 6 XAML de ventana
+  - **Qué hacer:** el bloque de tarjeta (fondo, borde, grosor, radio y padding) se repite **30 veces** con
+    cinco paddings distintos (`20,16`, `16,12`, `16,10`, `16,8` y `12`). Crear un `Styles.xaml` con
+    `CardStyle`, el estilo de cabecera de tabla, `TableRowContainerStyle` (F-07), `DangerButtonStyle`
+    (F-05) y `ColumnHeaderButtonStyle` (hoy local en `MainWindow.xaml:19-28`); usar `OverlayCornerRadius` y
+    `ControlCornerRadius` en vez de `8` y `4` literales, y llevar los espaciados a la rampa de 4 px.
+  - **Criterio de aceptación:** ningún XAML de ventana repite el bloque de tarjeta ni usa `CornerRadius`
+    literales (test estructural); las capturas no cambian salvo por la normalización de espaciados.
+  - **Esfuerzo:** medio
+  - **Depende de:** F-05, F-07
+
+- [ ] **[F-15] Etiquetas reales en la búsqueda y los filtros de Historial, Desinstalar y Buscar**
+  - **Área:** Accesibilidad (WCAG 2.2 AA · 1.3.1, 3.3.2 y 4.1.2)
+  - **Ubicación:** `src/WingetUSoft/UI/HistoryWindow.xaml:53-73`, `UninstallWindow.xaml:97-104` y `SearchWindow.xaml:62-66` (con el nombre puesto por código en `SearchWindow.xaml.cs:91`)
+  - **Qué hacer:** T2-08 asoció las etiquetas de la ventana principal y las otras tres se quedaron fuera.
+    Poner `LabeledBy` hacia la etiqueta visible en Historial y Desinstalar, y una etiqueta visible en
+    Buscar, que hoy solo tiene el placeholder. Valorar `AutoSuggestBox` con `QueryIcon` para las búsquedas
+    (`QuerySubmitted` sustituye el manejo de Intro de `SearchWindow.xaml.cs:112-119`).
+  - **Criterio de aceptación:** el patrón de `AccessibilityTests.MainWindowFilters_AreNamedAfterTheirVisibleLabel`
+    se extiende a Historial y Desinstalar: el `Name` coincide con la etiqueta visible.
+  - **Evidencia (2026-09-14):** en Historial y Desinstalar el buscador se anuncia «Nombre o Id...» (el
+    placeholder) y el filtro de estado, «Todos»; ninguno tiene `LabeledBy`.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-16] Configuración con un único patrón de fila**
+  - **Área:** Fluent / UX
+  - **Ubicación:** `src/WingetUSoft/UI/SettingsWindow.xaml:47-177`
+  - **Qué hacer:** la página mezcla cuatro patrones de etiqueta (radios con subtítulo, `ComboBox` con
+    `Header`, `CheckBox`, y texto con `ToggleSwitch`). Adoptar filas tipo `SettingsCard` (título y
+    descripción a la izquierda, control a la derecha) con un estilo o `UserControl` propio, sin añadir la
+    dependencia del Toolkit, en la línea de `WrapPanel`. Además: tema en un `ComboBox`, como en la
+    Configuración de Windows; una descripción de las consecuencias (silenciosa frente a interactiva;
+    administrador = un UAC por lote); un botón «Abrir carpeta» junto a la ruta de registros; y estado vacío
+    y botón por fila en la lista de excluidos.
+  - **Criterio de aceptación:** todas las preferencias siguen el mismo patrón; `SettingsTests` y
+    `AccessibilityTests` en verde (los nombres siguen coincidiendo con la etiqueta visible en los 5 idiomas).
+  - **Evidencia (2026-09-14):** cuatro patrones distintos en una sola página; los tres radios de tema
+    quedan desigualmente espaciados (`docs/screenshots/settings-light.png`).
+  - **Esfuerzo:** medio
+  - **Depende de:** ninguna
+
+---
+
+## 🟡 F·3 — Experiencia de uso
+
+- [ ] **[F-17] Más espacio para los datos: cabecera compacta, `CommandBar` y registro plegable**
+  - **Área:** UX / densidad
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:78-245` y `:549-568`; tarjetas de cabecera de Buscar, Desinstalar, Limpieza, Historial y Configuración
+  - **Qué hacer:** cada ventana repite su título en una tarjeta de 28 px, cuando ya lo dice la barra de
+    título, y el registro reserva sitio aunque esté vacío. Compactar o retirar las cabeceras, llevar las
+    acciones a una `CommandBar` con icono y etiqueta, y meter el registro en un `Expander` que se abra solo
+    al empezar una operación o ante un error. La línea fija de atajos se va con F-21.
+  - **Criterio de aceptación:** a tamaño de diseño, las cabeceras de columna de la ventana principal
+    empiezan por encima del 30 % del alto y Desinstalar muestra al menos 10 filas a 900×700;
+    `LayoutTests` y `SnapLayoutTests` en verde; capturas del README regeneradas.
+  - **Evidencia (2026-09-14):** las cabeceras de columna de la principal empiezan al **49 %** del alto
+    (1180×820); Desinstalar muestra **4 de 113** programas a 900×700.
+  - **Esfuerzo:** medio
+  - **Depende de:** F-01, F-14
+
+- [ ] **[F-18] Estados vacíos accionables y un único mensaje de arranque**
+  - **Área:** UX / redacción
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:510-539` (`panelListState`), `MainWindow.xaml.cs:391-445` y `:618-633`; listas de `SearchWindow`, `UninstallWindow` y `CleanupWindow`
+  - **Qué hacer:** al arrancar, la misma instrucción aparece en la línea de detalle, en el estado vacío y
+    en la barra de estado, y el estado vacío no tiene botón. Añadir la acción al panel («Consultar
+    actualizaciones» en el estado inicial; «Reintentar» en error y cancelado) y quitar la repetición.
+    Extraer el panel como `UserControl` (igual que `ActivityLog`) y dar estados de carga, vacío y error a
+    Buscar, Desinstalar y Limpieza, que hoy solo informan en la barra de estado. Opcional: un ajuste
+    «Consultar al abrir».
+  - **Criterio de aceptación:** la instrucción de arranque aparece una sola vez y su botón lanza la
+    consulta (UI test); las otras tres listas muestran el panel de estado al cargar y al quedar vacías.
+  - **Evidencia (2026-09-14):** «Pulsa "Consultar actualizaciones"» aparece **3 veces** en la pantalla
+    inicial, sin botón en el panel.
+  - **Esfuerzo:** medio
+  - **Depende de:** ninguna
+
+- [ ] **[F-19] Tabla usable durante consultas y lotes, con estado por fila**
+  - **Área:** UX / feedback
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:347-358` (`lvPackages.IsEnabled = !busy` en `:351`), `MainWindow.BatchObserver.cs:37-90` y `PackageViewModel.cs`
+  - **Qué hacer:** mientras dura la operación, la tabla entera queda deshabilitada y en gris, y el avance
+    solo se ve en la barra de estado y en el registro. Dejar la lista habilitada en modo lectura (con las
+    casillas y el menú contextual bloqueados) y añadir a `PackageViewModel` un estado de operación —en
+    cola, en curso, correcto, fallido con motivo— alimentado por `IUpgradeBatchObserver`, que ya recibe
+    esos eventos, y por `ReportElevatedBatchStatus` en el lote elevado.
+  - **Criterio de aceptación:** durante un lote la lista se puede recorrer y cada fila muestra su estado,
+    con el motivo del fallo en un tooltip y en el nombre accesible; tests unitarios de las transiciones
+    con el doble de `IWingetService`.
+  - **Evidencia (2026-09-14):** `lvPackages` expone `IsEnabled=False` durante la consulta.
+  - **Esfuerzo:** medio
+  - **Depende de:** F-01
+
+- [ ] **[F-20] Pulido de textos: plurales, tratamiento, abreviaturas y truncados**
+  - **Área:** Redacción / i18n
+  - **Ubicación:** `src/WingetUSoft/Localization/Localization.cs` (p. ej. `status.updatesFound`, `uninstall.countAll`, `history.summaryAll`, `confirm.updateBody` en `:414`, `confirm.openWingetRunBody` en `:416`, `uninstall.confirmBody` en `:495` y `list.colExcluded` en `:321`); plantillas de las tablas
+  - **Qué hacer:** (1) formas de singular y plural reales, con un ayudante `L.Plural` según CLDR (en FR y
+    PT-BR el 0 va en singular), en vez de «(s)» y «(es)»; (2) un solo tratamiento en español —el tú que ya
+    usa casi toda la interfaz— frente al «¿Desea continuar?» y el «Verifique» de los diálogos; (3) «Excl.»
+    → columna de icono con la cabecera descriptiva en un tooltip; (4) traducir la versión «Unknown» que
+    emite winget; (5) tooltip en las celdas truncadas (Id y Nombre).
+  - **Criterio de aceptación:** ninguna cadena contiene «(s)» ni «(es)» (test estructural); revisión del
+    español sin formas de «usted»; `LocalizationTests` en verde.
+  - **Evidencia (2026-09-14):** «Se encontraron 26 actualización(es) disponible(s).», «113 programa(s)» y
+    «104 registro(s) cargados»; «Unknown» visible en Desinstalar; Ids truncados sin tooltip en tres tablas.
+  - **Esfuerzo:** medio
+  - **Depende de:** F-04
+
+- [ ] **[F-21] Atajos donde se usan, y `Ctrl+F`**
+  - **Área:** UX / teclado
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:199-250` (`KeyboardAcceleratorPlacementMode.Hidden` en `:204`) y `MainWindow.xaml:98-101`
+  - **Qué hacer:** los aceleradores cuelgan de `Content`, así que su tooltip saltaba al pasar el ratón por
+    cualquier sitio; se ocultó, y los atajos pasaron a una línea fija de la cabecera. Colgar cada
+    acelerador de su control (F5 en `btnConsultar`, Esc en `btnCancelar`…) para que el tooltip aparezca solo
+    ahí, conservando las guardas de `IsTextInputFocused`; mostrar Supr en el menú contextual
+    (`KeyboardAcceleratorTextOverride`); añadir `Ctrl+F` para el buscador; y retirar la línea fija.
+  - **Criterio de aceptación:** cada atajo se descubre en el tooltip o el menú de su acción; un UI test
+    comprueba que `Ctrl+F` enfoca `txtBuscar`; `header.shortcuts` deja de usarse.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-22] Aviso de nueva versión breve**
+  - **Área:** UX
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.AppUpdate.cs:26-50` y `MainWindow.xaml:102-119`
+  - **Qué hacer:** la `InfoBar` llega a cargar 500 caracteres de changelog, cuando está pensada para un
+    estado breve. Dejar el título y una línea, con un enlace «Ver novedades» que abra `WhatsNewDialog` con
+    las notas, y sacar la `InfoBar` de la tarjeta de cabecera a lo alto del contenido.
+  - **Criterio de aceptación:** el mensaje de la `InfoBar` no pasa de dos líneas y el changelog queda a
+    un clic.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+- [ ] **[F-23] «Consultar» como `SplitButton` y un solo acento por ventana**
+  - **Área:** UX
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:136-151`
+  - **Qué hacer:** «Consultar actualizaciones» y «Consultar con desconocidas» son dos botones hermanos para
+    la misma acción. Unirlos en un `SplitButton` con la variante en el desplegable (recordando la última
+    elección) y mover el acento a «Actualizar seleccionados (N)» / «Actualizar todo» cuando hay resultados.
+  - **Criterio de aceptación:** como mucho un botón con acento visible por ventana; `MainWindowTests`
+    adaptados si cambia algún `AutomationId`.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+---
+
+## 🔵 F·4 — Verificación pendiente y QA
+
+- [ ] **[F-24] Probar y corregir en contraste alto**
+  - **Área:** Accesibilidad (temas de contraste de Windows)
+  - **Ubicación:** `src/WingetUSoft/Core/LogPalette.cs:27-41` y `src/WingetUSoft/UI/ActivityLog.xaml.cs:45-47`; diccionarios de F-05; barra de título de F-13
+  - **Qué hacer:** el registro pinta RGB fijos de claro u oscuro según `ActualTheme`, sin mirar
+    `AccessibilitySettings.HighContrast`. Con un tema de contraste activo, dejar que las líneas hereden
+    `SystemColorWindowTextColor` sin perder el tipo de línea (que ahí no puede depender del color), y
+    comprobar los botones y la barra de título en «Acuático» y «Desierto».
+  - **Criterio de aceptación:** registro, botón de peligro y barra de título legibles en ambos temas de
+    contraste (capturas); test unitario de que `LogPalette` no fuerza color con el contraste alto activo.
+  - **Evidencia (2026-09-14):** **no verificado en ejecución**, porque activar un tema de contraste cambia
+    la configuración del sistema del usuario. El riesgo sale del código: colores fijos (texto `#1B1B1B` en
+    claro) sobre un fondo que en contraste alto puede ser negro.
+  - **Esfuerzo:** medio
+  - **Depende de:** F-05, F-13
+
+- [ ] **[F-25] Los UI tests deben respaldar el `settings.json` real**
+  - **Área:** QA / datos del usuario
+  - **Ubicación:** `tests/WingetUSoft.UiTests/SettingsBackup.cs:26` (usado en `AppFixture.cs:27` y `:50`) frente a `src/WingetUSoft/Settings/AppSettings.cs:10-12`
+  - **Qué hacer:** `SettingsBackup` copia `%AppData%\WingetUSoft`, pero la app escribe en
+    `%LocalAppData%\WingetUSoft`: el respaldo no encuentra nada, `Restore()` no repone nada y los UI tests
+    corren contra el `settings.json` real (historial, exclusiones, idioma). Apuntar a
+    `LocalApplicationData`, respaldar también `settings.json.bak` y `logs/`, y retirar `history.log`, que
+    ya no aparece en ningún sitio de `src/` (el historial vive dentro de `settings.json`).
+  - **Criterio de aceptación:** tras la suite de UI tests, el `settings.json` real queda idéntico byte a
+    byte al de antes (comprobación por hash en el `Dispose` del fixture).
+  - **Evidencia (2026-09-14):** `%AppData%\WingetUSoft` no existe; los datos están en `%LocalAppData%`.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
+---
+
+## ⚪ F·5 — Opcional / estructural
+
+> Como en el T4: no se aborda sin una decisión explícita.
+
+- [ ] **[F-26] Evaluar una ventana única con `NavigationView`**
+  - **Área:** Arquitectura de UI
+  - **Ubicación:** las seis ventanas de `src/WingetUSoft/UI/`, `WindowChrome.cs` y `MainWindow.Menus.cs`
+  - **Qué hacer:** hoy son seis ventanas de primer nivel sin ventana propietaria, cada una con su botón en
+    la barra de tareas, y Desinstalar abre Limpieza por su cuenta. La forma natural de un gestor de
+    paquetes es una sola ventana con `NavigationView` (Actualizaciones · Buscar e instalar · Instalados ·
+    Historial, y Configuración al pie) y el control `TitleBar`. Resolvería de raíz F-08, la duplicación de
+    cabeceras de F-17 y buena parte de F-14.
+  - **Criterio de aceptación:** una rama de prueba que compile, pase los UI tests adaptados y tenga
+    capturas; o una entrada en `CONTEXT.md` §4 que explique por qué se descarta (la misma salida que T4-01).
+  - **Esfuerzo:** alto
+  - **Depende de:** F-08, F-13, F-14
+
+---
+
+## 📊 Progreso del Tier F
+
+> Misma regla que en la Parte II: marcar al **verificar** (build + tests + prueba real), añadir la fila
+> al registro y referenciar el ID en el mensaje del commit (p. ej.
+> `fix(a11y): nombre accesible en las filas de Historial (F-02)`).
+
+### Estado por bloque
+
+| Bloque | Total | Completadas | Pendientes | % |
+|---|---:|---:|---:|---:|
+| F·1 — Defectos verificados | 10 | 0 | 10 | 0 % |
+| F·2 — Fluent / WinUI 3 | 6 | 0 | 6 | 0 % |
+| F·3 — Experiencia de uso | 7 | 0 | 7 | 0 % |
+| F·4 — Verificación y QA | 2 | 0 | 2 | 0 % |
+| F·5 — Opcional | 1 | 0 | 1 | 0 % |
+| **Total** | **26** | **0** | **26** | **0 %** |
+
+### Registro de tareas completadas
+
+| Fecha | ID | Tarea | Verificado con | Commit | Versión |
+|---|---|---|---|---|---|
+| — | — | *(ninguna todavía)* | — | — | — |
+
+### Línea base del Tier F (2026-09-14, v1.8.8)
+
+| Métrica | Valor | Cómo se obtuvo |
+|---|---|---|
+| Scroll de la tabla principal (26 filas, 1180×820) | lista `VerticallyScrollable=False` · página al 44,7 % de vista | UI Automation, `ScrollPattern` |
+| Registro visible tras consultar | no (fuera de la ventana) | UI Automation, `BoundingRectangle` de `txtLogHeader` |
+| Salto de la tabla al seleccionar una fila | 36 px | UI Automation, Y de `lvPackages` antes y después |
+| Nombre accesible de las filas (Historial · Desinstalar) | `WingetUSoft.HistoryEntryViewModel` · `WingetUSoft.WingetPackage` | UI Automation, `Name` |
+| Tema de los diálogos genéricos | no sigue el de la app | captura con Claro forzado sobre Windows oscuro |
+| Contraste del botón de peligro | 3,84:1 (oscuro) · 3,34:1 (oscuro, hover) · 4,28:1 (claro, hover) | fórmula WCAG 2.x |
+| Contraste de las filas atenuadas | 2,50:1 (claro) · 3,59:1 (oscuro) | fórmula WCAG 2.x sobre la tarjeta |
+| Desalineación entre cabecera y celda | +16 px (1.ª columna) · −12 px (resto), en 4 tablas | capturas |
+| Ventanas de Configuración abiertas a la vez | 2 | UI Automation |
+| Inicio de las cabeceras de columna (principal) | 49 % del alto de la ventana | captura a 1180×820 |
+| Filas visibles en Desinstalar | 4 de 113 (900×700) | captura |
+| Fondo de página detrás de Mica | `#F3F3F3` / `#202020` planos | píxeles de `docs/screenshots` |
+| Instrucción de arranque repetida | 3 veces | captura |
+| Bloques de tarjeta repetidos | 30 en 6 XAML | `grep` sobre `src/WingetUSoft/UI` |
+
+### Zonas que el Tier F no pudo cubrir
+
+- **Contraste alto:** no se activó, porque cambia la configuración del sistema del usuario (ver F-24).
+- **Lector de pantalla real:** igual que en la Parte II, se leyó el árbol de UI Automation; no se escuchó
+  una sesión con Narrador ni NVDA.
+- **Limpieza de residuos:** no se condujo; solo se abre tras desinstalar un programa de verdad (el mismo
+  límite que T1-09). Lo que le afecta en F-04 y F-05 sale del código.
+- **Buscar e instalar:** no se condujo en esta pasada; lo que le afecta en F-07 y F-15 sale del código y de
+  `docs/screenshots/search-*.png`.
+- **Lotes de actualización reales:** no se lanzó ninguno; F-19 se apoya en el código y en el estado de la
+  tabla durante la consulta.
