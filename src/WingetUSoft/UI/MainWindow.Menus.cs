@@ -97,6 +97,7 @@ public sealed partial class MainWindow
         menuLicencia.Text = L.T("menu.license");
         menuAvisosTerceros.Text = L.T("menu.thirdParty");
         menuAcercaDe.Text = L.T("menu.about");
+        RefreshTrayMenu();
     }
 
     private async void MenuExportar_Click(object sender, RoutedEventArgs e)
@@ -130,60 +131,76 @@ public sealed partial class MainWindow
         txtEstado.Text = L.T("status.listExported", file.Name);
     }
 
+    /// <summary>
+    /// Ventanas secundarias abiertas, una por tipo (F-08).
+    /// </summary>
+    /// <remarks>
+    /// Cada clic en el menú creaba una ventana nueva: con dos Configuraciones abiertas sobre el mismo
+    /// <see cref="AppSettings"/> ganaba la última en guardar y esta ventana reaplicaba los cambios dos veces
+    /// (comprobado en la app real: dos invocaciones dejaban dos ventanas).
+    /// </remarks>
+    private readonly Dictionary<Type, Window> _openWindows = [];
+
+    /// <summary>
+    /// Abre una ventana secundaria y espera a que se cierre; si ya había una de ese tipo, la trae al frente.
+    /// </summary>
+    /// <returns>
+    /// La ventana, si esta llamada la abrió; <c>null</c> si solo reactivó la existente. Así lo que se hace al
+    /// cerrarla —reaplicar ajustes, avisar de que la lista pudo quedar obsoleta— ocurre una sola vez.
+    /// </returns>
+    private async Task<T?> OpenSingleInstanceAsync<T>(Func<T> create) where T : Window
+    {
+        if (_openWindows.TryGetValue(typeof(T), out Window? open))
+        {
+            if (open.AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter)
+                presenter.Restore();
+            open.Activate();
+            return null;
+        }
+
+        T window = create();
+        _openWindows[typeof(T)] = window;
+
+        var closed = new TaskCompletionSource();
+        window.Closed += (_, _) =>
+        {
+            _openWindows.Remove(typeof(T));
+            closed.TrySetResult();
+        };
+        window.Activate();
+
+        await closed.Task;
+        return window;
+    }
+
     private async void MenuConfiguracion_Click(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow(_settings);
-        settingsWindow.Activate();
+        if (await OpenSingleInstanceAsync(() => new SettingsWindow(_settings)) is not { SavedChanges: true })
+            return;
 
-        var tcs = new TaskCompletionSource();
-        settingsWindow.Closed += (_, _) => tcs.TrySetResult();
-        await tcs.Task;
-
-        if (settingsWindow.SavedChanges)
-        {
-            _silentMode = _settings.SilentMode;
-            UpdateAutoCheckTimer();
-            LoadPackagesToGrid();
-            ApplyTheme(_settings.ThemeMode);
-            // El idioma también se elige aquí desde el Tier C #5. SettingsWindow ya lo fijó en L al
-            // guardar; esta ventana sigue rotulada en el idioma viejo hasta que se relea.
-            ApplyLocalizedStrings();
-        }
+        _silentMode = _settings.SilentMode;
+        UpdateAutoCheckTimer();
+        LoadPackagesToGrid();
+        ApplyTheme(_settings.ThemeMode);
+        // El idioma también se elige aquí desde el Tier C #5. SettingsWindow ya lo fijó en L al
+        // guardar; esta ventana sigue rotulada en el idioma viejo hasta que se relea.
+        ApplyLocalizedStrings();
     }
 
-    private async void MenuHistorial_Click(object sender, RoutedEventArgs e)
-    {
-        var historyWindow = new HistoryWindow(_settings.History, _settings.ThemeMode);
-        historyWindow.Activate();
+    private async void MenuHistorial_Click(object sender, RoutedEventArgs e) =>
+        await OpenSingleInstanceAsync(() => new HistoryWindow(_settings.History, _settings.ThemeMode));
 
-        var tcs = new TaskCompletionSource();
-        historyWindow.Closed += (_, _) => tcs.TrySetResult();
-        await tcs.Task;
-    }
-
-    private async void MenuDesinstalar_Click(object sender, RoutedEventArgs e)
-    {
-        var uninstallWindow = new UninstallWindow(_settings);
-        uninstallWindow.Activate();
-
-        var tcs = new TaskCompletionSource();
-        uninstallWindow.Closed += (_, _) => tcs.TrySetResult();
-        await tcs.Task;
-    }
+    private async void MenuDesinstalar_Click(object sender, RoutedEventArgs e) =>
+        await OpenSingleInstanceAsync(() => new UninstallWindow(_settings));
 
     private async void MenuBuscarInstalar_Click(object sender, RoutedEventArgs e)
     {
-        var searchWindow = new SearchWindow(_settings);
-        searchWindow.Activate();
-
-        var tcs = new TaskCompletionSource();
-        searchWindow.Closed += (_, _) => tcs.TrySetResult();
-        await tcs.Task;
+        var searchWindow = await OpenSingleInstanceAsync(() => new SearchWindow(_settings));
 
         // Instalar software cambia lo que hay en el equipo: la lista de actualizaciones en pantalla
         // puede haber quedado obsoleta. No se reconsulta sola (winget tarda y el usuario no lo pidió),
         // pero el estado deja de afirmar un recuento que ya no se puede garantizar.
-        if (searchWindow.InstalledSomething && _listState == ListState.Ready)
+        if (searchWindow is { InstalledSomething: true } && _listState == ListState.Ready)
             txtEstado.Text = L.T("status.listMayBeStale");
     }
 
@@ -210,16 +227,14 @@ public sealed partial class MainWindow
             FontSize = 12,
         });
 
-        var dialog = new ContentDialog
+        var dialog = WindowDialogHelper.Prepare(new ContentDialog
         {
-            XamlRoot = Content.XamlRoot,
-            RequestedTheme = CurrentTheme,
             Title = L.T("export.wingetTitle"),
             Content = panel,
             PrimaryButtonText = L.T("export.wingetContinue"),
             CloseButtonText = L.T("btn.cancel"),
             DefaultButton = ContentDialogButton.Primary,
-        };
+        }, Content.XamlRoot);
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
 
@@ -284,7 +299,8 @@ public sealed partial class MainWindow
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
 
-        if (!await ShowConfirmDialogAsync(L.T("import.confirmTitle"), L.T("import.confirmBody", file.Name)))
+        if (!await ShowConfirmDialogAsync(L.T("import.confirmTitle"), L.T("import.confirmBody", file.Name),
+                L.T("import.confirmPrimary")))
             return;
 
         _cancelStopsCurrentProcess = true;

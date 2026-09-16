@@ -174,8 +174,6 @@ public static class L
 
         ["btn.close"]              = ["Cerrar", "Close", "Fechar", "Fermer", "Chiudi"],
         ["btn.accept"]             = ["Aceptar", "OK", "OK", "OK", "OK"],
-        ["btn.yes"]                = ["Sí", "Yes", "Sim", "Oui", "Sì"],
-        ["btn.no"]                 = ["No", "No", "Não", "Non", "No"],
         ["whatsnew.title"]         = ["Novedades de WingetUSoft", "What's new in WingetUSoft", "Novidades do WingetUSoft", "Nouveautés de WingetUSoft", "Novità di WingetUSoft"],
         ["whatsnew.version"]       = ["Versión {0}", "Version {0}", "Versão {0}", "Version {0}", "Versione {0}"],
         ["whatsnew.viewOnGitHub"]  = ["Ver en GitHub", "View on GitHub", "Ver no GitHub", "Voir sur GitHub", "Vedi su GitHub"],
@@ -225,6 +223,7 @@ public static class L
         ["msg.exportWingetError"] = ["winget no pudo exportar la lista de paquetes (código {0}).", "winget could not export the package list (code {0}).", "O winget não conseguiu exportar a lista de pacotes (código {0}).", "winget n'a pas pu exporter la liste des paquets (code {0}).", "winget non è riuscito a esportare l'elenco dei pacchetti (codice {0})."],
         ["import.confirmTitle"]  = ["Importar e instalar paquetes", "Import and install packages", "Importar e instalar pacotes", "Importer et installer des paquets", "Importa e installa pacchetti"],
         ["import.confirmBody"]   = ["Se instalarán en este equipo los programas listados en «{0}». Los que ya tengas instalados se ACTUALIZARÁN si hay una versión más reciente. Puede tardar bastante y algunos instaladores pedirán permiso de administrador. ¿Continuar?", "The programs listed in \"{0}\" will be installed on this PC. Those you already have will be UPDATED if a newer version exists. It may take a while and some installers will ask for administrator permission. Continue?", "Serão instalados neste PC os programas listados em «{0}». Os que você já tiver serão ATUALIZADOS se houver uma versão mais recente. Pode demorar e alguns instaladores pedirão permissão de administrador. Continuar?", "Les programmes listés dans « {0} » seront installés sur ce PC. Ceux que vous avez déjà seront MIS À JOUR s'il existe une version plus récente. Cela peut prendre du temps et certains installateurs demanderont une autorisation d'administrateur. Continuer ?", "Verranno installati su questo PC i programmi elencati in «{0}». Quelli che hai già verranno AGGIORNATI se esiste una versione più recente. Può richiedere tempo e alcuni installer chiederanno l'autorizzazione di amministratore. Continuare?"],
+        ["import.confirmPrimary"] = ["Importar e instalar", "Import and install", "Importar e instalar", "Importer et installer", "Importa e installa"],
         ["status.importing"]     = ["Importando paquetes...", "Importing packages...", "Importando pacotes...", "Importation des paquets...", "Importazione pacchetti..."],
         ["status.importDone"]    = ["Importación completada.", "Import completed.", "Importação concluída.", "Importation terminée.", "Importazione completata."],
         ["status.importPartial"] = ["Importación terminada con incidencias (ver registro).", "Import finished with issues (see log).", "Importação concluída com problemas (ver registro).", "Importation terminée avec des problèmes (voir le journal).", "Importazione terminata con problemi (vedi registro)."],
@@ -277,6 +276,7 @@ public static class L
         ["search.error"]         = ["No se pudo completar la búsqueda.", "The search could not be completed.", "Não foi possível concluir a busca.", "La recherche n'a pas pu aboutir.", "Impossibile completare la ricerca."],
         ["search.confirmInstallTitle"] = ["Instalar programa", "Install program", "Instalar programa", "Installer le programme", "Installa programma"],
         ["search.confirmInstallBody"]  = ["Se instalará {0} ({1}), versión {2}, en este equipo. El instalador puede pedir permiso de administrador. ¿Continuar?", "{0} ({1}), version {2}, will be installed on this PC. The installer may ask for administrator permission. Continue?", "Será instalado {0} ({1}), versão {2}, neste PC. O instalador pode pedir permissão de administrador. Continuar?", "{0} ({1}), version {2}, sera installé sur ce PC. L'installateur peut demander une autorisation d'administrateur. Continuer ?", "Verrà installato {0} ({1}), versione {2}, su questo PC. L'installer potrebbe chiedere l'autorizzazione di amministratore. Continuare?"],
+        ["search.confirmInstallPrimary"] = ["Instalar", "Install", "Instalar", "Installer", "Installa"],
         ["search.installing"]    = ["Instalando {0}...", "Installing {0}...", "Instalando {0}...", "Installation de {0}...", "Installazione di {0}..."],
         ["search.installOk"]     = ["{0} instalado correctamente.", "{0} installed successfully.", "{0} instalado com sucesso.", "{0} installé avec succès.", "{0} installato correttamente."],
         ["search.installFailed"] = ["No se pudo instalar {0}.", "Could not install {0}.", "Não foi possível instalar {0}.", "Impossible d'installer {0}.", "Impossibile installare {0}."],
@@ -350,8 +350,6 @@ public static class L
         ["status.readyToStart"] = ["Listo. Pulsa 'Consultar actualizaciones' para comenzar.", "Ready. Click 'Check for updates' to start.", "Pronto. Clique em 'Consultar atualizações' para começar.", "Prêt. Cliquez sur « Rechercher des mises à jour » pour commencer.", "Pronto. Premi 'Cerca aggiornamenti' per iniziare."],
         ["status.cancelling"] = ["Cancelando...", "Cancelling...", "Cancelando...", "Annulation...", "Annullamento..."],
         ["status.cancellingAfterCurrent"] = ["Cancelando después de la operación actual...", "Cancelling after the current operation...", "Cancelando após a operação atual...", "Annulation après l'opération en cours...", "Annullamento dopo l'operazione corrente..."],
-        ["pkg.excluded"]      = ["Excluido de actualizaciones automáticas", "Excluded from automatic updates", "Excluído das atualizações automáticas", "Exclu des mises à jour automatiques", "Escluso dagli aggiornamenti automatici"],
-        ["pkg.readyToUpdate"] = ["Listo para actualizar", "Ready to update", "Pronto para atualizar", "Prêt à mettre à jour", "Pronto per l'aggiornamento"],
         ["winget.unavailableStatus"] = ["winget no está disponible. Instálalo desde Microsoft Store.", "winget is not available. Install it from the Microsoft Store.", "O winget não está disponível. Instale-o pela Microsoft Store.", "winget n'est pas disponible. Installez-le depuis le Microsoft Store.", "winget non è disponibile. Installalo dal Microsoft Store."],
         ["winget.unavailableDetail"]  = ["La aplicación necesita App Installer o una versión reciente de Windows.", "The app needs App Installer or a recent version of Windows.", "O aplicativo precisa do App Installer ou de uma versão recente do Windows.", "L'application nécessite App Installer ou une version récente de Windows.", "L'app richiede App Installer o una versione recente di Windows."],
         ["winget.unavailableTitle"]   = ["winget no disponible", "winget not available", "winget não disponível", "winget non disponible", "winget non disponibile"],
@@ -380,6 +378,7 @@ public static class L
         ["msg.saveExclusionsError"] = ["No se pudieron guardar las exclusiones.", "Could not save the exclusions.", "Não foi possível salvar as exclusões.", "Impossible d'enregistrer les exclusions.", "Impossibile salvare le esclusioni."],
 
         ["admin.confirmTitle"] = ["Confirmar modo administrador", "Confirm administrator mode", "Confirmar modo administrador", "Confirmer le mode administrateur", "Conferma modalità amministratore"],
+        ["admin.confirmPrimary"] = ["Continuar como administrador", "Continue as administrator", "Continuar como administrador", "Continuer en tant qu'administrateur", "Continua come amministratore"],
         ["admin.confirmSingleBody"] = ["La actualización se ejecutará con permisos de administrador.\n\nWindows mostrará el aviso de UAC y el progreso detallado se reemplazará por un indicador general.\n\n¿Desea continuar?", "The update will run with administrator permissions.\n\nWindows will show the UAC prompt and the detailed progress will be replaced by a general indicator.\n\nDo you want to continue?", "A atualização será executada com permissões de administrador.\n\nO Windows mostrará o aviso de UAC e o progresso detalhado será substituído por um indicador geral.\n\nDeseja continuar?", "La mise à jour s'exécutera avec des droits d'administrateur.\n\nWindows affichera l'invite UAC et la progression détaillée sera remplacée par un indicateur général.\n\nVoulez-vous continuer ?", "L'aggiornamento verrà eseguito con i permessi di amministratore.\n\nWindows mostrerà la richiesta UAC e il progresso dettagliato sarà sostituito da un indicatore generale.\n\nVuoi continuare?"],
         ["admin.confirmBatchBody"] = ["Las {0} actualizaciones se ejecutarán con permisos de administrador.\n\nWindows pedirá confirmación de UAC una sola vez para todo el lote y el progreso detallado se reemplazará por un indicador general.\n\n¿Desea continuar?", "The {0} updates will run with administrator permissions.\n\nWindows will ask for UAC confirmation once for the whole batch and the detailed progress will be replaced by a general indicator.\n\nDo you want to continue?", "As {0} atualizações serão executadas com permissões de administrador.\n\nO Windows pedirá confirmação de UAC uma única vez para todo o lote e o progresso detalhado será substituído por um indicador geral.\n\nDeseja continuar?", "Les {0} mises à jour s'exécuteront avec des droits d'administrateur.\n\nWindows demandera une confirmation UAC une seule fois pour tout le lot et la progression détaillée sera remplacée par un indicateur général.\n\nVoulez-vous continuer ?", "I {0} aggiornamenti verranno eseguiti con i permessi di amministratore.\n\nWindows chiederà la conferma UAC una sola volta per l'intero lotto e il progresso dettagliato sarà sostituito da un indicatore generale.\n\nVuoi continuare?"],
 
@@ -412,8 +411,10 @@ public static class L
 
         ["confirm.updateTitle"] = ["Confirmar actualización", "Confirm update", "Confirmar atualização", "Confirmer la mise à jour", "Conferma aggiornamento"],
         ["confirm.updateBody"] = ["Se van a actualizar {0} programa(s):\n\n  • {1}\n\n¿Desea continuar?", "{0} program(s) will be updated:\n\n  • {1}\n\nDo you want to continue?", "{0} programa(s) serão atualizados:\n\n  • {1}\n\nDeseja continuar?", "{0} programme(s) vont être mis à jour :\n\n  • {1}\n\nVoulez-vous continuer ?", "Verranno aggiornati {0} programma/i:\n\n  • {1}\n\nVuoi continuare?"],
+        ["confirm.updatePrimary"] = ["Actualizar", "Update", "Atualizar", "Mettre à jour", "Aggiorna"],
         ["confirm.openWingetRunTitle"] = ["Abrir en winget.run", "Open on winget.run", "Abrir no winget.run", "Ouvrir sur winget.run", "Apri su winget.run"],
         ["confirm.openWingetRunBody"] = ["Se abrirá la página del paquete en su navegador:\n\n{0}\n\nVerifique que el paquete es legítimo antes de instalar nada. ¿Desea continuar?", "The package page will open in your browser:\n\n{0}\n\nVerify the package is legitimate before installing anything. Do you want to continue?", "A página do pacote será aberta no seu navegador:\n\n{0}\n\nVerifique se o pacote é legítimo antes de instalar algo. Deseja continuar?", "La page du paquet s'ouvrira dans votre navigateur :\n\n{0}\n\nVérifiez que le paquet est légitime avant d'installer quoi que ce soit. Voulez-vous continuer ?", "La pagina del pacchetto si aprirà nel browser:\n\n{0}\n\nVerifica che il pacchetto sia legittimo prima di installare qualsiasi cosa. Vuoi continuare?"],
+        ["confirm.openWingetRunPrimary"] = ["Abrir en el navegador", "Open in browser", "Abrir no navegador", "Ouvrir dans le navigateur", "Apri nel browser"],
 
         // Prefijos de los nombres de archivo propuestos al exportar. Sin acentos ni espacios: son
         // nombres de fichero, y la fecha que se les añade va siempre en yyyy-MM-dd invariante.
@@ -470,6 +471,8 @@ public static class L
         ["settings.notifTrayTitle"] = ["Notificaciones y bandeja", "Notifications and tray", "Notificações e bandeja", "Notifications et barre d'état", "Notifiche e area di notifica"],
         ["settings.showNotifications"] = ["Mostrar notificaciones al completar actualizaciones", "Show notifications when updates complete", "Mostrar notificações ao concluir atualizações", "Afficher des notifications à la fin des mises à jour", "Mostra notifiche al completamento degli aggiornamenti"],
         ["settings.minimizeToTray"] = ["Minimizar a la bandeja del sistema al cerrar", "Minimize to the system tray on close", "Minimizar para a bandeja do sistema ao fechar", "Réduire dans la barre d'état système à la fermeture", "Riduci a icona nell'area di notifica alla chiusura"],
+        ["tray.open"] = ["Abrir WingetUSoft", "Open WingetUSoft", "Abrir o WingetUSoft", "Ouvrir WingetUSoft", "Apri WingetUSoft"],
+        ["tray.exit"] = ["Salir", "Exit", "Sair", "Quitter", "Esci"],
         ["settings.excludedTitle"] = ["Paquetes excluidos", "Excluded packages", "Pacotes excluídos", "Paquets exclus", "Pacchetti esclusi"],
         ["settings.excludedSubtitle"] = ["Estos paquetes no se incluirán en las actualizaciones.", "These packages will not be included in updates.", "Esses pacotes não serão incluídos nas atualizações.", "Ces paquets ne seront pas inclus dans les mises à jour.", "Questi pacchetti non saranno inclusi negli aggiornamenti."],
         ["btn.removeSelected"]    = ["Quitar seleccionado", "Remove selected", "Remover selecionado", "Retirer la sélection", "Rimuovi selezionato"],
@@ -491,8 +494,11 @@ public static class L
         ["uninstall.loadError"]   = ["Error al cargar la lista.", "Error loading the list.", "Erro ao carregar a lista.", "Erreur lors du chargement de la liste.", "Errore nel caricamento dell'elenco."],
         ["uninstall.countAll"]    = ["{0} programa(s)", "{0} program(s)", "{0} programa(s)", "{0} programme(s)", "{0} programma/i"],
         ["uninstall.countFiltered"] = ["{0} de {1}", "{0} of {1}", "{0} de {1}", "{0} sur {1}", "{0} di {1}"],
+        ["uninstall.rowAccessible"] = ["{0}, versión {1}, origen {2}", "{0}, version {1}, source {2}", "{0}, versão {1}, fonte {2}", "{0}, version {1}, source {2}", "{0}, versione {1}, origine {2}"],
+        ["uninstall.rowAccessibleNoSource"] = ["{0}, versión {1}", "{0}, version {1}", "{0}, versão {1}", "{0}, version {1}", "{0}, versione {1}"],
         ["uninstall.confirmTitle"] = ["Confirmar desinstalación", "Confirm uninstall", "Confirmar desinstalação", "Confirmer la désinstallation", "Conferma disinstallazione"],
         ["uninstall.confirmBody"] = ["¿Desea desinstalar \"{0}\" ({1})?\n\nEsta acción no se puede deshacer.", "Do you want to uninstall \"{0}\" ({1})?\n\nThis action cannot be undone.", "Deseja desinstalar \"{0}\" ({1})?\n\nEsta ação não pode ser desfeita.", "Voulez-vous désinstaller « {0} » ({1}) ?\n\nCette action est irréversible.", "Vuoi disinstallare \"{0}\" ({1})?\n\nQuesta azione non può essere annullata."],
+        ["uninstall.confirmPrimary"] = ["Desinstalar", "Uninstall", "Desinstalar", "Désinstaller", "Disinstalla"],
         ["uninstall.uninstalling"] = ["Desinstalando: {0}...", "Uninstalling: {0}...", "Desinstalando: {0}...", "Désinstallation : {0}...", "Disinstallazione: {0}..."],
         ["uninstall.startingLog"] = ["Iniciando desinstalación: {0} ({1})", "Starting uninstall: {0} ({1})", "Iniciando desinstalação: {0} ({1})", "Démarrage de la désinstallation : {0} ({1})", "Avvio disinstallazione: {0} ({1})"],
         ["uninstall.successLog"]  = ["  ✔ {0}: desinstalado correctamente.", "  ✔ {0}: uninstalled successfully.", "  ✔ {0}: desinstalado com sucesso.", "  ✔ {0} : désinstallé avec succès.", "  ✔ {0}: disinstallato correttamente."],
@@ -515,7 +521,7 @@ public static class L
         ["btn.deleteSelected"]   = ["Eliminar seleccionados", "Delete selected", "Excluir selecionados", "Supprimer la sélection", "Elimina selezionati"],
         ["btn.selectAll"]        = ["Seleccionar todo", "Select all", "Selecionar tudo", "Tout sélectionner", "Seleziona tutto"],
         ["btn.deselectAll"]      = ["Deseleccionar todo", "Deselect all", "Desmarcar tudo", "Tout désélectionner", "Deseleziona tutto"],
-        ["btn.yesDelete"]        = ["Sí, eliminar", "Yes, delete", "Sim, excluir", "Oui, supprimer", "Sì, elimina"],
+        ["cleanup.confirmPrimary"] = ["Eliminar", "Delete", "Excluir", "Supprimer", "Elimina"],
         ["cleanup.listHeader"]   = ["Residuos encontrados", "Leftovers found", "Resíduos encontrados", "Résidus trouvés", "Residui trovati"],
         ["cleanup.colPath"]      = ["Ruta", "Path", "Caminho", "Chemin", "Percorso"],
         ["cleanup.colType"]      = ["Tipo", "Type", "Tipo", "Type", "Tipo"],
@@ -555,6 +561,8 @@ public static class L
         ["history.colStatus"]    = ["Estado", "Status", "Status", "État", "Stato"],
         ["history.statusSuccess"] = ["Éxito", "Success", "Sucesso", "Réussite", "Riuscito"],
         ["history.statusFailed"] = ["Fallido", "Failed", "Falhou", "Échec", "Fallito"],
+        ["history.rowAccessible"] = ["{0}: {1}, de {2} a {3}, {4}", "{0}: {1}, from {2} to {3}, {4}", "{0}: {1}, de {2} para {3}, {4}", "{0} : {1}, de {2} à {3}, {4}", "{0}: {1}, da {2} a {3}, {4}"],
+        ["history.rowAccessibleInstall"] = ["{0}: {1}, instalada la versión {2}, {3}", "{0}: {1}, installed version {2}, {3}", "{0}: {1}, instalada a versão {2}, {3}", "{0} : {1}, version {2} installée, {3}", "{0}: {1}, installata la versione {2}, {3}"],
         ["history.stateLabel"]   = ["Estado:", "Status:", "Status:", "État :", "Stato:"],
         ["btn.exportCsv"]        = ["Exportar CSV...", "Export CSV...", "Exportar CSV...", "Exporter en CSV...", "Esporta CSV..."],
 

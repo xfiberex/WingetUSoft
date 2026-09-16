@@ -65,7 +65,8 @@ public sealed class LocalizationTests
     /// <c>MainWindow</c>, <c>SearchWindow</c>, <c>UninstallWindow</c> y <c>CleanupWindow</c> a través de
     /// <c>WindowDialogHelper</c>. Hasta la auditoría del 2026-08-20 estaban cableados en español, así que
     /// un usuario con la interfaz en francés confirmaba un borrado pulsando «Sí» — y «No» ni siquiera es
-    /// una palabra francesa.
+    /// una palabra francesa. Desde F-04 las confirmaciones ya no dicen «Sí / No» en ningún idioma: el primario
+    /// es el verbo de la acción y el cierre, «Cancelar».
     /// </summary>
     /// <remarks>
     /// Se comprueba el diccionario directamente en vez de mover <see cref="L.Current"/> con
@@ -76,16 +77,15 @@ public sealed class LocalizationTests
     [InlineData(AppLang.Es, "btn.accept", "Aceptar")]
     [InlineData(AppLang.En, "btn.accept", "OK")]
     [InlineData(AppLang.Fr, "btn.accept", "OK")]
-    [InlineData(AppLang.Es, "btn.yes", "Sí")]
-    [InlineData(AppLang.En, "btn.yes", "Yes")]
-    [InlineData(AppLang.Pt, "btn.yes", "Sim")]
-    [InlineData(AppLang.Fr, "btn.yes", "Oui")]
-    [InlineData(AppLang.It, "btn.yes", "Sì")]
-    [InlineData(AppLang.Es, "btn.no", "No")]
-    [InlineData(AppLang.En, "btn.no", "No")]
-    [InlineData(AppLang.Pt, "btn.no", "Não")]
-    [InlineData(AppLang.Fr, "btn.no", "Non")]
-    [InlineData(AppLang.It, "btn.no", "No")]
+    [InlineData(AppLang.Es, "btn.cancel", "Cancelar")]
+    [InlineData(AppLang.En, "btn.cancel", "Cancel")]
+    [InlineData(AppLang.Pt, "btn.cancel", "Cancelar")]
+    [InlineData(AppLang.Fr, "btn.cancel", "Annuler")]
+    [InlineData(AppLang.It, "btn.cancel", "Annulla")]
+    [InlineData(AppLang.Es, "uninstall.confirmPrimary", "Desinstalar")]
+    [InlineData(AppLang.Fr, "uninstall.confirmPrimary", "Désinstaller")]
+    [InlineData(AppLang.Es, "cleanup.confirmPrimary", "Eliminar")]
+    [InlineData(AppLang.It, "cleanup.confirmPrimary", "Elimina")]
     public void DialogButtons_AreTranslatedInEveryLanguage(AppLang lang, string key, string expected)
     {
         Assert.True(L.Map.ContainsKey(key), $"Falta la clave '{key}' en el diccionario.");

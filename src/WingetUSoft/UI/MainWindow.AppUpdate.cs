@@ -145,7 +145,8 @@ public sealed partial class MainWindow
                 string confirmBody = BuildChangelogMessage(info.Notes,
                     L.T("update.confirmInstall"));
                 if (await ShowConfirmDialogAsync(L.T("update.availTitle"),
-                    $"{L.T("update.availBody", info.Version)}\n\n{confirmBody}"))
+                    $"{L.T("update.availBody", info.Version)}\n\n{confirmBody}",
+                    L.T("btn.installNow")))
                 {
                     await DownloadAndInstallUpdateAsync();
                 }

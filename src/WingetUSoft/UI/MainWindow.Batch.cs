@@ -40,7 +40,7 @@ public sealed partial class MainWindow
                 ? L.T("admin.confirmSingleBody")
                 : L.T("admin.confirmBatchBody", packagesToUpdate.Count);
 
-            if (!await ShowConfirmDialogAsync(L.T("admin.confirmTitle"), adminMessage))
+            if (!await ShowConfirmDialogAsync(L.T("admin.confirmTitle"), adminMessage, L.T("admin.confirmPrimary")))
                 return;
         }
 

@@ -9,7 +9,23 @@
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.Resources>
             <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-            <local:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+
+            <!-- Celdas de texto de la tabla. La atenuada (paquete excluido u omitido) usa el gris secundario del
+                 tema en lugar de Opacity: con Opacity 0.4 el texto caía a 2,50:1 en claro y 3,59:1 en oscuro
+                 (F-06). El pincel va en un estilo y no en un convertidor porque un {ThemeResource} solo sigue el
+                 tema forzado de la ventana si lo resuelve el propio elemento; Application.Current.Resources
+                 devolvería el del sistema (el mismo problema que T1-04). -->
+            <Style x:Key="PackageCellTextStyle" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                <Setter Property="Margin" Value="8,0,0,0" />
+            </Style>
+            <Style x:Key="DimmedPackageCellTextStyle" TargetType="TextBlock" BasedOn="{StaticResource PackageCellTextStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <local:BoolToObjectConverter x:Key="PackageCellStyleConverter"
+                                         TrueValue="{StaticResource DimmedPackageCellTextStyle}"
+                                         FalseValue="{StaticResource PackageCellTextStyle}" />
 
             <!-- Cabecera ordenable: un Button de verdad, no un StackPanel con Tapped (Tier C #6). Un
                  StackPanel no entra en el orden de tabulación, no responde a Espacio/Intro y un lector
@@ -53,18 +69,22 @@
         <!-- Main Content -->
         <!-- Todo el contenido vive dentro de un ScrollViewer vertical: en ventanas muy bajas (snap
              a cuarto de pantalla de Windows 11) las tarjetas superiores no dejaban ni un pixel a la
-             tabla, que quedaba recortada entera fuera de la ventana. MinHeight (no Height) atado al
-             viewport da los dos comportamientos con una sola regla: si sobra alto, el Grid se estira
-             hasta el viewport y la fila * rellena como siempre, sin barra; si falta, el Grid conserva
-             su alto natural (mayor que el viewport) y el ScrollViewer desplaza la pagina. -->
+             tabla, que quedaba recortada entera fuera de la ventana (Tier B #7).
+             Height atado al viewport y MinHeight calculado en código (UpdateContentMinHeight) dan los dos
+             comportamientos: si sobra alto, el Grid mide lo mismo que el viewport y la fila * tiene un alto
+             finito, así que la tabla desplaza por sí misma; si falta, manda MinHeight (tarjetas superiores +
+             el piso de la tabla) y desplaza la página. Hasta F-01 era MinHeight atado al viewport sin Height:
+             el ScrollViewer mide con alto infinito, la fila * se comportaba como Auto y la tabla se medía
+             entera, sin scroll propio ni virtualización, empujando el registro fuera de la ventana. -->
         <ScrollViewer Grid.Row="1"
                       x:Name="ContentScroller"
                       VerticalScrollBarVisibility="Auto"
                       VerticalScrollMode="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       HorizontalScrollMode="Disabled">
-            <Grid Padding="16"
-                  MinHeight="{Binding ViewportHeight, ElementName=ContentScroller}">
+            <Grid x:Name="ContentGrid"
+                  Padding="16"
+                  Height="{Binding ViewportHeight, ElementName=ContentScroller}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -90,11 +110,6 @@
                                    Text="Consulta, filtra y actualiza paquetes desde una sola vista."
                                    Style="{StaticResource BodyTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock x:Name="txtDetalleEstado"
-                                   Text="Selecciona un programa para ver sus detalles antes de actualizar."
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   TextTrimming="CharacterEllipsis" />
                         <TextBlock x:Name="txtShortcuts"
                                    Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
                                    Style="{StaticResource CaptionTextBlockStyle}"
@@ -151,7 +166,7 @@
                                     MinWidth="140" Height="36" />
                             <!-- Cancelar NO es destructivo: interrumpe un lote, no borra nada. Vestirlo de
                                  rojo (como iba hasta v1.5.0) lo confundía con el peligro real, que en esta
-                                 app son Desinstalar y Eliminar (DangerButtonStyle). Es un botón normal. -->
+                                 app son Desinstalar y Eliminar (DangerButtonResources.xaml). Es un botón normal. -->
                             <Button x:Name="btnCancelar"
                                     Content="Cancelar"
                                     Click="BtnCancelar_Click"
@@ -297,9 +312,12 @@
                                          TextChanged="TxtBuscar_TextChanged" />
                             </StackPanel>
                         </local:WrapPanel>
-                        <!-- Package info panel (shown when a package is selected) -->
+                        <!-- Panel de información del paquete seleccionado. Siempre visible y con alto fijo: al
+                             aparecer solo al seleccionar, empujaba la tabla 36 px hacia abajo (F-10). Sin selección
+                             muestra la indicación que antes ocupaba una línea propia en la cabecera, así que la
+                             misma frase no aparece dos veces. El alto mínimo es el que tiene con enlaces. -->
                         <Border x:Name="panelPackageInfo"
-                                Visibility="Collapsed"
+                                MinHeight="30"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                 CornerRadius="4"
                                 Padding="10,6">
@@ -310,7 +328,9 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="txtInfoDescripcion"
                                            Grid.Column="0"
+                                           Text="Selecciona un programa para ver sus detalles antes de actualizar."
                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis"
                                            TextWrapping="NoWrap"
                                            VerticalAlignment="Center" />
@@ -455,11 +475,19 @@
                                               SelectionMode="Single"
                                               SelectionChanged="LvPackages_SelectionChanged"
                                               ContextRequested="LvPackages_ContextRequested">
+                                        <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto,
+                                             la primera columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda
+                                             (F-07). El margen lo pone la propia fila, igual que la cabecera. -->
+                                        <ListView.ItemContainerStyle>
+                                            <Style TargetType="ListViewItem">
+                                                <Setter Property="Padding" Value="0" />
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            </Style>
+                                        </ListView.ItemContainerStyle>
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="36" Padding="8,0"
-                                                      AutomationProperties.Name="{Binding RowLabel}"
-                                                      Opacity="{Binding IsDimmed, Converter={StaticResource BoolToOpacityConverter}}">
+                                                      AutomationProperties.Name="{Binding RowLabel}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="54" />
                                                         <ColumnDefinition Width="*" />
@@ -473,16 +501,16 @@
                                                               IsEnabled="{Binding IsSelectable}"
                                                               VerticalAlignment="Center" MinWidth="0"
                                                               AutomationProperties.Name="{Binding SelectLabel}" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding Version}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <TextBlock Grid.Column="4" Text="{Binding Available}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                                    <TextBlock Grid.Column="5" Text="{Binding Source}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                               Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Id}"
+                                                               Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
+                                                    <TextBlock Grid.Column="3" Text="{Binding Version}"
+                                                               Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding Available}"
+                                                               Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
+                                                    <TextBlock Grid.Column="5" Text="{Binding Source}"
+                                                               Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
                                                     <!-- Ni excluido ni omitido son errores: son decisiones del usuario.
                                                          En rojo (como iba hasta v1.5.0) competían con los fallos reales
                                                          del registro. Gris secundario, coherente con la fila atenuada.

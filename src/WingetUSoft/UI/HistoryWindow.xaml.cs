@@ -17,6 +17,12 @@ internal sealed class HistoryEntryViewModel
     public string StatusDisplay { get; }
     public bool Success { get; }
 
+    /// <summary>
+    /// Nombre accesible de la fila (F-02). Sin él, el <c>ListViewItem</c> hereda el <c>ToString()</c> y un
+    /// lector de pantalla anuncia «WingetUSoft.HistoryEntryViewModel» (comprobado en la app real).
+    /// </summary>
+    public string RowLabel { get; }
+
     public HistoryEntryViewModel(HistoryEntry entry)
     {
         DateDisplay = L.FormatDateTime(entry.Date);
@@ -26,6 +32,11 @@ internal sealed class HistoryEntryViewModel
         ToVersion = entry.ToVersion;
         Success = entry.Success;
         StatusDisplay = entry.Success ? L.T("history.statusSuccess") : L.T("history.statusFailed");
+
+        // Lo instalado desde Buscar no tiene versión de origen: «de  a 2.0» se oiría con un hueco.
+        RowLabel = string.IsNullOrWhiteSpace(FromVersion)
+            ? L.T("history.rowAccessibleInstall", DateDisplay, PackageName, ToVersion, StatusDisplay)
+            : L.T("history.rowAccessible", DateDisplay, PackageName, FromVersion, ToVersion, StatusDisplay);
     }
 }
 

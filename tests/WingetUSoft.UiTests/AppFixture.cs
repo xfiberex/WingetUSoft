@@ -20,10 +20,10 @@ public sealed class AppFixture : IDisposable
         // de test NO necesita una terminal elevada para automatizar esta ventana. Por eso, a diferencia
         // de FormatDiskPro.UiTests, aquí no hay ningún EnsureElevated().
 
-        // La app es unpackaged: no tiene almacenamiento aislado por prueba. settings.json/history.log
-        // viven en %AppData%\WingetUSoft, el MISMO sitio que usa la instalación real del usuario. Sin
-        // este backup, cambiar idioma/opciones durante las pruebas dejaría esos cambios filtrados en
-        // la app de verdad.
+        // La app es unpackaged: no tiene almacenamiento aislado por prueba. settings.json (con el
+        // historial dentro), su .bak y los registros viven en %LocalAppData%\WingetUSoft, el MISMO sitio
+        // que usa la instalación real del usuario. Sin este backup, cambiar idioma/opciones durante las
+        // pruebas dejaría esos cambios filtrados en la app de verdad (F-25).
         _settingsBackup = SettingsBackup.Capture();
 
         var exePath = ResolveExePath();
@@ -45,9 +45,29 @@ public sealed class AppFixture : IDisposable
     public void Dispose()
     {
         try { App.Close(); } catch { /* pudo cerrarse ya dentro de un test */ }
+        WaitForAppExit();
         Automation.Dispose();
         App.Dispose();
         _settingsBackup.Restore();
+    }
+
+    /// <summary>
+    /// La restauración va DESPUÉS de que el proceso termine: al cerrarse, la app todavía vacía su registro
+    /// a disco (<c>FileLog.Dispose</c>), y una escritura tardía pisaría lo recién restaurado.
+    /// </summary>
+    private void WaitForAppExit()
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(App.ProcessId);
+            if (!process.WaitForExit(15_000))
+            {
+                process.Kill();
+                process.WaitForExit(5_000);
+            }
+        }
+        catch (ArgumentException) { /* el proceso ya no existe */ }
+        catch (InvalidOperationException) { /* terminó entre la búsqueda y la espera */ }
     }
 
     private static string ResolveExePath()
@@ -79,7 +99,7 @@ public sealed class AppFixture : IDisposable
         return candidates.OrderByDescending(File.GetLastWriteTimeUtc).First();
     }
 
-    private static string? FindRepoRoot(string startDir)
+    internal static string? FindRepoRoot(string startDir)
     {
         var dir = new DirectoryInfo(startDir);
         while (dir is not null)

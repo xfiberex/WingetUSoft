@@ -93,6 +93,37 @@ public sealed class SettingsTests(AppFixture fixture)
         }
     }
 
+    /// <summary>
+    /// F-08: volver a pulsar «Configuración...» con la ventana ya abierta la trae al frente en lugar de abrir
+    /// otra. Con dos abiertas sobre el mismo <c>AppSettings</c> ganaba la última en guardar.
+    /// </summary>
+    [Fact]
+    public void SettingsWindow_OpenedTwice_StaysASingleWindow()
+    {
+        OpenSettingsWindow();
+
+        try
+        {
+            MenuActions.ClickPath(Window, "btnHerramientas", "menuConfiguracion");
+
+            // Margen de sobra para que una segunda ventana, si se abriera, llegara al árbol de automatización.
+            var second = Retry.WhileFalse(
+                () => SettingsWindows().Count > 1,
+                timeout: TimeSpan.FromSeconds(3),
+                interval: TimeSpan.FromMilliseconds(250),
+                ignoreException: true);
+
+            Assert.False(second.Success, "Una segunda pulsación abrió otra ventana de Configuración.");
+            Assert.Single(SettingsWindows());
+        }
+        finally
+        {
+            foreach (var settingsWindow in SettingsWindows())
+                settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnCancelar"))?.AsButton()?.Invoke();
+            WaitUntilSettingsWindowIsGone();
+        }
+    }
+
     private void SelectLanguageAndSave(int languageIndex)
     {
         var settingsWindow = OpenSettingsWindow();
@@ -131,12 +162,15 @@ public sealed class SettingsTests(AppFixture fixture)
             interval: TimeSpan.FromMilliseconds(250),
             ignoreException: true);
 
+    private Window? FindSettingsWindow() => SettingsWindows().FirstOrDefault();
+
     /// <summary>Se identifica por su botón Guardar: es el único control que solo existe en esa ventana.</summary>
-    private Window? FindSettingsWindow() =>
+    private List<Window> SettingsWindows() =>
         fixture.App.GetAllTopLevelWindows(fixture.Automation)
-            .FirstOrDefault(w =>
+            .Where(w =>
             {
                 try { return w.FindFirstDescendant(cf => cf.ByAutomationId("btnGuardar")) is not null; }
                 catch { return false; }
-            });
+            })
+            .ToList();
 }

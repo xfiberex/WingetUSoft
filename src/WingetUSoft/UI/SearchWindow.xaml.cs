@@ -221,7 +221,8 @@ public sealed partial class SearchWindow : Window
 
         bool confirmed = await ShowConfirmAsync(
             L.T("search.confirmInstallTitle"),
-            L.T("search.confirmInstallBody", selected.Name, selected.Id, selected.Version));
+            L.T("search.confirmInstallBody", selected.Name, selected.Id, selected.Version),
+            L.T("search.confirmInstallPrimary"));
         if (!confirmed) return;
 
         var cts = new CancellationTokenSource();
@@ -315,8 +316,8 @@ public sealed partial class SearchWindow : Window
         progressRing.IsActive = busy;
     }
 
-    private Task<bool> ShowConfirmAsync(string title, string body) =>
-        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, body);
+    private Task<bool> ShowConfirmAsync(string title, string body, string primaryText) =>
+        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, body, primaryText);
 
     private Task ShowInfoAsync(string title, string body) =>
         WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, body);

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
@@ -57,7 +58,9 @@ public sealed partial class CleanupWindow : Window
         txtSubtitulo.Text = L.T("cleanup.scanning");
         txtWarning.Text = L.T("cleanup.warning");
         btnEscanear.Content = L.T("btn.rescan");
-        btnEliminar.Content = L.T("btn.deleteSelected");
+        txtEliminarLabel.Text = L.T("btn.deleteSelected");
+        // El contenido es glifo + texto: sin nombre explícito, el lector de pantalla no tendría qué anunciar.
+        AutomationProperties.SetName(btnEliminar, txtEliminarLabel.Text);
         btnSelAll.Content = L.T("btn.selectAll");
         btnDeselAll.Content = L.T("btn.deselectAll");
         btnCancelar.Content = L.T("btn.cancel");
@@ -135,9 +138,13 @@ public sealed partial class CleanupWindow : Window
         string lista = string.Join("\n  • ", toDelete.Take(10).Select(i => i.Path));
         if (toDelete.Count > 10) lista += L.T("list.andMore", toDelete.Count - 10);
 
-        bool confirmed = await ShowConfirmDialogAsync(
+        // Irreversible y recursivo: Cancelar es el botón por defecto, así que Intro no borra (F-04).
+        bool confirmed = await WindowDialogHelper.ShowConfirmDialogAsync(
+            Content.XamlRoot,
             L.T("cleanup.confirmDeleteTitle"),
-            L.T("cleanup.confirmDeleteBody", toDelete.Count, lista));
+            L.T("cleanup.confirmDeleteBody", toDelete.Count, lista),
+            L.T("cleanup.confirmPrimary"),
+            destructive: true);
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
@@ -254,8 +261,4 @@ public sealed partial class CleanupWindow : Window
 
     private Task ShowDialogAsync(string title, string message) =>
         WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, message);
-
-    private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
-        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message,
-            primaryText: L.T("btn.yesDelete"));
 }

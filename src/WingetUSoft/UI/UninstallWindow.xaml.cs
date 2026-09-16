@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Media;
@@ -9,10 +10,36 @@ using WinRT.Interop;
 
 namespace WingetUSoft;
 
+/// <summary>
+/// Fila de la lista de programas instalados. Envuelve <see cref="WingetPackage"/> para darle lo que solo
+/// existe en la vista: el nombre accesible (F-02).
+/// </summary>
+/// <remarks>
+/// Hasta F-02 las filas eran el <see cref="WingetPackage"/> tal cual, sin nombre accesible, así que el
+/// <c>ListViewItem</c> heredaba su <c>ToString()</c> y un lector de pantalla anunciaba
+/// «WingetUSoft.WingetPackage» (comprobado en la app real).
+/// </remarks>
+public sealed class InstalledPackageViewModel(WingetPackage package)
+{
+    public WingetPackage Package { get; } = package;
+    public string Name => Package.Name;
+    public string Id => Package.Id;
+    public string Version => Package.Version;
+    public string Source => Package.Source;
+
+    /// <summary>
+    /// Casi todo lo instalado no viene de winget sino de «Agregar o quitar programas», y no tiene origen:
+    /// en ese caso la etiqueta no termina en un «origen» vacío.
+    /// </summary>
+    public string RowLabel => string.IsNullOrWhiteSpace(Source)
+        ? L.T("uninstall.rowAccessibleNoSource", Name, Version)
+        : L.T("uninstall.rowAccessible", Name, Version, Source);
+}
+
 public sealed partial class UninstallWindow : Window
 {
     private readonly AppSettings _settings;
-    private readonly ObservableCollection<WingetPackage> _packageViewModels = [];
+    private readonly ObservableCollection<InstalledPackageViewModel> _packageViewModels = [];
     private List<WingetPackage> _allPackages = [];
     private string _searchFilter = "";
     private CancellationTokenSource? _cts;
@@ -58,7 +85,9 @@ public sealed partial class UninstallWindow : Window
         txtHeaderTitle.Text = L.T("uninstall.headerTitle");
         txtSubtitulo.Text = L.T("uninstall.headerSubtitle");
         btnRefresh.Content = L.T("btn.refreshList");
-        btnUninstall.Content = L.T("uninstall.uninstallSelected");
+        txtUninstallLabel.Text = L.T("uninstall.uninstallSelected");
+        // El contenido es glifo + texto: sin nombre explícito, el lector de pantalla no tendría qué anunciar.
+        AutomationProperties.SetName(btnUninstall, txtUninstallLabel.Text);
         btnCancelar.Content = L.T("btn.cancel");
         txtBuscarLabel.Text = L.T("search.label");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
@@ -116,7 +145,7 @@ public sealed partial class UninstallWindow : Window
                 p.Id.Contains(search, StringComparison.OrdinalIgnoreCase));
 
         foreach (var pkg in filtered)
-            _packageViewModels.Add(pkg);
+            _packageViewModels.Add(new InstalledPackageViewModel(pkg));
 
         txtContador.Text = _packageViewModels.Count == _allPackages.Count
             ? L.T("uninstall.countAll", _allPackages.Count)
@@ -127,11 +156,15 @@ public sealed partial class UninstallWindow : Window
 
     private async Task UninstallSelectedAsync()
     {
-        if (lvPackages.SelectedItem is not WingetPackage pkg) return;
+        if (lvPackages.SelectedItem is not InstalledPackageViewModel { Package: var pkg }) return;
 
-        bool confirmed = await ShowConfirmDialogAsync(
+        // Irreversible: Cancelar es el botón por defecto, así que Intro no desinstala (F-04).
+        bool confirmed = await WindowDialogHelper.ShowConfirmDialogAsync(
+            Content.XamlRoot,
             L.T("uninstall.confirmTitle"),
-            L.T("uninstall.confirmBody", pkg.Name, pkg.Id));
+            L.T("uninstall.confirmBody", pkg.Name, pkg.Id),
+            L.T("uninstall.confirmPrimary"),
+            destructive: true);
 
         if (!confirmed) return;
 
@@ -245,7 +278,4 @@ public sealed partial class UninstallWindow : Window
 
     private Task ShowDialogAsync(string title, string message) =>
         WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, message);
-
-    private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
-        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message);
 }

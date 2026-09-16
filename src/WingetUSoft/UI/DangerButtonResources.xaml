@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Botón de peligro (F-05): Desinstalar y Eliminar, las dos únicas acciones destructivas de la app.
+
+    Se aplica fusionando este diccionario en los Resources del propio botón. No es un Style porque la plantilla
+    de Button lee ButtonBackgroundPointerOver, ButtonBackgroundPressed... directamente en sus estados visuales:
+    un Style solo puede cambiar el reposo, y cambiar el resto obligaría a copiar la plantilla entera.
+
+    Hasta F-05 cada ventana llevaba su copia, sin estado pulsado ni alto contraste, con blanco sobre #D55C4C en
+    oscuro (3,84:1) y sobre #E06858 en hover (3,34:1). Los tonos salen de SystemFillColorCritical, los mismos
+    que usa LogPalette para los fallos; DangerButtonTests mide cada estado contra WCAG AA (4,5:1).
+
+    Deshabilitado queda con los recursos por defecto de Button: gris neutro, como cualquier botón inactivo.
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="ButtonBackground" Color="#FFC42B1C" />
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFB0271A" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FF9C2217" />
+            <SolidColorBrush x:Key="ButtonForeground" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="ButtonBorderBrush" Color="#FFC42B1C" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#FFB0271A" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#FF9C2217" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="ButtonBackground" Color="#FFFF99A4" />
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#FFFFB0B8" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#FFE8858F" />
+            <SolidColorBrush x:Key="ButtonForeground" Color="#FF1A1A1A" />
+            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#FF1A1A1A" />
+            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FF1A1A1A" />
+            <SolidColorBrush x:Key="ButtonBorderBrush" Color="#FFFF99A4" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#FFFFB0B8" />
+            <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#FFE8858F" />
+        </ResourceDictionary>
+        <!-- En alto contraste manda la paleta del usuario: los colores del sistema, igual que un botón normal.
+             Ahí el peligro no puede ir en el color, y por eso el botón lleva también el glifo de la papelera. -->
+        <ResourceDictionary x:Key="HighContrast">
+            <StaticResource x:Key="ButtonBackground" ResourceKey="SystemColorButtonFaceColorBrush" />
+            <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="SystemColorHighlightColorBrush" />
+            <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="SystemColorHighlightTextColorBrush" />
+            <StaticResource x:Key="ButtonForeground" ResourceKey="SystemColorButtonTextColorBrush" />
+            <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="SystemColorHighlightTextColorBrush" />
+            <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="SystemColorHighlightColorBrush" />
+            <StaticResource x:Key="ButtonBorderBrush" ResourceKey="SystemColorButtonTextColorBrush" />
+            <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="SystemColorHighlightColorBrush" />
+            <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="SystemColorHighlightColorBrush" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

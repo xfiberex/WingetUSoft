@@ -105,7 +105,6 @@ public sealed partial class MainWindow
         _packageInfoCts = new CancellationTokenSource();
         var token = _packageInfoCts.Token;
 
-        panelPackageInfo.Visibility = Visibility.Visible;
         txtInfoDescripcion.Text = L.T("pkg.loading");
         lnkHomepage.Visibility = Visibility.Collapsed;
         lnkNotasVersion.Visibility = Visibility.Collapsed;
@@ -144,21 +143,26 @@ public sealed partial class MainWindow
         }
     }
 
-    private void HidePackageInfoPanel()
+    /// <summary>
+    /// Sin paquete seleccionado el panel no se pliega —plegarlo movía la tabla (F-10)—: vuelve a la indicación
+    /// de qué hacer, sin enlaces.
+    /// </summary>
+    private void ResetPackageInfoPanel()
     {
         _packageInfoCts?.Cancel();
-        panelPackageInfo.Visibility = Visibility.Collapsed;
+        lnkHomepage.Visibility = Visibility.Collapsed;
+        lnkNotasVersion.Visibility = Visibility.Collapsed;
+        UpdateSelectionDetails();
     }
 
     // --- DataGrid Events ---
 
     private void LvPackages_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        UpdateSelectionDetails();
         if (GetSelectedPackage() is { } pkg)
             _ = LoadPackageInfoPanelAsync(pkg);
         else
-            HidePackageInfoPanel();
+            ResetPackageInfoPanel();
     }
 
     /// <summary>
@@ -237,7 +241,8 @@ public sealed partial class MainWindow
 
         bool confirmed = await ShowConfirmDialogAsync(
             L.T("confirm.openWingetRunTitle"),
-            L.T("confirm.openWingetRunBody", url));
+            L.T("confirm.openWingetRunBody", url),
+            L.T("confirm.openWingetRunPrimary"));
 
         if (!confirmed) return;
 

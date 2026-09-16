@@ -80,9 +80,37 @@ public sealed partial class MainWindow : Window
     private MenuFlyoutItem ctxExcluir = null!;
     private MenuFlyoutItem ctxOmitirVersion = null!;
 
+    /// <summary>Fila de <c>ContentGrid</c> con la tabla y el registro; las anteriores son las tarjetas superiores.</summary>
+    private const int TableRow = 3;
+
+    /// <summary>
+    /// El alto mínimo de la página se recalcula cada vez que cambia una tarjeta superior: la de filtros crece al
+    /// estrechar la ventana (los botones pasan a otra línea) y la cabecera, al abrirse el aviso de actualización.
+    /// </summary>
+    private void TrackContentMinHeight()
+    {
+        foreach (var card in ContentGrid.Children.OfType<FrameworkElement>().Where(e => Grid.GetRow(e) < TableRow))
+            card.SizeChanged += (_, _) => UpdateContentMinHeight();
+    }
+
+    /// <summary>
+    /// Por debajo de este alto, la página desplaza en lugar de seguir encogiendo la tabla (F-01): las tarjetas
+    /// superiores tal como miden ahora, más el piso de la fila de la tabla, más el relleno.
+    /// </summary>
+    private void UpdateContentMinHeight()
+    {
+        double cards = ContentGrid.Children.OfType<FrameworkElement>()
+            .Where(e => Grid.GetRow(e) < TableRow && e.Visibility == Visibility.Visible)
+            .Sum(e => e.ActualHeight + e.Margin.Top + e.Margin.Bottom);
+
+        ContentGrid.MinHeight = ContentGrid.Padding.Top + cards + ContentGrid.RowDefinitions[TableRow].MinHeight
+            + ContentGrid.Padding.Bottom;
+    }
+
     public MainWindow()
     {
         InitializeComponent();
+        TrackContentMinHeight();
 
         _settings = AppSettings.Load();
 
@@ -170,7 +198,7 @@ public sealed partial class MainWindow : Window
                 {
                     SetActionButtonsEnabled(false);
                     txtEstado.Text = L.T("winget.unavailableStatus");
-                    txtDetalleEstado.Text = L.T("winget.unavailableDetail");
+                    txtInfoDescripcion.Text = L.T("winget.unavailableDetail");
                     await ShowDialogAsync(L.T("winget.unavailableTitle"), L.T("winget.unavailableBody"));
                     return;
                 }
@@ -256,15 +284,6 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private bool IsTextInputFocused() =>
         FocusManager.GetFocusedElement(Content.XamlRoot) is TextBox or PasswordBox or AutoSuggestBox or RichEditBox;
-
-    /// <summary>
-    /// Tema con el que abrir los diálogos. Se lee del contenido (<c>RequestedTheme</c>), no de
-    /// <c>Application.Current</c>: el tema se fuerza por elemento, así que con "Claro" elegido sobre un
-    /// Windows oscuro el tema de la *aplicación* seguiría diciendo "oscuro" (mismo motivo que en
-    /// <c>LogBrush</c>, Tier C #4).
-    /// </summary>
-    private ElementTheme CurrentTheme =>
-        Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default;
 
     private void SetActionButtonsEnabled(bool enabled)
     {
@@ -596,7 +615,8 @@ public sealed partial class MainWindow : Window
         string lista = string.Join("\n  \u2022 ", pendientes.Take(10).Select(p => p.Name));
         if (pendientes.Count > 10) lista += L.T("list.andMore", pendientes.Count - 10);
         if (!await ShowConfirmDialogAsync(L.T("confirm.updateTitle"),
-                L.T("confirm.updateBody", pendientes.Count, lista)))
+                L.T("confirm.updateBody", pendientes.Count, lista),
+                L.T("confirm.updatePrimary")))
             return;
         await UpdatePackagesAsync(pendientes);
     }
@@ -615,21 +635,16 @@ public sealed partial class MainWindow : Window
         return (lvPackages.SelectedItem as PackageViewModel)?.Package;
     }
 
+    /// <summary>
+    /// Sin paquete seleccionado, el panel de información indica qué hacer a continuación. Con uno, el panel
+    /// muestra su descripción, que carga <see cref="LoadPackageInfoPanelAsync"/>; hasta F-10 aquí se
+    /// escribía además una línea «nombre | id | versiones | origen» que repetía lo que ya dice la fila.
+    /// </summary>
     private void UpdateSelectionDetails()
     {
-        WingetPackage? pkg = GetSelectedPackage();
+        if (GetSelectedPackage() is not null) return;
 
-        if (pkg is null)
-        {
-            txtDetalleEstado.Text = _packages.Count == 0 ? L.T("header.detailEmpty") : L.T("header.detailDefault");
-            return;
-        }
-
-        string state = _settings.ExcludedIds.Contains(pkg.Id)
-            ? L.T("pkg.excluded")
-            : L.T("pkg.readyToUpdate");
-
-        txtDetalleEstado.Text = $"{pkg.Name} | {pkg.Id} | {pkg.Version} -> {pkg.Available} | {pkg.Source} | {state}";
+        txtInfoDescripcion.Text = _packages.Count == 0 ? L.T("header.detailEmpty") : L.T("header.detailDefault");
     }
 
     private void ApplyTheme(int themeMode)
@@ -672,11 +687,7 @@ public sealed partial class MainWindow : Window
 
     private async void MenuAcercaDe_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new AboutDialog
-        {
-            XamlRoot = Content.XamlRoot,
-            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
-        };
+        var dlg = WindowDialogHelper.Prepare(new AboutDialog(), Content.XamlRoot);
         await dlg.ShowAsync();
     }
 
@@ -689,11 +700,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Muestra un texto legal embebido (licencia / avisos de terceros) en un diálogo con scroll.</summary>
     private async Task ShowLegalTextAsync(string title, string body)
     {
-        var dlg = new LegalTextDialog(title, body)
-        {
-            XamlRoot = Content.XamlRoot,
-            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
-        };
+        var dlg = WindowDialogHelper.Prepare(new LegalTextDialog(title, body), Content.XamlRoot);
         await dlg.ShowAsync();
     }
 
@@ -733,21 +740,19 @@ public sealed partial class MainWindow : Window
         GitHubReleaseInfo? info = await GitHubUpdateService.GetReleaseByTagAsync("v" + version)
             ?? await GitHubUpdateService.GetLatestReleaseAsync();
 
-        var dlg = new WhatsNewDialog(
-            info?.Version ?? version,
-            info?.Notes ?? "",
-            info?.HtmlUrl ?? $"https://github.com/xfiberex/WingetUSoft/releases")
-        {
-            XamlRoot = Content.XamlRoot,
-            RequestedTheme = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default,
-        };
+        var dlg = WindowDialogHelper.Prepare(
+            new WhatsNewDialog(
+                info?.Version ?? version,
+                info?.Notes ?? "",
+                info?.HtmlUrl ?? $"https://github.com/xfiberex/WingetUSoft/releases"),
+            Content.XamlRoot);
         await dlg.ShowAsync();
     }
 
     private Task ShowDialogAsync(string title, string message) =>
         WindowDialogHelper.ShowDialogAsync(Content.XamlRoot, title, message);
 
-    private Task<bool> ShowConfirmDialogAsync(string title, string message) =>
-        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message);
+    private Task<bool> ShowConfirmDialogAsync(string title, string message, string primaryText) =>
+        WindowDialogHelper.ShowConfirmDialogAsync(Content.XamlRoot, title, message, primaryText);
 
 }

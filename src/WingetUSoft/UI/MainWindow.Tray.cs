@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using Microsoft.UI;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -25,13 +26,24 @@ public sealed partial class MainWindow
 {
     #region Tray Icon & Notifications
 
+    /// <summary>«Salir» desde la bandeja: el cierre ya no se intercepta para minimizar (F-09).</summary>
+    private bool _exitRequested;
+
+    /// <summary>Evita liberar dos veces lo que se libera al salir (el registro a disco no lo admite).</summary>
+    private bool _exitResourcesReleased;
+
     private void InitializeTrayIcon()
     {
         if (_trayIcon is not null) return;
 
         _trayIcon = new H.NotifyIcon.TaskbarIcon
         {
-            ToolTipText = "WingetUSoft"
+            ToolTipText = "WingetUSoft",
+            // Clic simple para volver a la ventana, sin la espera con la que se descarta un doble clic.
+            NoLeftClickDelay = true,
+            LeftClickCommand = TrayCommand(RestoreFromTray),
+            DoubleClickCommand = TrayCommand(RestoreFromTray),
+            ContextFlyout = BuildTrayMenu(),
         };
 
         try
@@ -46,10 +58,53 @@ public sealed partial class MainWindow
         {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
         }
+    }
 
-        var cmd = new Microsoft.UI.Xaml.Input.XamlUICommand();
-        cmd.ExecuteRequested += (_, _) => DispatcherQueue.TryEnqueue(RestoreFromTray);
-        _trayIcon.DoubleClickCommand = cmd;
+    /// <summary>
+    /// Menú del icono de bandeja (F-09). Hasta F-09 el icono solo respondía al doble clic, y con «Minimizar a la
+    /// bandeja al cerrar» activo no quedaba ninguna forma de salir de la app desde la interfaz.
+    /// </summary>
+    /// <remarks>
+    /// H.NotifyIcon convierte el <see cref="MenuFlyout"/> en un menú nativo del sistema y de cada entrada solo
+    /// ejecuta su <c>Command</c>: el evento <c>Click</c> nunca llega a dispararse. Por eso todas van con comando.
+    /// </remarks>
+    private MenuFlyout BuildTrayMenu()
+    {
+        var menu = new MenuFlyout();
+        menu.Items.Add(new MenuFlyoutItem { Text = L.T("tray.open"), Command = TrayCommand(RestoreFromTray) });
+        menu.Items.Add(new MenuFlyoutItem { Text = L.T("btn.checkUpdates"), Command = TrayCommand(CheckUpdatesFromTray) });
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(new MenuFlyoutItem { Text = L.T("tray.exit"), Command = TrayCommand(ExitFromTray) });
+        return menu;
+    }
+
+    /// <summary>Comando para el icono de bandeja: la acción se lleva siempre al hilo de UI.</summary>
+    private XamlUICommand TrayCommand(DispatcherQueueHandler action)
+    {
+        var command = new XamlUICommand();
+        command.ExecuteRequested += (_, _) => DispatcherQueue.TryEnqueue(action);
+        return command;
+    }
+
+    /// <summary>Tras cambiar el idioma, el menú de la bandeja (si ya existe) se reconstruye con los textos nuevos.</summary>
+    private void RefreshTrayMenu()
+    {
+        if (_trayIcon is not null)
+            _trayIcon.ContextFlyout = BuildTrayMenu();
+    }
+
+    private void CheckUpdatesFromTray()
+    {
+        RestoreFromTray();
+        if (_cts is null)
+            _ = LoadPackagesAsync(_lastIncludeUnknown);
+    }
+
+    private void ExitFromTray()
+    {
+        _exitRequested = true;
+        ReleaseResourcesOnExit();
+        Application.Current.Exit();
     }
 
     private void RestoreFromTray()
@@ -62,23 +117,34 @@ public sealed partial class MainWindow
     private void MinimizeToTray()
     {
         InitializeTrayIcon();
-        if (_trayIcon is not null)
-        {
-            _trayIcon.Visibility = Visibility.Visible;
-            _appWindow.Hide();
-        }
+        if (_trayIcon is null) return;
+
+        _trayIcon.Visibility = Visibility.Visible;
+        // Un TaskbarIcon creado desde código no está en el árbol XAML y nunca recibe el Loaded con el que
+        // H.NotifyIcon registra el icono en el área de notificación: sin esto la ventana se ocultaba y el
+        // proceso seguía vivo sin icono al que volver. Sin modo eficiencia: la app sigue consultando en segundo plano.
+        if (!_trayIcon.IsCreated)
+            _trayIcon.ForceCreate(enablesEfficiencyMode: false);
+        _appWindow.Hide();
     }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (_settings.MinimizeToTray)
+        if (_settings.MinimizeToTray && !_exitRequested)
         {
             args.Cancel = true;
             MinimizeToTray();
             return;
         }
 
-        // Cleanup tray icon
+        ReleaseResourcesOnExit();
+    }
+
+    private void ReleaseResourcesOnExit()
+    {
+        if (_exitResourcesReleased) return;
+        _exitResourcesReleased = true;
+
         if (_trayIcon is not null)
         {
             _trayIcon.Visibility = Visibility.Collapsed;

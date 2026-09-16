@@ -174,13 +174,12 @@ public sealed partial class SettingsWindow : Window
             ? L.T("msg.saveSettingsError")
             : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError.Text}";
 
-        var dialog = new ContentDialog
+        var dialog = WindowDialogHelper.Prepare(new ContentDialog
         {
-            XamlRoot = Content.XamlRoot,
             Title = L.T("error.configTitle"),
             Content = detail,
             CloseButtonText = L.T("btn.close")
-        };
+        }, Content.XamlRoot);
         return dialog.ShowAsync().AsTask();
     }
 

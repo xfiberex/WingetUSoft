@@ -139,6 +139,15 @@
                                   Grid.Row="2"
                                   SelectionMode="Single"
                                   SelectionChanged="LvResults_SelectionChanged">
+                            <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto,
+                                 la primera columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda
+                                 (F-07). El margen lo pone la propia fila, igual que la cabecera. -->
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="36" Padding="8,0"
