@@ -11,14 +11,14 @@
 
   <ItemGroup>
     <!-- Aplicación -->
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
-    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.8.260804001" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
     <PackageVersion Include="H.NotifyIcon.WinUI" Version="2.4.1" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Pruebas. Se alinean en la versión más alta que ya usaba alguno de los dos proyectos. -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <!-- Cobertura en local (T4-04): el recolector va en el proyecto de tests; el informe HTML lo genera
