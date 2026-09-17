@@ -261,6 +261,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-17 | **1.10.0** | **Tier F · bloque F·3 (5 de 7)** — atajos en su propio control y `Ctrl+F`, «Consultar» como `SplitButton` con el acento en la acción del momento, aviso de versión nueva breve, estados de lista accionables en las cuatro ventanas y textos con plurales reales |
 | 2026-09-17 | **1.9.0** | **Tier F · bloque F·2 completo** — Mica visible, diálogos y barra de título modernos, estilos compartidos, etiquetas reales en búsquedas y filtros, y Configuración rehecha con un único patrón de fila |
 | 2026-09-17 | **1.8.9** | **Tier F · bloque F·1 completo** — la bandeja por fin funciona (icono y menú con «Salir»), la tabla desplaza por sí misma, confirmaciones con verbo, botón de peligro AA y diálogos con el tema elegido; CI, CodeQL y Dependabot en GitHub |
 | 2026-08-23 | **1.8.8** | **Tier T4 y cierre del plan de auditoría** — MainWindow dividido, el flujo de lotes por fin probable, cobertura en local, y SECURITY/CONTRIBUTING/CHANGELOG |
@@ -281,7 +282,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
-### 2026-09-17 — Tier F, bloque F·3: experiencia de uso (F-18, F-20 a F-23, **sin publicar todavía**)
+### 2026-09-17 — Tier F, bloque F·3: experiencia de uso (F-18, F-20 a F-23, release v1.10.0)
 
 **22 de 26** del Tier F. Build 0/0, **395/395 unitarios**, **58/58 UI tests**. Cinco de las siete tareas del
 bloque; queda F-19 (tabla usable durante los lotes) y F-17 (densidad), que es la que cambiará la cabecera.
@@ -326,8 +327,8 @@ continuar?», que además sobra con el verbo en el botón), el «Unknown» que e
 mostrarlo** (las versiones crudas siguen alimentando `VersionOrder`), la columna «Excl.» pasa a icono con su
 nombre completo en el tooltip, y Nombre e Id llevan tooltip con el valor entero en las tres tablas.
 
-**Pendiente antes del próximo corte:** las capturas de `docs/screenshots` siguen mostrando los dos botones de
-consulta y la cabecera anterior. Se regeneran cuando F-17 haya cambiado también la cabecera.
+**Capturas del README** regeneradas para este corte: las anteriores mostraban los dos botones de consulta, la
+pantalla inicial sin su botón y el aviso de actualización dentro de la tarjeta de cabecera.
 
 ---
 

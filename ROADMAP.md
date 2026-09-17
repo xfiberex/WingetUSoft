@@ -2261,11 +2261,11 @@ explícita.
 | 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | 1.9.0 |
 | 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | 1.9.0 |
 | 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
-| 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | — |
-| 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | `ca083cb` | — |
-| 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | — |
-| 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | — |
-| 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | — | — |
+| 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | 1.10.0 |
+| 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | `ca083cb` | 1.10.0 |
+| 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | 1.10.0 |
+| 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | 1.10.0 |
+| 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | `b80212d` | 1.10.0 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 
