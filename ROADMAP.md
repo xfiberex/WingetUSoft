@@ -27,7 +27,7 @@
 | **C** | Auditoría de UI/UX (flujo, datos, color, accesibilidad) | ✅ Completado | 1.5.0 / 1.6.0 |
 | **D** | Cara pública (licencia in-app, README, capturas) | ✅ Completado | 1.7.0 |
 | **E** | Gestión completa de software ⚠️ *cambio de alcance* | ✅ Completado | 1.8.0 |
-| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (15 de 26) | — |
+| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (16 de 26) | — |
 
 El único tier abierto es el **F**, con sus tareas en la Parte III. Las decisiones ya tomadas (y lo que se
 descartó a propósito) están al final de la Parte I.
@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 15 de 26.** ✅ F-01 a F-13, F-15 y F-25.
+**Progreso (2026-09-17): 16 de 26.** ✅ F-01 a F-15 y F-25.
 
 ---
 
@@ -1846,7 +1846,7 @@ explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-14] Estilos compartidos en `App.xaml`**
+- [x] **[F-14] Estilos compartidos en `App.xaml`**
   - **Área:** Mantenibilidad / consistencia visual
   - **Ubicación:** `src/WingetUSoft/App.xaml:6-12` (solo fusiona `XamlControlsResources`); tarjetas repetidas en los 6 XAML de ventana
   - **Qué hacer:** el bloque de tarjeta (fondo, borde, grosor, radio y padding) se repite **30 veces** con
@@ -1856,6 +1856,23 @@ explícita.
     `ControlCornerRadius` en vez de `8` y `4` literales, y llevar los espaciados a la rampa de 4 px.
   - **Criterio de aceptación:** ningún XAML de ventana repite el bloque de tarjeta ni usa `CornerRadius`
     literales (test estructural); las capturas no cambian salvo por la normalización de espaciados.
+  - **Al implementarlo:** `UI/Styles.xaml`, fusionado en `App.xaml` después de `XamlControlsResources`. Las
+    30 tarjetas quedan en cuatro estilos según su relleno, todos `BasedOn` `CardStyle`: `HeaderCardStyle`
+    (20,16), `CardStyle` (16,12), `TableCardStyle` (12) y `CompactCardStyle` (16,8). También van ahí
+    `TableHeaderStyle` (5 cabeceras de tabla), `TableRowContainerStyle` (5 `ItemContainerStyle` en línea) y
+    `ColumnHeaderButtonStyle`, que sale de `MainWindow.xaml`. Radios con `OverlayCornerRadius`,
+    `ControlCornerRadius` y un `TableHeaderCornerRadius` compartido. Se normalizaron 20 espaciados a la rampa
+    de 4 px (10 → 8, 6 → 4 u 8, 3 → 4, `10,6` → `12,4`), además del `16,10` de las barras.
+  - **Desviación:** no hay `DangerButtonStyle`. Un `Style` no alcanza los estados de la plantilla de `Button`
+    (F-05), así que el botón de peligro sigue siendo `DangerButtonResources.xaml`, fusionado por botón.
+  - **Verificado (2026-09-17):** capturas antes y después, píxel a píxel, de la ventana principal,
+    Configuración, Historial y Buscar e instalar, en claro y en oscuro. En las 8, la primera fila distinta
+    coincide con el primer espaciado normalizado (la barra de filtros de 16,10 a 16,8, el título de
+    Acciones rápidas de 10 a 8), y a partir de ahí solo hay desplazamientos de 2–4 px, sin cambios de
+    color, borde ni radio (revisado a ojo). `SharedStylesTests` (4: `App.xaml` fusiona `Styles.xaml`,
+    ninguna ventana repite la tarjeta, ningún `CornerRadius` literal, espaciados en la rampa) falla en 3 con
+    el XAML anterior. `TableXamlTests` exige ahora el estilo compartido en las 5 tablas. 342/342 unitarios,
+    43/43 UI tests.
   - **Esfuerzo:** medio
   - **Depende de:** F-05, F-07
 
@@ -2074,11 +2091,11 @@ explícita.
 | Bloque | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
-| F·2 — Fluent / WinUI 3 | 6 | 4 | 2 | 67 % |
+| F·2 — Fluent / WinUI 3 | 6 | 5 | 1 | 83 % |
 | F·3 — Experiencia de uso | 7 | 0 | 7 | 0 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **15** | **11** | **58 %** |
+| **Total** | **26** | **16** | **10** | **62 %** |
 
 ### Registro de tareas completadas
 
@@ -2095,10 +2112,11 @@ explícita.
 | 2026-09-16 | F-08 | Una sola instancia por ventana secundaria | UI test falla contra 1.8.8 · 42/42 UI tests · 1 ventana de Historial en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-09 | Menú en el icono de bandeja, con «Salir» | 314/314 unitarios · icono, clic simple, menú y «Salir» en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-10 | Sin salto de maquetación al seleccionar una fila | guard estructural · 0 px de salto en la app real | `9b77a78` | 1.8.9 |
-| 2026-09-17 | F-11 | Mica visible, con fondo sólido de reserva | márgenes con tinte medidos en pantalla · registro ≥ 5,07:1 sobre Mica · 338/338 unitarios | *(pendiente)* | — |
-| 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | *(pendiente)* | — |
-| 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | *(pendiente)* | — |
-| 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | *(pendiente)* | — |
+| 2026-09-17 | F-11 | Mica visible, con fondo sólido de reserva | márgenes con tinte medidos en pantalla · registro ≥ 5,07:1 sobre Mica · 338/338 unitarios | `50119e5` | — |
+| 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | `50119e5` | — |
+| 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | `50119e5` | — |
+| 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | — |
+| 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | *(pendiente)* | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

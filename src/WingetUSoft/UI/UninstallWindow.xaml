@@ -33,12 +33,7 @@
             </Grid.RowDefinitions>
 
             <!-- Header Card -->
-            <Border Grid.Row="0"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="20,16"
+            <Border Grid.Row="0" Style="{StaticResource HeaderCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="txtHeaderTitle" Text="Desinstalar programas instalados"
@@ -51,14 +46,9 @@
             </Border>
 
             <!-- Actions + Search Bar -->
-            <Border Grid.Row="1"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,12"
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}"
                     Margin="0,0,0,12">
-                <StackPanel Spacing="10">
+                <StackPanel Spacing="8">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button x:Name="btnRefresh"
                                 Content="Actualizar lista"
@@ -114,12 +104,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Installed Packages Card -->
-                <Border Grid.Row="0"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Grid.Row="0" Style="{StaticResource TableCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -133,9 +118,7 @@
                                    Margin="4,0,0,8" />
 
                         <!-- Column Headers -->
-                        <Grid Grid.Row="1" Height="36"
-                              Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                              CornerRadius="4,4,0,0"
+                        <Grid Grid.Row="1" Style="{StaticResource TableHeaderStyle}" Height="36"
                               Padding="8,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -153,19 +136,10 @@
                                        TextTrimming="CharacterEllipsis" />
                         </Grid>
 
-                        <ListView x:Name="lvPackages"
+                        <ListView x:Name="lvPackages" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
                                   Grid.Row="2"
                                   SelectionMode="Single"
                                   SelectionChanged="LvPackages_SelectionChanged">
-                            <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto,
-                                 la primera columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda
-                                 (F-07). El margen lo pone la propia fila, igual que la cabecera. -->
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="36" Padding="8,0"
@@ -196,12 +170,7 @@
                 <Border Grid.Row="1" Height="6" Background="Transparent" />
 
                 <!-- Log Card -->
-                <Border Grid.Row="2"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -219,12 +188,7 @@
             </Grid>
 
             <!-- Status Bar -->
-            <Border Grid.Row="3"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,10">
+            <Border Grid.Row="3" Style="{StaticResource CompactCardStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

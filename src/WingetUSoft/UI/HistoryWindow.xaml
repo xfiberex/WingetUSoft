@@ -24,12 +24,7 @@
         </Grid>
 
         <!-- Header Card -->
-        <Border Grid.Row="1"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="20,16"
+        <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
                 Margin="16,4,16,12">
             <StackPanel Spacing="4">
                 <TextBlock x:Name="txtHeaderTitle" Text="Historial reciente"
@@ -42,12 +37,7 @@
         </Border>
 
         <!-- Search + Filter + Export -->
-        <Border Grid.Row="2"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,10"
+        <Border Grid.Row="2" Style="{StaticResource CompactCardStyle}"
                 Margin="16,0,16,12">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
@@ -81,12 +71,7 @@
         </Border>
 
         <!-- History List -->
-        <Border Grid.Row="3"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="12"
+        <Border Grid.Row="3" Style="{StaticResource TableCardStyle}"
                 Margin="16,0,16,12">
             <Grid>
                 <Grid.RowDefinitions>
@@ -95,9 +80,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Column Headers -->
-                <Grid Grid.Row="0" Height="36"
-                      Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                      CornerRadius="4,4,0,0"
+                <Grid Grid.Row="0" Style="{StaticResource TableHeaderStyle}" Height="36"
                       Padding="12,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="155" />
@@ -121,19 +104,10 @@
                                TextTrimming="CharacterEllipsis" />
                 </Grid>
 
-                <ListView x:Name="lvHistory"
+                <ListView x:Name="lvHistory" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
                           Grid.Row="1"
                           SelectionMode="Single"
                           IsItemClickEnabled="False">
-                    <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto,
-                         la primera columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda
-                         (F-07). El margen lo pone la propia fila, igual que la cabecera. -->
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        </Style>
-                    </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="local:HistoryEntryViewModel">
                             <Grid Height="34" Padding="12,0"
@@ -173,7 +147,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             MaxWidth="420"
-                            Spacing="10"
+                            Spacing="8"
                             Padding="24">
                     <FontIcon x:Name="iconEmptyState"
                               Glyph="&#xE81C;"

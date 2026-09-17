@@ -30,12 +30,7 @@
             </Grid.RowDefinitions>
 
             <!-- Header Card -->
-            <Border Grid.Row="0"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="20,16"
+            <Border Grid.Row="0" Style="{StaticResource HeaderCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="txtHeaderTitle" Text="Limpieza de residuos tras la desinstalación"
@@ -54,12 +49,7 @@
             </Border>
 
             <!-- Actions Bar -->
-            <Border Grid.Row="1"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,12"
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button x:Name="btnEscanear"
@@ -109,12 +99,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Residuals List Card -->
-                <Border Grid.Row="0"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Grid.Row="0" Style="{StaticResource TableCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -128,9 +113,7 @@
                                    Margin="4,0,0,8" />
 
                         <!-- Column Headers -->
-                        <Grid Grid.Row="1" Height="36"
-                              Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                              CornerRadius="4,4,0,0"
+                        <Grid Grid.Row="1" Style="{StaticResource TableHeaderStyle}" Height="36"
                               Padding="8,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="40" />
@@ -150,15 +133,9 @@
                                        TextTrimming="CharacterEllipsis" />
                         </Grid>
 
-                        <ListView x:Name="lvItems"
+                        <ListView x:Name="lvItems" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
                                   Grid.Row="2"
                                   SelectionMode="None">
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Height="38" Padding="8,0"
@@ -211,12 +188,7 @@
                 <Border Grid.Row="1" Height="6" Background="Transparent" />
 
                 <!-- Log Card -->
-                <Border Grid.Row="2"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="12">
+                <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -234,12 +206,7 @@
             </Grid>
 
             <!-- Status Bar -->
-            <Border Grid.Row="3"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,10">
+            <Border Grid.Row="3" Style="{StaticResource CompactCardStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

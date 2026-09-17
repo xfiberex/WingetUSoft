@@ -27,21 +27,6 @@
                                          TrueValue="{StaticResource DimmedPackageCellTextStyle}"
                                          FalseValue="{StaticResource PackageCellTextStyle}" />
 
-            <!-- Cabecera ordenable: un Button de verdad, no un StackPanel con Tapped (Tier C #6). Un
-                 StackPanel no entra en el orden de tabulación, no responde a Espacio/Intro y un lector
-                 de pantalla lo anuncia como un panel cualquiera, así que ordenar la tabla era imposible
-                 sin ratón. Se ve igual: fondo transparente y sin borde, con el realce estándar al pasar
-                 el puntero y el foco visible del sistema. -->
-            <Style x:Key="ColumnHeaderButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Padding" Value="8,0" />
-                <Setter Property="HorizontalAlignment" Value="Stretch" />
-                <Setter Property="VerticalAlignment" Value="Stretch" />
-                <Setter Property="HorizontalContentAlignment" Value="Left" />
-                <Setter Property="VerticalContentAlignment" Value="Center" />
-                <Setter Property="CornerRadius" Value="4" />
-            </Style>
         </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -95,12 +80,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- Header Card -->
-                <Border Grid.Row="0"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="20,16"
+                <Border Grid.Row="0" Style="{StaticResource HeaderCardStyle}"
                         Margin="0,0,0,12">
                     <StackPanel Spacing="4">
                         <TextBlock x:Name="txtHeaderTitle"
@@ -136,17 +116,12 @@
                 </Border>
 
                 <!-- Actions Bar -->
-                <Border Grid.Row="1"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12"
+                <Border Grid.Row="1" Style="{StaticResource CardStyle}"
                         Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="0,0,0,10" />
+                                   Margin="0,0,0,8" />
                         <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                             <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
                                     Content="Consultar actualizaciones"
@@ -260,14 +235,9 @@
                 </Border>
 
                 <!-- Source Filter + Search + Package Info -->
-                <Border Grid.Row="2"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,8"
+                <Border Grid.Row="2" Style="{StaticResource CompactCardStyle}"
                         Margin="0,0,0,8">
-                    <StackPanel Spacing="6">
+                    <StackPanel Spacing="8">
                         <!-- Filters row. WrapPanel y no StackPanel horizontal: con anchos fijos (200 + 200)
                              la fila pide ~850 px y el mínimo de ventana son 900 DIP, así que a 150 % de DPI o
                              con etiquetas FR/IT el cuadro de búsqueda quedaba recortado y sin scroll con el
@@ -319,8 +289,8 @@
                         <Border x:Name="panelPackageInfo"
                                 MinHeight="30"
                                 Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                CornerRadius="4"
-                                Padding="10,6">
+                                CornerRadius="{ThemeResource ControlCornerRadius}"
+                                Padding="12,4">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -334,7 +304,7 @@
                                            TextTrimming="CharacterEllipsis"
                                            TextWrapping="NoWrap"
                                            VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                     <HyperlinkButton x:Name="lnkHomepage"
                                                      Content="Página web"
                                                      Padding="4,0"
@@ -360,12 +330,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Updates DataGrid Card -->
-                    <Border Grid.Row="0"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="12">
+                    <Border Grid.Row="0" Style="{StaticResource TableCardStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -397,9 +362,7 @@
                                     </Grid.RowDefinitions>
 
                                     <!-- Column Headers -->
-                                    <Grid Grid.Row="0" Height="38"
-                                          Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                          CornerRadius="4,4,0,0"
+                                    <Grid Grid.Row="0" Style="{StaticResource TableHeaderStyle}" Height="38"
                                           Padding="8,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="54" />
@@ -423,7 +386,7 @@
                                         <!-- Sortable header cells -->
                                         <Button x:Name="btnColNombre" Grid.Column="1" Tag="1"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="colNombre" Text="Nombre" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="sortNombre" Text="" FontSize="9" VerticalAlignment="Center"
@@ -432,7 +395,7 @@
                                         </Button>
                                         <Button x:Name="btnColId" Grid.Column="2" Tag="2"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="colId" Text="Id" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="sortId" Text="" FontSize="9" VerticalAlignment="Center"
@@ -441,7 +404,7 @@
                                         </Button>
                                         <Button x:Name="btnColVersion" Grid.Column="3" Tag="3"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="colVersion" Text="Versión" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="sortVersion" Text="" FontSize="9" VerticalAlignment="Center"
@@ -450,7 +413,7 @@
                                         </Button>
                                         <Button x:Name="btnColDisponible" Grid.Column="4" Tag="4"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="colDisponible" Text="Disponible" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="sortAvailable" Text="" FontSize="9" VerticalAlignment="Center"
@@ -459,7 +422,7 @@
                                         </Button>
                                         <Button x:Name="btnColFuente" Grid.Column="5" Tag="5"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                 <TextBlock x:Name="colFuente" Text="Fuente" FontWeight="SemiBold" VerticalAlignment="Center"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock x:Name="sortSource" Text="" FontSize="9" VerticalAlignment="Center"
@@ -470,20 +433,11 @@
                                                    TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
                                     </Grid>
 
-                                    <ListView x:Name="lvPackages"
+                                    <ListView x:Name="lvPackages" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
                                               Grid.Row="1"
                                               SelectionMode="Single"
                                               SelectionChanged="LvPackages_SelectionChanged"
                                               ContextRequested="LvPackages_ContextRequested">
-                                        <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto,
-                                             la primera columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda
-                                             (F-07). El margen lo pone la propia fila, igual que la cabecera. -->
-                                        <ListView.ItemContainerStyle>
-                                            <Style TargetType="ListViewItem">
-                                                <Setter Property="Padding" Value="0" />
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            </Style>
-                                        </ListView.ItemContainerStyle>
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="36" Padding="8,0"
@@ -541,7 +495,7 @@
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
                                                 MaxWidth="440"
-                                                Spacing="10"
+                                                Spacing="8"
                                                 Padding="24">
                                         <ProgressRing x:Name="ringListState"
                                                       IsActive="False"
@@ -574,12 +528,7 @@
                     <Border Grid.Row="1" Height="6" Background="Transparent" />
 
                     <!-- Log Card -->
-                    <Border Grid.Row="2"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="12">
+                    <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -602,12 +551,7 @@
              operación larga corre, este texto (con velocidad y ETA) y la barra de progreso son lo
              único que el usuario mira; dentro de la página desplazable podían quedar fuera de la
              vista en ventanas bajas o si el usuario subía el scroll. -->
-        <Border Grid.Row="2"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="16,10"
+        <Border Grid.Row="2" Style="{StaticResource CompactCardStyle}"
                 Margin="16,0,16,16">
             <StackPanel Spacing="8">
                 <Grid>

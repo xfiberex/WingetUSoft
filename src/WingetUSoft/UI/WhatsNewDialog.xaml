@@ -9,7 +9,7 @@
          esta línea, el diálogo usaba la plantilla antigua (contenido y botones en una sola franja plana) y
          necesitaba parches de CornerRadius en el diálogo y en cada botón (F-12). -->
 
-    <StackPanel MaxWidth="380" Spacing="10">
+    <StackPanel MaxWidth="380" Spacing="8">
         <TextBlock x:Name="VersionText" FontWeight="SemiBold"
                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
         <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto"

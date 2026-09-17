@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Estilos compartidos por las seis ventanas (F-14). Se fusiona en App.xaml, después de XamlControlsResources.
+
+    Hasta F-14 el bloque de tarjeta (fondo, borde, grosor, radio y relleno) se repetía 30 veces con cinco rellenos
+    distintos, y los radios iban como literales (8 y 4) en lugar de los recursos del sistema. Los rellenos quedan en
+    la rampa de 4 px: 20,16 para la cabecera, 16,12 para las secciones, 12 para las tablas y 16,8 para las barras
+    compactas (antes, 16,10 en unas y 16,8 en otras).
+
+    El botón de peligro no está aquí: no puede ser un Style (ver DangerButtonResources.xaml).
+-->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ── Tarjetas ─────────────────────────────────────────────────────────── -->
+
+    <!-- Sección normal: acciones, opciones de Configuración. -->
+    <Style x:Key="CardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="16,12" />
+    </Style>
+
+    <!-- Cabecera de la ventana: título y subtítulo. -->
+    <Style x:Key="HeaderCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+        <Setter Property="Padding" Value="20,16" />
+    </Style>
+
+    <!-- Tabla o registro: el contenido ya trae su propio relleno por fila. -->
+    <Style x:Key="TableCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+        <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <!-- Barras de una sola línea: filtros y barra de estado. -->
+    <Style x:Key="CompactCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+        <Setter Property="Padding" Value="16,8" />
+    </Style>
+
+    <!-- ── Tablas ───────────────────────────────────────────────────────────── -->
+
+    <CornerRadius x:Key="TableHeaderCornerRadius">4,4,0,0</CornerRadius>
+
+    <!-- Fila de cabeceras de columna, pegada al borde superior de la tabla. -->
+    <Style x:Key="TableHeaderStyle" TargetType="Grid">
+        <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="CornerRadius" Value="{StaticResource TableHeaderCornerRadius}" />
+    </Style>
+
+    <!-- El ListViewItem trae Padding="16,0,12,0" por defecto y la cabecera no lo replica: sin esto, la primera
+         columna quedaba 16 px a la derecha de su cabecera y el resto 12 px a la izquierda (F-07). El margen lo pone
+         la propia fila, igual que la cabecera. -->
+    <Style x:Key="TableRowContainerStyle" TargetType="ListViewItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <!-- Cabecera ordenable: un Button de verdad, no un StackPanel con Tapped (Tier C #6). Un StackPanel no entra en
+         el orden de tabulación, no responde a Espacio/Intro y un lector de pantalla lo anuncia como un panel
+         cualquiera, así que ordenar la tabla era imposible sin ratón. Se ve igual: fondo transparente y sin borde,
+         con el realce estándar al pasar el puntero y el foco visible del sistema. -->
+    <Style x:Key="ColumnHeaderButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}" />
+    </Style>
+</ResourceDictionary>

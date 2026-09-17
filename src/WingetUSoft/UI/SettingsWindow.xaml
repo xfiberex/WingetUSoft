@@ -22,12 +22,7 @@
         </Grid>
 
         <!-- Header Card -->
-        <Border Grid.Row="1"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="20,16"
+        <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
                 Margin="20,4,20,12">
             <StackPanel Spacing="4">
                 <TextBlock x:Name="txtHeaderTitle" Text="Configuración"
@@ -44,15 +39,11 @@
 
                 <!-- Apariencia: tema e idioma. Vivían en el menú "Opciones" de la ventana principal
                      hasta v1.5.0, partiendo las preferencias entre dos sitios (Tier C #5). -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12">
-                    <StackPanel Spacing="10">
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
                         <TextBlock x:Name="txtAppearanceTitle" Text="Apariencia"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <StackPanel Spacing="6">
+                        <StackPanel Spacing="4">
                             <TextBlock x:Name="txtThemeLabel" Text="Tema"
                                        Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -73,15 +64,11 @@
                 </Border>
 
                 <!-- Actualizaciones: cómo se ejecutan (modo, permisos) y cada cuánto se consultan -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12">
-                    <StackPanel Spacing="10">
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
                         <TextBlock x:Name="txtUpdatesTitle" Text="Actualizaciones"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <StackPanel Spacing="6">
+                        <StackPanel Spacing="4">
                             <TextBlock x:Name="txtUpdateModeLabel" Text="Modo de actualización"
                                        Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -102,12 +89,8 @@
                 </Border>
 
                 <!-- Registro de actividad -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12">
-                    <StackPanel Spacing="10">
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
                         <TextBlock x:Name="txtLogTitle" Text="Registro de actividad"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <CheckBox x:Name="chkLogArchivo" Content="Guardar registro de actividad en archivo" />
@@ -121,12 +104,8 @@
                 </Border>
 
                 <!-- Notifications & Tray -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12">
-                    <StackPanel Spacing="10">
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="8">
                         <TextBlock x:Name="txtNotifTrayTitle" Text="Notificaciones y bandeja"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />
                         <Grid>
@@ -153,11 +132,7 @@
                 </Border>
 
                 <!-- Excluded packages -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,12">
+                <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="8">
                         <TextBlock x:Name="txtExcludedTitle" Text="Paquetes excluidos"
                                    Style="{StaticResource BodyStrongTextBlockStyle}" />

@@ -35,11 +35,15 @@ public sealed class TableXamlTests
 
         Assert.True(tables.Count >= 5, $"Solo se encontraron {tables.Count} tablas.");
 
+        // Desde F-14 el estilo vive en Styles.xaml y cada tabla lo referencia.
+        var rowContainer = XDocument.Load(Path.Combine(Path.GetDirectoryName(UiXaml().First().Path)!, "Styles.xaml"))
+            .Descendants(Presentation + "Style")
+            .Single(s => (string?)s.Attribute(Xaml + "Key") == "TableRowContainerStyle");
+        Assert.Contains(rowContainer.Elements(Presentation + "Setter"), s =>
+            (string?)s.Attribute("Property") == "Padding" && (string?)s.Attribute("Value") == "0");
+
         var misaligned = tables
-            .Where(t => !t.ListView
-                .Elements(Presentation + "ListView.ItemContainerStyle")
-                .Descendants(Presentation + "Setter")
-                .Any(s => (string?)s.Attribute("Property") == "Padding" && (string?)s.Attribute("Value") == "0"))
+            .Where(t => (string?)t.ListView.Attribute("ItemContainerStyle") != "{StaticResource TableRowContainerStyle}")
             .Select(t => $"{t.File} ({(string?)t.ListView.Attribute(Xaml + "Name")})")
             .ToList();
 
