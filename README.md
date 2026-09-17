@@ -1,6 +1,8 @@
 # WingetUSoft
 
 ![Release](https://img.shields.io/github/v/release/xfiberex/WingetUSoft?label=versión&color=blue)
+[![CI](https://github.com/xfiberex/WingetUSoft/actions/workflows/ci.yml/badge.svg)](https://github.com/xfiberex/WingetUSoft/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/xfiberex/WingetUSoft/actions/workflows/codeql.yml/badge.svg)](https://github.com/xfiberex/WingetUSoft/actions/workflows/codeql.yml)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Plataforma](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6)
 ![Licencia](https://img.shields.io/github/license/xfiberex/WingetUSoft?label=licencia&color=green)

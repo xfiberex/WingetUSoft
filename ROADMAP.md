@@ -140,12 +140,22 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
 - **Instalador framework-dependent** (no self-contained): descarga los runtimes que falten, verificado de
   punta a punta.
 - **Licencia MIT** y **sin donaciones** (a diferencia de FormatDiskPro, GPLv3 + PayPal).
-- **CI con GitHub Actions — descartado (2026-07-12; reafirmado 2026-08-20):** `release.ps1` ya corre
-  unitarios **y** UI tests antes de cada corte, y un runner hospedado **no puede** correr los UI tests
-  (necesitan escritorio interactivo); solo duplicaría lo ya cubierto, con menos cobertura. **Nada de
-  workflows, GitHub Actions ni runners hospedados: todo el testing profesional se hace en local.** La
-  auditoría del 2026-08-20 cuestionó el alcance de esta decisión y se reafirmó sin matices; el plan de
-  la Parte II la respeta y canaliza la automatización por scripts locales (T2-12).
+- **CI con GitHub Actions — reabierta y adoptada (2026-09-16), con alcance acotado.** Se descartó el
+  2026-07-12 y se reafirmó el 2026-08-20 porque un runner hospedado no puede correr los UI tests y
+  `release.ps1` ya cubría el corte. Con el repositorio público cambia la cuenta: los pull requests de
+  terceros y de Dependabot necesitan una señal que no dependa del equipo del mantenedor. Lo que hay:
+  - `.github/workflows/ci.yml`: el mismo `verify.ps1` sin `-Full` (build con `-warnaserror`, estilo,
+    unitarios y dependencias vulnerables) en cada push a `main` y en cada PR. No duplica lógica: si
+    cambia el script, cambia el workflow.
+  - `.github/workflows/codeql.yml`: CodeQL para C# (`security-and-quality`), en push, en PR y cada semana.
+  - `.github/dependabot.yml`: NuGet y Actions, semanal; ignora las subidas mayores de WindowsAppSDK
+    (T4-01 descartó la 2.x).
+  - Ajustes del repositorio: avisos y actualizaciones de seguridad de Dependabot, secret scanning con
+    protección de push, y reporte privado de vulnerabilidades, el canal que ya indicaba `SECURITY.md`.
+
+  **Lo que no cambia:** los UI tests siguen siendo solo locales (`verify.ps1 -Full`) y obligatorios antes
+  de cada release, y `release.ps1` sigue cortando y publicando desde el equipo del mantenedor. Un CI en
+  verde **no** da por verificada una tarea que toque la interfaz.
 - **Certificado de firma de código (OV/EV) — descartado (2026-07-12):** consecuencia asumida — SmartScreen
   dirá "editor desconocido", y las actualizaciones se verifican por **SHA-256**. El soporte de firma sigue en
   el pipeline por si algún día hay certificado.

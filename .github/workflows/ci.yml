@@ -1,0 +1,54 @@
+# Verificación en cada push a main y en cada pull request.
+#
+# Ejecuta el MISMO verify.ps1 que se lanza en local, sin -Full: compilación con advertencias como error,
+# estilo contra el .editorconfig, pruebas unitarias y dependencias vulnerables. Así «verificado» sigue
+# definido en un solo sitio y el workflow no puede divergir del script.
+#
+# Los UI tests (verify.ps1 -Full) NO corren aquí: conducen la app real y necesitan un escritorio interactivo
+# que un runner hospedado no tiene. Siguen siendo obligatorios en local antes de cada release (release.ps1).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Compilación, estilo y pruebas unitarias
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Caché de NuGet
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}\.nuget\packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # Windows PowerShell 5.1, el mismo intérprete para el que está escrito el script (ver su BOM).
+      # -SkipOutdated: el listado de paquetes desactualizados es informativo y de eso ya se ocupa Dependabot.
+      - name: verify.ps1
+        shell: powershell
+        run: .\verify.ps1 -SkipOutdated

@@ -1,7 +1,6 @@
 #!/bin/sh
-# Verificación antes de publicar (T2-12). Sustituye a lo que en otros proyectos haría CI: aquí no
-# hay GitHub Actions ni runners hospedados (decisión cerrada, ver ROADMAP.md), así que la última
-# oportunidad de detectar un test roto antes de que llegue a main es este hook.
+# Verificación antes de publicar (T2-12). El workflow de CI (.github/workflows/ci.yml) corre lo mismo
+# después del push; este hook lo adelanta para que un fallo no llegue a publicarse.
 #
 # Se instala una sola vez por clon:
 #     git config core.hooksPath .githooks

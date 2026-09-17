@@ -13,13 +13,10 @@
       5. Con -Full: además los UI tests de FlaUI, que conducen la app real, y un informe de
          cobertura en local (HTML navegable en coverage\report, ignorada por git).
 
-    POR QUÉ NO ES CI. Decisión cerrada del proyecto (ver ROADMAP.md, T2-12): nada de GitHub
-    Actions ni runners hospedados. La verificación baja al equipo de desarrollo, y con ella
-    entra en el flujo justo lo que un runner hospedado NO podría correr: los UI tests, que
-    necesitan una sesión de escritorio interactiva.
-
-    Lo usan el hook .githooks/pre-push (variante rápida) y release.ps1 (que lo llama en vez de
-    repetir sus pasos).
+    Lo usan el hook .githooks/pre-push (variante rápida), release.ps1 (que lo llama en vez de
+    repetir sus pasos) y el workflow de GitHub Actions .github/workflows/ci.yml, que lo ejecuta
+    sin -Full. Los UI tests quedan fuera del CI: necesitan una sesión de escritorio interactiva
+    que un runner hospedado no tiene (ver ROADMAP.md, «Decisiones cerradas»).
 
     NOTA sobre el formateo: se comprueban las categorías 'style' y 'analyzers', NO 'whitespace'.
     El repositorio alinea deliberadamente en columnas (constantes, campos de structs interop, el

@@ -45,12 +45,15 @@ Para activar el hook que lanza la verificación rápida antes de cada `push`:
 git config core.hooksPath .githooks
 ```
 
-### No hay CI, y es a propósito
+### Qué verifica el CI y qué no
 
-Nada de GitHub Actions ni runners hospedados: es una decisión cerrada del proyecto (ROADMAP, T2-12). Un
-runner hospedado no puede correr los UI tests, que son justo los que verifican la app real, así que la
-verificación baja al equipo de desarrollo y entra en el flujo por el hook de pre-push y por `release.ps1`.
-Si mandas un cambio, **la verificación la ejecutas tú**.
+Cada push a `main` y cada pull request pasan por GitHub Actions (`.github/workflows/ci.yml`), que ejecuta
+`verify.ps1` **sin** `-Full`: compilación sin advertencias, estilo, pruebas unitarias y dependencias
+vulnerables. CodeQL analiza además el C# en busca de problemas de seguridad.
+
+Lo que el CI **no** puede correr son los UI tests, que conducen la app real y necesitan un escritorio
+interactivo. Si tu cambio toca la interfaz, ejecuta `.erify.ps1 -Full` en tu equipo y dilo en el pull
+request: un CI en verde no basta para esos cambios.
 
 ## Convenciones que el repositorio comprueba
 

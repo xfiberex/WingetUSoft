@@ -1,0 +1,33 @@
+# Actualizaciones de dependencias. Los PR de Dependabot pasan por el workflow CI como cualquier otro, pero
+# un PR en verde NO basta para fusionar una subida de WindowsAppSDK o de H.NotifyIcon: esos cambian la
+# app que se ve, y solo los UI tests (verify.ps1 -Full, en local) la verifican.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Las pruebas se suben juntas: xunit, su runner y el SDK de test van de la mano.
+      pruebas:
+        patterns:
+          - "Microsoft.NET.Test.Sdk"
+          - "xunit*"
+          - "coverlet.*"
+          - "FlaUI.*"
+    ignore:
+      # Migración a Windows App SDK 2.x descartada tras el spike (ROADMAP T4-01, CONTEXT.md §4).
+      # Se siguen recibiendo los parches y menores de la 1.x.
+      - dependency-name: "Microsoft.WindowsAppSDK"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]

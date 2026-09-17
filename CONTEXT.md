@@ -231,10 +231,11 @@ Lo comparten el hook de pre-push y `release.ps1`.
   dice "editor desconocido" en cada instalación, y la verificación se apoya en el SHA-256 (detecta
   manipulación en tránsito, no un compromiso de la cuenta de GitHub). El pipeline ya lo soporta si algún
   día hay certificado (`build-installer.ps1 -CertThumbprint …`; el updater prefiere la firma sobre el hash).
-- **CI (GitHub Actions) — descartado**, y reafirmado al cerrar T2-12. La alternativa no fue «nada», sino
-  bajar la verificación al equipo de desarrollo: `verify.ps1` y el hook de pre-push corren en cada push lo
-  mismo que corre un release, **incluidos los UI tests** (con `-Full`), que son justamente lo que un runner
-  hospedado no puede ejecutar por necesitar escritorio interactivo.
+- **CI (GitHub Actions) — adoptado el 2026-09-16 con el repositorio ya público**, tras descartarse dos veces
+  (2026-07-12 y al cerrar T2-12). El workflow ejecuta el mismo `verify.ps1` sin `-Full`, así que la
+  definición de «verificado» sigue viviendo en un solo sitio. Lo acompañan CodeQL, Dependabot, secret
+  scanning y el reporte privado de vulnerabilidades. Los UI tests siguen siendo locales (`-Full`, hook de
+  pre-push y `release.ps1`): un runner hospedado no tiene el escritorio interactivo que necesitan.
 - **Notificación toast — descartada.** El aviso ya existe (sonido + parpadeo de la barra de tareas +
   progreso en el icono), y en una app unpackaged el toast exige registrar un servidor COM del
   `AppNotificationManager`: mucha fontanería para un beneficio marginal. **No quedan ideas abiertas.**
