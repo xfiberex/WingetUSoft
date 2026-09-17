@@ -221,8 +221,18 @@ public sealed partial class MainWindow : Window
     }
 
     // --- Atajos de teclado ---
-    // Declarados en MainWindow.xaml sobre el control de su acción (F-21). F5 y Esc no tienen manejador: sin
-    // Invoked, el acelerador ejecuta el Click de su botón, y no se dispara si el botón está deshabilitado.
+    // Declarados en MainWindow.xaml sobre el control de su acción (F-21). Esc no tiene manejador: sin Invoked,
+    // el acelerador ejecuta el Click de su botón, y no se dispara si el botón está deshabilitado.
+
+    /// <summary>
+    /// F5 repite la variante de consulta elegida, igual que el botón principal. Un <c>SplitButton</c> no es un
+    /// <c>ButtonBase</c>, así que su acelerador sí necesita manejador.
+    /// </summary>
+    private void RefreshAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        if (btnConsultar.IsEnabled) _ = LoadPackagesAsync(_lastIncludeUnknown);
+    }
 
     /// <summary>Ctrl+A marca todas las filas visibles; para desmarcar, la casilla de la cabecera.</summary>
     private void SelectAllAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -260,7 +270,6 @@ public sealed partial class MainWindow : Window
     {
         _actionsEnabled = enabled;
         btnConsultar.IsEnabled = enabled;
-        btnConsultarDesconocidas.IsEnabled = enabled;
         btnActualizarTodo.IsEnabled = enabled;
         // "Actualizar seleccionados" depende además de que haya algo marcado.
         UpdateSelectionSummary();
@@ -304,6 +313,7 @@ public sealed partial class MainWindow : Window
         // Deshabilitado sin nada marcado: antes se podía pulsar y la única respuesta era un diálogo
         // "no hay programas seleccionados".
         btnActualizarSeleccionados.IsEnabled = _actionsEnabled && checkedCount > 0;
+        UpdateAccentButton(checkedCount);
 
         // Las filas excluidas no cuentan: su casilla está deshabilitada y nunca se actualizan.
         var selectable = _packageViewModels.Where(v => v.IsSelectable).ToList();
@@ -498,6 +508,7 @@ public sealed partial class MainWindow : Window
     private async Task LoadPackagesAsync(bool includeUnknown)
     {
         _lastIncludeUnknown = includeUnknown;
+        UpdateCheckVariant();
         _cancelStopsCurrentProcess = true;
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
@@ -566,11 +577,51 @@ public sealed partial class MainWindow : Window
 
     // --- Button Event Handlers ---
 
-    private async void BtnConsultar_Click(object sender, RoutedEventArgs e) =>
+    /// <summary>
+    /// Mueve el acento a la acción principal del momento (F-23): con paquetes marcados, «Actualizar
+    /// seleccionados»; con resultados sin marcar, «Actualizar todo»; y sin resultados, ninguno.
+    /// </summary>
+    /// <remarks>
+    /// Hasta F-23 el acento vivía en «Consultar actualizaciones» para siempre, también con 26 actualizaciones
+    /// en pantalla, donde ya no es lo que el usuario viene a hacer. Ir sin acento en la pantalla inicial es a
+    /// propósito: quien empieza tiene la llamada a la acción en el panel de la tabla vacía.
+    /// </remarks>
+    private void UpdateAccentButton(int checkedCount)
+    {
+        bool hasResults = _packages.Count > 0;
+        SetAccent(btnActualizarSeleccionados, hasResults && checkedCount > 0);
+        SetAccent(btnActualizarTodo, hasResults && checkedCount == 0);
+    }
+
+    private static void SetAccent(Button button, bool accent)
+    {
+        // El estilo se cambia entero, y no solo el color: los estados de puntero y pulsado de la plantilla
+        // leen sus propios recursos, que un Setter suelto no alcanza (la lección de F-05).
+        var key = accent ? "AccentButtonStyle" : "DefaultButtonStyle";
+        var style = (Style)Application.Current.Resources[key];
+        if (!ReferenceEquals(button.Style, style)) button.Style = style;
+    }
+
+    /// <summary>El botón principal repite la variante elegida la última vez (la que rotula).</summary>
+    private async void BtnConsultar_Click(SplitButton sender, SplitButtonClickEventArgs args) =>
+        await LoadPackagesAsync(_lastIncludeUnknown);
+
+    private async void MenuConsultarNormal_Click(object sender, RoutedEventArgs e) =>
         await LoadPackagesAsync(includeUnknown: false);
 
-    private async void BtnConsultarDesconocidas_Click(object sender, RoutedEventArgs e) =>
+    private async void MenuConsultarDesconocidas_Click(object sender, RoutedEventArgs e) =>
         await LoadPackagesAsync(includeUnknown: true);
+
+    /// <summary>
+    /// El botón principal rotula la variante que ejecuta, y el desplegable marca cuál es. Sin esto, pulsar
+    /// «Consultar actualizaciones» podría lanzar la consulta con desconocidas de la vez anterior.
+    /// </summary>
+    private void UpdateCheckVariant()
+    {
+        btnConsultar.Content = _lastIncludeUnknown ? L.T("btn.checkUnknown") : L.T("btn.checkUpdates");
+        menuConsultarNormal.IsChecked = !_lastIncludeUnknown;
+        menuConsultarDesconocidas.IsChecked = _lastIncludeUnknown;
+    }
 
     private async void BtnActualizarSeleccionados_Click(object sender, RoutedEventArgs e) =>
         await UpdatePackagesAsync(GetCheckedPackages());

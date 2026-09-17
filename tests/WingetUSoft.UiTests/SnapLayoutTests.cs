@@ -29,7 +29,7 @@ public sealed class SnapLayoutTests(AppFixture fixture)
 {
     private static readonly string[] ActionButtonIds =
     [
-        "btnConsultar", "btnConsultarDesconocidas", "btnActualizarSeleccionados",
+        "btnConsultar", "btnActualizarSeleccionados",
         "btnActualizarTodo", "btnCancelar", "btnHerramientas", "btnAyuda"
     ];
 

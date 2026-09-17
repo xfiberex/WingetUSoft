@@ -13,7 +13,6 @@ public sealed class MainWindowTests(AppFixture fixture)
 
     [Theory]
     [InlineData("btnConsultar")]
-    [InlineData("btnConsultarDesconocidas")]
     [InlineData("btnActualizarSeleccionados")]
     [InlineData("btnActualizarTodo")]
     [InlineData("btnCancelar")]
@@ -24,6 +23,20 @@ public sealed class MainWindowTests(AppFixture fixture)
         var button = fixture.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId(automationId));
 
         Assert.NotNull(button);
+    }
+
+    /// <summary>
+    /// «Consultar» es una sola acción con su variante en el desplegable (F-23): el botón se puede pulsar y
+    /// desplegar. No se elige ninguna variante aquí, porque lanzaría una consulta real a winget.
+    /// </summary>
+    [Fact]
+    public void CheckForUpdates_IsASplitButton()
+    {
+        var button = fixture.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnConsultar"));
+
+        Assert.NotNull(button);
+        Assert.NotNull(button!.Patterns.ExpandCollapse.PatternOrDefault);
+        Assert.Null(fixture.MainWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnConsultarDesconocidas")));
     }
 
     [Fact]

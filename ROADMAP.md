@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 18 de 26.** ✅ F-01 a F-16, F-21 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-17): 19 de 26.** ✅ F-01 a F-16, F-21, F-23 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -2062,7 +2062,7 @@ explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-23] «Consultar» como `SplitButton` y un solo acento por ventana**
+- [x] **[F-23] «Consultar» como `SplitButton` y un solo acento por ventana**
   - **Área:** UX
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:136-151`
   - **Qué hacer:** «Consultar actualizaciones» y «Consultar con desconocidas» son dos botones hermanos para
@@ -2070,6 +2070,29 @@ explícita.
     elección) y mover el acento a «Actualizar seleccionados (N)» / «Actualizar todo» cuando hay resultados.
   - **Criterio de aceptación:** como mucho un botón con acento visible por ventana; `MainWindowTests`
     adaptados si cambia algún `AutomationId`.
+  - **Al implementarlo:**
+    - `btnConsultar` pasa a `SplitButton` y `btnConsultarDesconocidas` desaparece. La variante va en dos
+      `RadioMenuFlyoutItem`: elegir una lanza esa consulta, y el botón principal queda rotulado con ella y la
+      repite (también con F5). `UpdateCheckVariant()` mantiene rótulo y marca en un solo sitio.
+    - El acento lo decide `UpdateAccentButton()`, dentro de `UpdateSelectionSummary()`: con paquetes marcados
+      va en «Actualizar seleccionados (N)», con resultados sin marcar en «Actualizar todo», y sin resultados
+      en ninguno. Se cambia el `Style` entero, porque los estados de puntero y pulsado de la plantilla leen
+      sus propios recursos (la lección de F-05).
+    - La pantalla inicial se queda sin acento a propósito: la llamada a la acción del arranque es el panel de
+      la tabla vacía, que F-18 convierte en accionable.
+    - El acelerador F5 ahora necesita manejador: un `SplitButton` no es un `ButtonBase` y no tiene acción por
+      defecto que el acelerador pueda ejecutar.
+  - **Verificado (2026-09-17):** conduciendo la app, midiendo la saturación del color de cada botón:
+    - Al arrancar, Consultar y Actualizar todo salen grises (`#383838`).
+    - Con 25 resultados, el acento está en «Actualizar todo» (`#F46762`) y «Actualizar seleccionados» sigue
+      gris; al marcar una fila, el acento pasa a «Actualizar seleccionados (1)» y «Actualizar todo» vuelve a
+      gris. Nunca hay dos acentos a la vez.
+    - El desplegable ofrece las dos variantes; al elegir «Consultar con desconocidas», el botón principal pasa
+      a rotularse así y lo mantiene tras la consulta.
+    - `settings.json` queda idéntico.
+    - Tests: `QuickActionsTests` (3 estructurales, 2 fallan al revertir) y `MainWindowTests.CheckForUpdates_IsASplitButton`.
+  - **Pendiente:** las capturas del README siguen mostrando los dos botones; se regeneran en el próximo corte
+    de versión, junto con los cambios de cabecera de F-17.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -2147,10 +2170,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 1 | 6 | 14 % |
+| F·3 — Experiencia de uso | 7 | 2 | 5 | 29 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **18** | **8** | **69 %** |
+| **Total** | **26** | **19** | **7** | **73 %** |
 
 ### Registro de tareas completadas
 
@@ -2173,7 +2196,8 @@ explícita.
 | 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | 1.9.0 |
 | 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | 1.9.0 |
 | 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
-| 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | — | — |
+| 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | — |
+| 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

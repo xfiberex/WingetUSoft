@@ -91,7 +91,7 @@ los toca: preferencias, historial y exclusiones siguen ahí después de volver a
 - **Importar** — reinstala esa lista en otro equipo (o tras formatear). Los paquetes que ya tengas se **actualizan** si hay versión más reciente; los que ya no estén en el catálogo se saltan sin abortar el resto.
 
 ### Actualizaciones
-- **Consulta de actualizaciones** — lista todos los paquetes con versión disponible, con soporte para versiones desconocidas (`<`).
+- **Consulta de actualizaciones** — lista todos los paquetes con versión disponible. Un solo botón «Consultar», con la variante que incluye las **versiones desconocidas** (`<`) en su desplegable; el botón recuerda y rotula la última que elegiste.
 - **Actualización selectiva** — marca los paquetes con su casilla (o todos de golpe con la casilla de la cabecera / `Ctrl+A`) y actualízalos. El botón muestra cuántos hay marcados y se deshabilita si no hay ninguno. La selección **sobrevive a buscar, ordenar y filtrar**.
 - **Modo silencioso / interactivo** — compatible con las flags `--silent` e `--interactive` de winget.
 - **Elevación de permisos** — ejecuta lotes elevados mediante un worker interno con comunicación por named pipe, sin scripts temporales en disco. Incluye reporte de progreso de descarga en tiempo real durante la instalación elevada.

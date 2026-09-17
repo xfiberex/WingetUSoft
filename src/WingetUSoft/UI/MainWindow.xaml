@@ -125,19 +125,31 @@
                              AutomationProperties.AcceleratorKey no lo rellena WinUI a partir del acelerador: sin él,
                              el Narrador no anunciaría la tecla. -->
                         <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
-                            <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
-                                    Content="Consultar actualizaciones"
-                                    Click="BtnConsultar_Click"
-                                    AutomationProperties.AcceleratorKey="F5"
-                                    MinWidth="180" Height="36">
-                                <Button.KeyboardAccelerators>
-                                    <KeyboardAccelerator Key="F5" />
-                                </Button.KeyboardAccelerators>
-                            </Button>
-                            <Button x:Name="btnConsultarDesconocidas"
-                                    Content="Consultar con desconocidas"
-                                    Click="BtnConsultarDesconocidas_Click"
-                                    MinWidth="180" Height="36" />
+                            <!-- Una sola acción, «Consultar», con su variante en el desplegable (F-23): eran dos botones
+                                 hermanos para lo mismo, y el de al lado ganaba el mismo peso visual. El botón principal
+                                 repite la última variante elegida, que es la que rotula. -->
+                            <SplitButton x:Name="btnConsultar"
+                                         Content="Consultar actualizaciones"
+                                         Click="BtnConsultar_Click"
+                                         AutomationProperties.AcceleratorKey="F5"
+                                         MinWidth="180" Height="36">
+                                <SplitButton.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="F5" Invoked="RefreshAccelerator_Invoked" />
+                                </SplitButton.KeyboardAccelerators>
+                                <SplitButton.Flyout>
+                                    <MenuFlyout Placement="Bottom">
+                                        <RadioMenuFlyoutItem x:Name="menuConsultarNormal"
+                                                             Text="Consultar actualizaciones"
+                                                             GroupName="ModoConsulta"
+                                                             IsChecked="True"
+                                                             Click="MenuConsultarNormal_Click" />
+                                        <RadioMenuFlyoutItem x:Name="menuConsultarDesconocidas"
+                                                             Text="Consultar con desconocidas"
+                                                             GroupName="ModoConsulta"
+                                                             Click="MenuConsultarDesconocidas_Click" />
+                                    </MenuFlyout>
+                                </SplitButton.Flyout>
+                            </SplitButton>
                             <Button x:Name="btnActualizarSeleccionados"
                                     Content="Actualizar seleccionados"
                                     Click="BtnActualizarSeleccionados_Click"

@@ -50,8 +50,9 @@ public sealed partial class MainWindow
         txtSubtitulo.Text = L.T("header.subtitle");
         btnInstalarUpdate.Content = L.T("btn.installNow");
         txtAccionesTitle.Text = L.T("actions.title");
-        btnConsultar.Content = L.T("btn.checkUpdates");
-        btnConsultarDesconocidas.Content = L.T("btn.checkUnknown");
+        menuConsultarNormal.Text = L.T("btn.checkUpdates");
+        menuConsultarDesconocidas.Text = L.T("btn.checkUnknown");
+        UpdateCheckVariant();   // rotula el botón principal con la variante activa
         btnActualizarTodo.Content = L.T("btn.updateAll");
         // btnActualizarSeleccionados lleva el contador: lo rotula UpdateSelectionSummary(), al final.
         btnCancelar.Content = L.T("btn.cancel");
