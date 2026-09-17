@@ -3,6 +3,7 @@
     x:Class="WingetUSoft.SettingsWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WingetUSoft"
     Title="Configuración">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
@@ -23,7 +24,7 @@
 
         <!-- Header Card -->
         <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
-                Margin="20,4,20,12">
+                Margin="20,4,20,8">
             <StackPanel Spacing="4">
                 <TextBlock x:Name="txtHeaderTitle" Text="Configuración"
                            Style="{StaticResource TitleTextBlockStyle}" />
@@ -33,122 +34,110 @@
             </StackPanel>
         </Border>
 
-        <!-- Settings Content -->
-        <ScrollViewer Grid.Row="2" Margin="20,0,20,16">
-            <StackPanel Spacing="16">
+        <!-- Todas las opciones siguen el mismo patrón (F-16): una SettingsCard por opción, con título y descripción a la
+             izquierda y el control a la derecha, agrupadas bajo un título. Hasta F-16 convivían radios con subtítulo,
+             ComboBox con Header, CheckBox e interruptores con un TextBlock suelto. -->
+        <ScrollViewer Grid.Row="2" Margin="20,0,20,16" Padding="0,0,12,0">
+            <StackPanel Spacing="4">
 
                 <!-- Apariencia: tema e idioma. Vivían en el menú "Opciones" de la ventana principal
                      hasta v1.5.0, partiendo las preferencias entre dos sitios (Tier C #5). -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtAppearanceTitle" Text="Apariencia"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <StackPanel Spacing="4">
-                            <TextBlock x:Name="txtThemeLabel" Text="Tema"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <RadioButtons x:Name="rbTema" MaxColumns="3">
-                                <RadioButton x:Name="rbTemaSistema" Content="Sistema (automático)" />
-                                <RadioButton x:Name="rbTemaClaro" Content="Claro" />
-                                <RadioButton x:Name="rbTemaOscuro" Content="Oscuro" />
-                            </RadioButtons>
-                        </StackPanel>
-                        <ComboBox x:Name="cmbIdioma" Width="280" Header="Idioma">
-                            <ComboBoxItem x:Name="itemLangEs" Content="Español" />
-                            <ComboBoxItem x:Name="itemLangEn" Content="Inglés" />
-                            <ComboBoxItem x:Name="itemLangPt" Content="Portugués" />
-                            <ComboBoxItem x:Name="itemLangFr" Content="Francés" />
-                            <ComboBoxItem x:Name="itemLangIt" Content="Italiano" />
-                        </ComboBox>
-                    </StackPanel>
-                </Border>
+                <TextBlock x:Name="txtAppearanceTitle" Text="Apariencia" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <!-- Tema en un ComboBox, como en la Configuración de Windows: los tres radios quedaban desigualmente
+                     espaciados y partían la fila a anchos pequeños. Mismo orden que ThemeMode (0/1/2). -->
+                <local:SettingsCard x:Name="cardTheme" Header="Tema" Description="Claro, oscuro o el mismo que Windows.">
+                    <ComboBox x:Name="cmbTema" MinWidth="200">
+                        <ComboBoxItem x:Name="itemThemeSystem" Content="Sistema (automático)" />
+                        <ComboBoxItem x:Name="itemThemeLight" Content="Claro" />
+                        <ComboBoxItem x:Name="itemThemeDark" Content="Oscuro" />
+                    </ComboBox>
+                </local:SettingsCard>
+                <local:SettingsCard x:Name="cardLanguage" Header="Idioma" Description="Idioma de toda la interfaz.">
+                    <ComboBox x:Name="cmbIdioma" MinWidth="200">
+                        <ComboBoxItem x:Name="itemLangEs" Content="Español" />
+                        <ComboBoxItem x:Name="itemLangEn" Content="Inglés" />
+                        <ComboBoxItem x:Name="itemLangPt" Content="Portugués" />
+                        <ComboBoxItem x:Name="itemLangFr" Content="Francés" />
+                        <ComboBoxItem x:Name="itemLangIt" Content="Italiano" />
+                    </ComboBox>
+                </local:SettingsCard>
 
                 <!-- Actualizaciones: cómo se ejecutan (modo, permisos) y cada cuánto se consultan -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtUpdatesTitle" Text="Actualizaciones"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <StackPanel Spacing="4">
-                            <TextBlock x:Name="txtUpdateModeLabel" Text="Modo de actualización"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <RadioButtons x:Name="rbModo" MaxColumns="2">
-                                <RadioButton x:Name="rbModoSilencioso" Content="Silenciosa" />
-                                <RadioButton x:Name="rbModoInteractivo" Content="Interactiva" />
-                            </RadioButtons>
-                        </StackPanel>
-                        <CheckBox x:Name="chkAdministrador" Content="Ejecutar actualizaciones como administrador" />
-                        <ComboBox x:Name="cmbIntervalo" Width="280"
-                                  Header="Intervalo de consulta automática">
-                            <ComboBoxItem x:Name="itemIntervalOff" Content="Desactivada" />
-                            <ComboBoxItem x:Name="itemInterval30" Content="Cada 30 minutos" />
-                            <ComboBoxItem x:Name="itemInterval60" Content="Cada 60 minutos" />
-                            <ComboBoxItem x:Name="itemInterval120" Content="Cada 120 minutos" />
-                        </ComboBox>
-                    </StackPanel>
-                </Border>
+                <TextBlock x:Name="txtUpdatesTitle" Text="Actualizaciones" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <local:SettingsCard x:Name="cardMode" Header="Modo de actualización"
+                                    Description="Silenciosa: los instaladores se ejecutan sin mostrar sus ventanas. Interactiva: cada instalador muestra su propio asistente.">
+                    <ComboBox x:Name="cmbModo" MinWidth="200">
+                        <ComboBoxItem x:Name="itemModeSilent" Content="Silenciosa" />
+                        <ComboBoxItem x:Name="itemModeInteractive" Content="Interactiva" />
+                    </ComboBox>
+                </local:SettingsCard>
+                <local:SettingsCard x:Name="cardAdmin" Header="Ejecutar actualizaciones como administrador"
+                                    Description="Todo el lote va en un único proceso elevado: Windows pide permiso una vez por lote. Cancelar no interrumpe el programa que se esté actualizando.">
+                    <ToggleSwitch x:Name="tsAdministrador" MinWidth="0" />
+                </local:SettingsCard>
+                <local:SettingsCard x:Name="cardInterval" Header="Intervalo de consulta automática"
+                                    Description="Consulta en segundo plano mientras la aplicación está abierta, también minimizada en la bandeja.">
+                    <ComboBox x:Name="cmbIntervalo" MinWidth="200">
+                        <ComboBoxItem x:Name="itemIntervalOff" Content="Desactivada" />
+                        <ComboBoxItem x:Name="itemInterval30" Content="Cada 30 minutos" />
+                        <ComboBoxItem x:Name="itemInterval60" Content="Cada 60 minutos" />
+                        <ComboBoxItem x:Name="itemInterval120" Content="Cada 120 minutos" />
+                    </ComboBox>
+                </local:SettingsCard>
 
                 <!-- Registro de actividad -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtLogTitle" Text="Registro de actividad"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <CheckBox x:Name="chkLogArchivo" Content="Guardar registro de actividad en archivo" />
-                        <StackPanel Spacing="4">
-                            <TextBlock x:Name="txtLogDirLabel" Text="Directorio de registros:"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBox x:Name="txtLogPath" IsReadOnly="True" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
+                <TextBlock x:Name="txtLogTitle" Text="Registro de actividad" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <local:SettingsCard x:Name="cardLogToFile" Header="Guardar registro de actividad en archivo"
+                                    Description="Un archivo por día. Los de más de 30 días se borran al abrir la aplicación.">
+                    <ToggleSwitch x:Name="tsLogArchivo" MinWidth="0" />
+                </local:SettingsCard>
+                <!-- La ruta va en la descripción (se pone desde código) y el botón abre la carpeta: hasta F-16 era un
+                     TextBox de solo lectura que parecía editable y no ofrecía llegar a los archivos. -->
+                <local:SettingsCard x:Name="cardLogFolder" Header="Carpeta de registros">
+                    <Button x:Name="btnAbrirCarpeta" Content="Abrir carpeta" Click="BtnAbrirCarpeta_Click" />
+                </local:SettingsCard>
 
                 <!-- Notifications & Tray -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtNotifTrayTitle" Text="Notificaciones y bandeja"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="txtShowNotifLabel" Text="Mostrar notificaciones al completar actualizaciones"
-                                       VerticalAlignment="Center"/>
-                            <ToggleSwitch x:Name="tsShowNotifications" Grid.Column="1" VerticalAlignment="Center"
-                                          AutomationProperties.LabeledBy="{Binding ElementName=txtShowNotifLabel}"/>
-                        </Grid>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="txtMinimizeTrayLabel" Text="Minimizar a la bandeja del sistema al cerrar"
-                                       VerticalAlignment="Center"/>
-                            <ToggleSwitch x:Name="tsMinimizeToTray" Grid.Column="1" VerticalAlignment="Center"
-                                          AutomationProperties.LabeledBy="{Binding ElementName=txtMinimizeTrayLabel}"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                <TextBlock x:Name="txtNotifTrayTitle" Text="Notificaciones y bandeja" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <local:SettingsCard x:Name="cardNotifications" Header="Mostrar notificaciones al completar actualizaciones"
+                                    Description="Sonido y parpadeo en la barra de tareas cuando termina una operación de más de 10 segundos y no estás mirando la ventana.">
+                    <ToggleSwitch x:Name="tsShowNotifications" MinWidth="0" />
+                </local:SettingsCard>
+                <local:SettingsCard x:Name="cardTray" Header="Minimizar a la bandeja del sistema al cerrar"
+                                    Description="Al cerrar la ventana, la aplicación sigue en el área de notificación. Para salir del todo, usa «Salir» en el menú del icono.">
+                    <ToggleSwitch x:Name="tsMinimizeToTray" MinWidth="0" />
+                </local:SettingsCard>
 
                 <!-- Excluded packages -->
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="txtExcludedTitle" Text="Paquetes excluidos"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}" />
-                        <TextBlock x:Name="txtExcludedSubtitle" Text="Estos paquetes no se incluirán en las actualizaciones."
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <ListView x:Name="lstExcluidos"
-                                  MaxHeight="200"
-                                  SelectionMode="Single" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="btnQuitar" Content="Quitar seleccionado"
-                                    Click="BtnQuitar_Click" MinWidth="160" />
-                            <Button x:Name="btnLimpiar" Content="Limpiar lista"
-                                    Click="BtnLimpiar_Click" MinWidth="120" />
-                        </StackPanel>
-                    </StackPanel>
+                <TextBlock x:Name="txtExcludedTitle" Text="Paquetes excluidos" Style="{StaticResource SettingsGroupTitleStyle}" />
+                <!-- La descripción cuenta los paquetes o, con la lista vacía, explica cómo excluir uno: hasta F-16 una lista
+                     vacía era un hueco en blanco con dos botones que no hacían nada. -->
+                <local:SettingsCard x:Name="cardExcluded" Header="Estos paquetes no se incluirán en las actualizaciones.">
+                    <Button x:Name="btnLimpiar" Content="Limpiar lista" Click="BtnLimpiar_Click" />
+                </local:SettingsCard>
+                <!-- Un botón «Quitar» por fila en vez de «Quitar seleccionado», que no hacía nada sin selección. -->
+                <Border x:Name="panelExcluidos" Style="{StaticResource CompactCardStyle}">
+                    <ListView x:Name="lstExcluidos"
+                              MaxHeight="240"
+                              SelectionMode="None"
+                              ItemContainerStyle="{StaticResource TableRowContainerStyle}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:ExcludedPackageViewModel">
+                                <Grid Height="40" Padding="4,0" AutomationProperties.Name="{x:Bind Id}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{x:Bind Id}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Button Grid.Column="1"
+                                            Content="{x:Bind RemoveText}"
+                                            AutomationProperties.Name="{x:Bind RemoveLabel}"
+                                            Tag="{x:Bind Id}"
+                                            Click="BtnQuitarFila_Click" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                 </Border>
             </StackPanel>
         </ScrollViewer>

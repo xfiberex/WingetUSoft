@@ -1,15 +1,26 @@
 using System.Collections.ObjectModel;
-using Microsoft.UI.Windowing;
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using WinRT.Interop;
 
 namespace WingetUSoft;
+
+/// <summary>Una fila de la lista de paquetes excluidos de Configuración.</summary>
+/// <remarks>
+/// El botón de cada fila se anuncia con el paquete («Quitar Git.Git de los excluidos»): diez botones que solo dijeran
+/// «Quitar» no permitirían saber cuál es cuál con un lector de pantalla.
+/// </remarks>
+public sealed class ExcludedPackageViewModel(string id)
+{
+    public string Id { get; } = id;
+    public string RemoveText => L.T("settings.removeExcluded");
+    public string RemoveLabel => L.T("settings.removeExcludedAccessible", Id);
+}
 
 public sealed partial class SettingsWindow : Window
 {
     private readonly AppSettings _settings;
-    private readonly ObservableCollection<string> _excludedIds = [];
+    private readonly ObservableCollection<ExcludedPackageViewModel> _excluded = [];
 
     public bool SavedChanges { get; private set; }
 
@@ -21,6 +32,8 @@ public sealed partial class SettingsWindow : Window
         WindowChrome.Apply(
             this, AppTitleBar, settings.ThemeMode,
             designWidthDip: 760, designHeightDip: 560, minWidthDip: 640, minHeightDip: 480);
+
+        _excluded.CollectionChanged += (_, _) => UpdateExcludedState();
 
         ApplyLocalizedStrings();
         LoadFromSettings();
@@ -34,11 +47,13 @@ public sealed partial class SettingsWindow : Window
         txtHeaderSubtitle.Text = L.T("settings.subtitle");
 
         txtAppearanceTitle.Text = L.T("settings.appearanceTitle");
-        txtThemeLabel.Text = L.T("pref.theme");
-        rbTemaSistema.Content = L.T("pref.themeSystem");
-        rbTemaClaro.Content = L.T("pref.themeLight");
-        rbTemaOscuro.Content = L.T("pref.themeDark");
-        cmbIdioma.Header = L.T("pref.lang");
+        cardTheme.Header = L.T("pref.theme");
+        cardTheme.Description = L.T("settings.themeDesc");
+        itemThemeSystem.Content = L.T("pref.themeSystem");
+        itemThemeLight.Content = L.T("pref.themeLight");
+        itemThemeDark.Content = L.T("pref.themeDark");
+        cardLanguage.Header = L.T("pref.lang");
+        cardLanguage.Description = L.T("settings.langDesc");
         itemLangEs.Content = L.T("pref.lang.es");
         itemLangEn.Content = L.T("pref.lang.en");
         itemLangPt.Content = L.T("pref.lang.pt");
@@ -46,26 +61,40 @@ public sealed partial class SettingsWindow : Window
         itemLangIt.Content = L.T("pref.lang.it");
 
         txtUpdatesTitle.Text = L.T("settings.updatesTitle");
-        txtUpdateModeLabel.Text = L.T("pref.updateMode");
-        rbModoSilencioso.Content = L.T("pref.silent");
-        rbModoInteractivo.Content = L.T("pref.interactive");
-        chkAdministrador.Content = L.T("settings.runAsAdmin");
-        cmbIntervalo.Header = L.T("settings.intervalHeader");
+        cardMode.Header = L.T("pref.updateMode");
+        cardMode.Description = L.T("settings.modeDesc");
+        itemModeSilent.Content = L.T("pref.silent");
+        itemModeInteractive.Content = L.T("pref.interactive");
+        cardAdmin.Header = L.T("settings.runAsAdmin");
+        cardAdmin.Description = L.T("settings.adminDesc");
+        cardInterval.Header = L.T("settings.intervalHeader");
+        cardInterval.Description = L.T("settings.intervalDesc");
         itemIntervalOff.Content = L.T("settings.intervalOff");
         itemInterval30.Content = L.T("settings.interval30");
         itemInterval60.Content = L.T("settings.interval60");
         itemInterval120.Content = L.T("settings.interval120");
 
         txtLogTitle.Text = L.T("settings.logTitle");
-        chkLogArchivo.Content = L.T("settings.logToFile");
-        txtLogDirLabel.Text = L.T("settings.logDirLabel");
+        cardLogToFile.Header = L.T("settings.logToFile");
+        cardLogToFile.Description = L.T("settings.logToFileDesc", AppSettings.LogRetentionDays);
+        cardLogFolder.Header = L.T("settings.logFolder");
+        cardLogFolder.Description = AppSettings.LogDirectory;
+        btnAbrirCarpeta.Content = L.T("settings.openFolder");
+
         txtNotifTrayTitle.Text = L.T("settings.notifTrayTitle");
-        txtShowNotifLabel.Text = L.T("settings.showNotifications");
-        txtMinimizeTrayLabel.Text = L.T("settings.minimizeToTray");
+        cardNotifications.Header = L.T("settings.showNotifications");
+        cardNotifications.Description = L.T("settings.notificationsDesc");
+        cardTray.Header = L.T("settings.minimizeToTray");
+        cardTray.Description = L.T("settings.trayDesc");
+
         txtExcludedTitle.Text = L.T("settings.excludedTitle");
-        txtExcludedSubtitle.Text = L.T("settings.excludedSubtitle");
-        btnQuitar.Content = L.T("btn.removeSelected");
+        cardExcluded.Header = L.T("settings.excludedSubtitle");
         btnLimpiar.Content = L.T("btn.clearList");
+        foreach (var toggle in new[] { tsAdministrador, tsLogArchivo, tsShowNotifications, tsMinimizeToTray })
+        {
+            toggle.OnContent = L.T("toggle.on");
+            toggle.OffContent = L.T("toggle.off");
+        }
         btnGuardar.Content = L.T("btn.save");
         btnCancelar.Content = L.T("btn.cancel");
     }
@@ -93,10 +122,10 @@ public sealed partial class SettingsWindow : Window
 
     private void LoadFromSettings()
     {
-        // ThemeMode: 0 = sistema, 1 = claro, 2 = oscuro -- el mismo orden que los RadioButton.
-        rbTema.SelectedIndex = _settings.ThemeMode is 1 or 2 ? _settings.ThemeMode : 0;
+        // ThemeMode: 0 = sistema, 1 = claro, 2 = oscuro -- el mismo orden que los elementos del ComboBox.
+        cmbTema.SelectedIndex = _settings.ThemeMode is 1 or 2 ? _settings.ThemeMode : 0;
         cmbIdioma.SelectedIndex = IndexFromLang(L.Current);
-        rbModo.SelectedIndex = _settings.SilentMode ? 0 : 1;
+        cmbModo.SelectedIndex = _settings.SilentMode ? 0 : 1;
 
         cmbIntervalo.SelectedIndex = _settings.AutoCheckIntervalMinutes switch
         {
@@ -105,32 +134,60 @@ public sealed partial class SettingsWindow : Window
             120 => 3,
             _ => 0
         };
-        chkLogArchivo.IsChecked = _settings.LogToFile;
-        chkAdministrador.IsChecked = _settings.RunUpdatesAsAdministrator;
+        tsLogArchivo.IsOn = _settings.LogToFile;
+        tsAdministrador.IsOn = _settings.RunUpdatesAsAdministrator;
         tsShowNotifications.IsOn = _settings.ShowNotifications;
         tsMinimizeToTray.IsOn = _settings.MinimizeToTray;
-        txtLogPath.Text = AppSettings.LogDirectory;
 
-        _excludedIds.Clear();
+        _excluded.Clear();
         foreach (var id in _settings.ExcludedIds)
-            _excludedIds.Add(id);
+            _excluded.Add(new ExcludedPackageViewModel(id));
 
-        lstExcluidos.ItemsSource = _excludedIds;
+        lstExcluidos.ItemsSource = _excluded;
+        UpdateExcludedState();
     }
 
-    private void BtnQuitar_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Con paquetes, la fila cuenta cuántos hay; sin ninguno, explica cómo excluir uno y la lista desaparece en
+    /// lugar de quedar como un hueco en blanco.
+    /// </summary>
+    private void UpdateExcludedState()
     {
-        if (lstExcluidos.SelectedItem is string id)
-            _excludedIds.Remove(id);
+        bool any = _excluded.Count > 0;
+        cardExcluded.Description = any
+            ? L.T("settings.excludedCount", _excluded.Count)
+            : L.T("settings.excludedEmpty");
+        panelExcluidos.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        btnLimpiar.IsEnabled = any;
+    }
+
+    private void BtnQuitarFila_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string id } && _excluded.FirstOrDefault(x => x.Id == id) is { } row)
+            _excluded.Remove(row);
     }
 
     private void BtnLimpiar_Click(object sender, RoutedEventArgs e) =>
-        _excludedIds.Clear();
+        _excluded.Clear();
+
+    /// <summary>Abre la carpeta de registros en el Explorador, creándola si todavía no se ha escrito ninguno.</summary>
+    private void BtnAbrirCarpeta_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppSettings.LogDirectory);
+            Process.Start(new ProcessStartInfo(AppSettings.LogDirectory) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        {
+            _ = ShowErrorAsync(L.T("settings.openFolderError", ex.Message));
+        }
+    }
 
     private async void BtnGuardar_Click(object sender, RoutedEventArgs e)
     {
-        _settings.ThemeMode = rbTema.SelectedIndex is 1 or 2 ? rbTema.SelectedIndex : 0;
-        _settings.SilentMode = rbModo.SelectedIndex != 1;
+        _settings.ThemeMode = cmbTema.SelectedIndex is 1 or 2 ? cmbTema.SelectedIndex : 0;
+        _settings.SilentMode = cmbModo.SelectedIndex != 1;
 
         AppLang lang = LangFromIndex(cmbIdioma.SelectedIndex);
         _settings.Language = L.ToCode(lang);
@@ -142,17 +199,20 @@ public sealed partial class SettingsWindow : Window
             3 => 120,
             _ => 0
         };
-        _settings.LogToFile = chkLogArchivo.IsChecked == true;
-        _settings.RunUpdatesAsAdministrator = chkAdministrador.IsChecked == true;
+        _settings.LogToFile = tsLogArchivo.IsOn;
+        _settings.RunUpdatesAsAdministrator = tsAdministrador.IsOn;
         _settings.ShowNotifications = tsShowNotifications.IsOn;
         _settings.MinimizeToTray = tsMinimizeToTray.IsOn;
-        _settings.ExcludedIds = [.. _excludedIds];
+        _settings.ExcludedIds = [.. _excluded.Select(x => x.Id)];
 
         if (!_settings.Save())
         {
             // La ventana NO se cierra: cerrarla daría por buenos unos cambios que no llegaron al
             // disco y que se perderían al reiniciar. El usuario decide si reintenta o cancela.
-            await ShowSaveErrorAsync();
+            string detail = _settings.LastSaveError is null
+                ? L.T("msg.saveSettingsError")
+                : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError.Text}";
+            await ShowErrorAsync(detail);
             return;
         }
 
@@ -164,12 +224,8 @@ public sealed partial class SettingsWindow : Window
         Close();
     }
 
-    private Task ShowSaveErrorAsync()
+    private Task ShowErrorAsync(string detail)
     {
-        string detail = _settings.LastSaveError is null
-            ? L.T("msg.saveSettingsError")
-            : $"{L.T("msg.saveSettingsError")}\n\n{_settings.LastSaveError.Text}";
-
         var dialog = WindowDialogHelper.Prepare(new ContentDialog
         {
             Title = L.T("error.configTitle"),

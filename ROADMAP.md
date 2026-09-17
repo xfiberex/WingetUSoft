@@ -27,7 +27,7 @@
 | **C** | Auditoría de UI/UX (flujo, datos, color, accesibilidad) | ✅ Completado | 1.5.0 / 1.6.0 |
 | **D** | Cara pública (licencia in-app, README, capturas) | ✅ Completado | 1.7.0 |
 | **E** | Gestión completa de software ⚠️ *cambio de alcance* | ✅ Completado | 1.8.0 |
-| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (16 de 26) | — |
+| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (17 de 26) | — |
 
 El único tier abierto es el **F**, con sus tareas en la Parte III. Las decisiones ya tomadas (y lo que se
 descartó a propósito) están al final de la Parte I.
@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 16 de 26.** ✅ F-01 a F-15 y F-25.
+**Progreso (2026-09-17): 17 de 26.** ✅ F-01 a F-16 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -1901,7 +1901,7 @@ explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-16] Configuración con un único patrón de fila**
+- [x] **[F-16] Configuración con un único patrón de fila**
   - **Área:** Fluent / UX
   - **Ubicación:** `src/WingetUSoft/UI/SettingsWindow.xaml:47-177`
   - **Qué hacer:** la página mezcla cuatro patrones de etiqueta (radios con subtítulo, `ComboBox` con
@@ -1915,6 +1915,37 @@ explícita.
     `AccessibilityTests` en verde (los nombres siguen coincidiendo con la etiqueta visible en los 5 idiomas).
   - **Evidencia (2026-09-14):** cuatro patrones distintos en una sola página; los tres radios de tema
     quedan desigualmente espaciados (`docs/screenshots/settings-light.png`).
+  - **Al implementarlo:**
+    - `UI/SettingsCard.cs`, un `ContentControl` con `Header` y `Description` y la plantilla en `Styles.xaml`.
+      Cada opción es su propia tarjeta bajo un título de grupo (`SettingsGroupTitleStyle`), como en la
+      Configuración de Windows.
+    - Tema y modo pasan de radios a `ComboBox`. Administrador y registro pasan de `CheckBox` a
+      interruptor.
+    - Cada opción lleva una descripción de sus consecuencias, sacada del código y no supuesta: `--silent`;
+      un único proceso elevado por lote, en el que Cancelar no detiene el programa en curso; aviso solo en
+      operaciones de 10 s o más con la ventana en segundo plano; el temporizador sigue en la bandeja;
+      30 días de registros.
+    - La ruta de registros va en la descripción, con un botón «Abrir carpeta» que la crea si no existe.
+    - La lista de excluidos tiene un «Quitar» por fila, que se anuncia con el paquete. La descripción de
+      la fila cuenta los paquetes o, sin ninguno, explica cómo excluir uno (Supr en la ventana
+      principal); la lista se oculta y «Limpiar lista» se deshabilita.
+    - 17 claves nuevas en los 5 idiomas; salen `settings.logDirLabel` y `btn.removeSelected`.
+  - **Defectos encontrados en la prueba en la app:**
+    - La primera versión nombraba también los botones desde el título de la fila, y «Limpiar lista» se
+      anunciaba «Estos paquetes no se incluirán en las actualizaciones.». `SettingsCard` ya no aplica
+      `LabeledBy` a un botón, y hay un UI test que lo fija.
+    - Los interruptores decían «Activado / Desactivado» con la app en inglés: WinUI toma ese texto del
+      idioma de Windows. Pasaba ya en 1.8.9. Ahora sale de `toggle.on` / `toggle.off`.
+  - **Verificado (2026-09-17):** capturas en oscuro (español, 13 excluidos) y en claro (inglés, lista
+    vacía), arriba y abajo. «Quitar» deja 12 filas y se anuncia «Quitar EclipseAdoptium.Temurin.21.JDK de
+    los excluidos». «Abrir carpeta» abre el Explorador en `logs`, y los interruptores muestran «On / Off»
+    en inglés.
+    - `AccessibilityTests.SettingsRows_NameTheirControlAfterTheVisibleTitle` cubre las 8 filas con control,
+      antes solo 2, y `SettingsRowButtons_KeepTheirOwnText` cubre los 2 botones.
+    - `XamlAccessibilityTests.SettingsWindow_UsesASingleRowPattern` prohíbe `RadioButtons`, `CheckBox` y
+      `ComboBox` con `Header`, y exige que cada opción cuelgue de una `SettingsCard`; falla con el XAML
+      anterior.
+    - 343/343 unitarios y 51/51 UI tests.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
@@ -2091,11 +2122,11 @@ explícita.
 | Bloque | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
-| F·2 — Fluent / WinUI 3 | 6 | 5 | 1 | 83 % |
+| F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
 | F·3 — Experiencia de uso | 7 | 0 | 7 | 0 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **16** | **10** | **62 %** |
+| **Total** | **26** | **17** | **9** | **65 %** |
 
 ### Registro de tareas completadas
 
@@ -2116,7 +2147,8 @@ explícita.
 | 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | `50119e5` | — |
 | 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | `50119e5` | — |
 | 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | — |
-| 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | *(pendiente)* | — |
+| 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | — |
+| 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | *(pendiente)* | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

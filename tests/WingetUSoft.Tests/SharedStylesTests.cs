@@ -39,11 +39,15 @@ public sealed class SharedStylesTests
                 .Select(b => $"{v.File}:{LineOf(b)}"))
             .ToList();
 
-        var cards = Views().Sum(v => v.Doc.Descendants(Presentation + "Border")
-            .Count(b => ((string?)b.Attribute("Style"))?.EndsWith("CardStyle}", StringComparison.Ordinal) == true));
+        // Las filas de Configuración son tarjetas con su propia plantilla (SettingsCard, F-16).
+        XNamespace local = "using:WingetUSoft";
+        var cards = Views().Sum(v =>
+            v.Doc.Descendants(Presentation + "Border")
+                .Count(b => ((string?)b.Attribute("Style"))?.EndsWith("CardStyle}", StringComparison.Ordinal) == true)
+            + v.Doc.Descendants(local + "SettingsCard").Count());
 
         Assert.True(inline.Count == 0, "Tarjetas con el bloque repetido en vez de CardStyle: " + string.Join(", ", inline));
-        Assert.True(cards >= 30, $"Solo {cards} tarjetas usan CardStyle: el escaneo no está viendo las ventanas.");
+        Assert.True(cards >= 30, $"Solo {cards} tarjetas usan un estilo compartido: el escaneo no está viendo las ventanas.");
     }
 
     /// <summary>Los radios salen de <c>OverlayCornerRadius</c> y <c>ControlCornerRadius</c>, no de un 8 o un 4 escritos a mano.</summary>

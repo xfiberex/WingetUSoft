@@ -82,9 +82,10 @@ public sealed class SettingsTests(AppFixture fixture)
 
         try
         {
-            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("rbTema")));
+            // Tema y modo eran radios hasta F-16; ahora son ComboBox, como el idioma.
+            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("cmbTema")));
             Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("cmbIdioma")));
-            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("rbModo")));
+            Assert.NotNull(settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("cmbModo")));
         }
         finally
         {

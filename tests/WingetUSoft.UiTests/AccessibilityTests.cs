@@ -92,10 +92,21 @@ public sealed class AccessibilityTests(AppFixture fixture)
     /// T1-08: los dos interruptores de Configuración se anunciaban como «interruptor, desactivado», sin
     /// decir de qué eran — su etiqueta vivía en un TextBlock aparte, sin asociar.
     /// </summary>
+    /// <remarks>
+    /// Desde F-16 cada opción es una <c>SettingsCard</c>, que nombra su control desde el título visible; el título
+    /// expone el AutomationId «nombre de la fila + Header». Se comprueban todas las filas, no solo los interruptores.
+    /// Los botones quedan fuera a propósito: conservan su propio texto (ver <see cref="SettingsRowButtons_KeepTheirOwnText"/>).
+    /// </remarks>
     [Theory]
-    [InlineData("tsShowNotifications", "txtShowNotifLabel")]
-    [InlineData("tsMinimizeToTray", "txtMinimizeTrayLabel")]
-    public void SettingsToggles_AreNamedAfterTheirVisibleLabel(string toggleId, string labelId)
+    [InlineData("cmbTema", "cardThemeHeader")]
+    [InlineData("cmbIdioma", "cardLanguageHeader")]
+    [InlineData("cmbModo", "cardModeHeader")]
+    [InlineData("tsAdministrador", "cardAdminHeader")]
+    [InlineData("cmbIntervalo", "cardIntervalHeader")]
+    [InlineData("tsLogArchivo", "cardLogToFileHeader")]
+    [InlineData("tsShowNotifications", "cardNotificationsHeader")]
+    [InlineData("tsMinimizeToTray", "cardTrayHeader")]
+    public void SettingsRows_NameTheirControlAfterTheVisibleTitle(string toggleId, string labelId)
     {
         var settingsWindow = OpenSettingsWindow();
 
@@ -111,6 +122,34 @@ public sealed class AccessibilityTests(AppFixture fixture)
 
             // El nombre sale de la etiqueta visible (LabeledBy), así que sigue al idioma sin claves nuevas.
             Assert.Equal(label!.Name, toggle.Name);
+        }
+        finally
+        {
+            settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId("btnCancelar"))?.AsButton()?.Invoke();
+            WaitUntilSettingsWindowIsGone();
+        }
+    }
+
+    /// <summary>
+    /// F-16: un botón dentro de una fila de Configuración se anuncia con su texto, no con el título de la fila.
+    /// </summary>
+    /// <remarks>
+    /// En la primera versión de <c>SettingsCard</c>, «Limpiar lista» se anunciaba «Estos paquetes no se incluirán en
+    /// las actualizaciones.»: el <c>LabeledBy</c> de la fila tapaba el texto del botón. Lo detectó la prueba en la app.
+    /// </remarks>
+    [Theory]
+    [InlineData("btnAbrirCarpeta", "Abrir carpeta")]
+    [InlineData("btnLimpiar", "Limpiar lista")]
+    public void SettingsRowButtons_KeepTheirOwnText(string buttonId, string expectedName)
+    {
+        var settingsWindow = OpenSettingsWindow();
+
+        try
+        {
+            var button = settingsWindow.FindFirstDescendant(cf => cf.ByAutomationId(buttonId));
+
+            Assert.NotNull(button);
+            Assert.Equal(expectedName, button!.Name);
         }
         finally
         {

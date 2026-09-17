@@ -77,6 +77,34 @@ public sealed class XamlAccessibilityTests
             (string?)Named(controlName).Attribute("AutomationProperties.LabeledBy"));
     }
 
+    /// <summary>
+    /// F-16: en Configuración, toda opción es una <c>SettingsCard</c> con su título y su descripción.
+    /// </summary>
+    /// <remarks>
+    /// Hasta F-16 convivían cuatro patrones: radios con subtítulo, <c>ComboBox</c> con <c>Header</c>, <c>CheckBox</c> con
+    /// el texto al lado e interruptores con un <c>TextBlock</c> suelto. Se prohíben los tres controles que traían su
+    /// propia etiqueta, y se exige que cada control de opción cuelgue de una fila que lo nombre.
+    /// </remarks>
+    [Fact]
+    public void SettingsWindow_UsesASingleRowPattern()
+    {
+        XNamespace local = "using:WingetUSoft";
+        var doc = XDocument.Load(UiXamlFiles().Single(f => Path.GetFileName(f) == "SettingsWindow.xaml"));
+
+        Assert.Empty(doc.Descendants(Presentation + "RadioButtons"));
+        Assert.Empty(doc.Descendants(Presentation + "CheckBox"));
+        Assert.DoesNotContain(doc.Descendants(Presentation + "ComboBox"), c => c.Attribute("Header") is not null);
+
+        var options = doc.Descendants()
+            .Where(e => e.Name == Presentation + "ComboBox" || e.Name == Presentation + "ToggleSwitch")
+            .ToList();
+        Assert.True(options.Count >= 7, $"Solo se encontraron {options.Count} controles de opción.");
+        Assert.All(options, o => Assert.Equal(local + "SettingsCard", o.Parent!.Name));
+
+        var cards = doc.Descendants(local + "SettingsCard").ToList();
+        Assert.All(cards, c => Assert.NotNull(c.Attribute("Header")));
+    }
+
     /// <summary>Primer elemento dentro del <c>DataTemplate</c>: el que representa la fila.</summary>
     private static XElement? RowRoot(XElement itemTemplate) =>
         itemTemplate.Element(Presentation + "DataTemplate")?.Elements().FirstOrDefault();
