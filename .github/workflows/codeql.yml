@@ -45,7 +45,10 @@ jobs:
           # Compilación real y no build-mode none: el código generado por el compilador XAML de WinUI solo
           # existe tras compilar, y sin él CodeQL no ve los manejadores enlazados desde el XAML.
           build-mode: manual
-          queries: security-and-quality
+          # security-extended y no security-and-quality: la primera ejecución (2026-09-17) con esta última dio 374
+          # alertas, ninguna con severidad de seguridad y 142 en código generado por el compilador XAML. Con
+          # tanto ruido, una alerta de seguridad real pasaría desapercibida en Security → Code scanning.
+          queries: security-extended
 
       - name: Compilar
         shell: pwsh

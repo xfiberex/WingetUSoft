@@ -1,4 +1,12 @@
-# Actualizaciones de dependencias. Los PR de Dependabot pasan por el workflow CI como cualquier otro, pero
+# Actualizaciones de dependencias.
+#
+# LIMITACIÓN CONOCIDA (comprobada en la primera ejecución, 2026-09-17): Dependabot resuelve NuGet en Linux, y
+# con un proyecto net10.0-windows no propone casi nada. Dio Microsoft.NET.Test.Sdk 18.10.x por «incompatible»
+# con net10.0-windows10.0.22621 y no pudo resolver las subidas de WindowsAppSDK ni de SDK.BuildTools, así que
+# no abrió ningún PR pese a haber versiones nuevas. La señal fiable sigue siendo el listado de paquetes
+# desactualizados de verify.ps1, que el workflow CI deja en su log. Para Actions sí funciona.
+#
+# Los PR de Dependabot pasan por el workflow CI como cualquier otro, pero
 # un PR en verde NO basta para fusionar una subida de WindowsAppSDK o de H.NotifyIcon: esos cambian la
 # app que se ve, y solo los UI tests (verify.ps1 -Full, en local) la verifican.
 version: 2

@@ -48,7 +48,8 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
 
       # Windows PowerShell 5.1, el mismo intérprete para el que está escrito el script (ver su BOM).
-      # -SkipOutdated: el listado de paquetes desactualizados es informativo y de eso ya se ocupa Dependabot.
+      # Sin -SkipOutdated: el listado de paquetes desactualizados es informativo (no hace fallar el job), y
+      # Dependabot no puede sustituirlo en este proyecto (ver .github/dependabot.yml).
       - name: verify.ps1
         shell: powershell
-        run: .\verify.ps1 -SkipOutdated
+        run: .\verify.ps1

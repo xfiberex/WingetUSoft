@@ -31,6 +31,32 @@ public sealed class LocalizationTests
         });
     }
 
+    /// <summary>
+    /// Cada traducción usa exactamente los mismos marcadores (<c>{0}</c>, <c>{1:N0}</c>...) que la española.
+    /// </summary>
+    /// <remarks>
+    /// <c>L.T(clave, args)</c> hace <c>string.Format</c>: un marcador de más en un idioma lanza
+    /// <c>FormatException</c> solo en ese idioma, y uno de menos se come un dato sin avisar. CodeQL lo señaló
+    /// (<c>cs/invalid-string-formatting</c>) al no poder ver qué cadena llega a cada llamada.
+    /// </remarks>
+    [Fact]
+    public void EveryTranslation_UsesTheSamePlaceholdersAsSpanish()
+    {
+        static string Placeholders(string text) => string.Join(",",
+            System.Text.RegularExpressions.Regex.Matches(text.Replace("{{", "").Replace("}}", ""), @"\{(\d+)(?:[,:][^}]*)?\}")
+                .Select(m => int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+                .Distinct()
+                .Order());
+
+        var mismatches = L.Map
+            .SelectMany(kv => kv.Value.Select((text, lang) => (kv.Key, Lang: (AppLang)lang, Found: Placeholders(text), Expected: Placeholders(kv.Value[0]))))
+            .Where(x => x.Found != x.Expected)
+            .Select(x => $"{x.Key} [{x.Lang}]: {{{x.Found}}} en lugar de {{{x.Expected}}}")
+            .ToList();
+
+        Assert.True(mismatches.Count == 0, "Marcadores que no coinciden con el español:\n" + string.Join("\n", mismatches));
+    }
+
     [Theory]
     [InlineData("es", AppLang.Es)]
     [InlineData("en", AppLang.En)]

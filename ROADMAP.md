@@ -147,9 +147,14 @@ el diálogo *Acerca de* se reescribieron en consecuencia.
   - `.github/workflows/ci.yml`: el mismo `verify.ps1` sin `-Full` (build con `-warnaserror`, estilo,
     unitarios y dependencias vulnerables) en cada push a `main` y en cada PR. No duplica lógica: si
     cambia el script, cambia el workflow.
-  - `.github/workflows/codeql.yml`: CodeQL para C# (`security-and-quality`), en push, en PR y cada semana.
+  - `.github/workflows/codeql.yml`: CodeQL para C# (`security-extended`), en push, en PR y cada semana. La
+    primera ejecución, con `security-and-quality`, dio 374 alertas de calidad sin ninguna de seguridad (142
+    en código generado); las 5 «error» de formato resultaron falsos positivos, ahora cubiertos por
+    `LocalizationTests.EveryTranslation_UsesTheSamePlaceholdersAsSpanish`.
   - `.github/dependabot.yml`: NuGet y Actions, semanal; ignora las subidas mayores de WindowsAppSDK
-    (T4-01 descartó la 2.x).
+    (T4-01 descartó la 2.x). Con NuGet apenas sirve: resuelve en Linux, da por incompatibles los paquetes
+    para `net10.0-windows` y no abrió ningún PR pese a haber versiones nuevas. Por eso el CI ejecuta
+    `verify.ps1` sin `-SkipOutdated` y deja el listado de desactualizados en su log.
   - Ajustes del repositorio: avisos y actualizaciones de seguridad de Dependabot, secret scanning con
     protección de push, y reporte privado de vulnerabilidades, el canal que ya indicaba `SECURITY.md`.
 
