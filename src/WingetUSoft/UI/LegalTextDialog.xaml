@@ -3,13 +3,11 @@
     x:Class="WingetUSoft.LegalTextDialog"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    CornerRadius="8">
+    Style="{StaticResource DefaultContentDialogStyle}">
 
-    <ContentDialog.CloseButtonStyle>
-        <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
-            <Setter Property="CornerRadius" Value="4" />
-        </Style>
-    </ContentDialog.CloseButtonStyle>
+    <!-- El estilo moderno de ContentDialog es implícito y no alcanza a las subclases definidas en XAML: sin
+         esta línea, el diálogo usaba la plantilla antigua (contenido y botones en una sola franja plana) y
+         necesitaba parches de CornerRadius en el diálogo y en cada botón (F-12). -->
 
     <ScrollViewer MinWidth="360" MaxWidth="460" MaxHeight="420"
                   VerticalScrollBarVisibility="Auto"

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Xunit;
 
 namespace WingetUSoft.Tests;
@@ -62,17 +63,50 @@ public sealed class DialogPreparationTests
         Assert.StartsWith("WindowDialogHelper.cs:", assignments[0], StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// F-12: los diálogos definidos en XAML declaran el estilo moderno y no llevan parches de esquinas ni de
+    /// botones.
+    /// </summary>
+    /// <remarks>
+    /// El estilo implícito de <c>ContentDialog</c> no alcanza a las subclases: Acerca de, Novedades y los textos
+    /// legales usaban la plantilla antigua, con contenido y botones en una misma franja plana (<c>#202020</c>
+    /// uniforme en oscuro, frente a <c>#2B2B2B</c> / <c>#202020</c> de un diálogo creado por código).
+    /// </remarks>
+    [Fact]
+    public void XamlDialogs_UseTheModernStyle_WithoutLocalPatches()
+    {
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        string ui = Path.Combine(RepoRoot(), "src", "WingetUSoft", "UI");
+
+        var dialogs = Directory.EnumerateFiles(ui, "*.xaml")
+            .Select(f => (File: Path.GetFileName(f), Root: XDocument.Load(f).Root!))
+            .Where(x => x.Root.Name == presentation + "ContentDialog")
+            .ToList();
+
+        Assert.True(dialogs.Count >= 3, $"Solo se encontraron {dialogs.Count} diálogos XAML.");
+        Assert.All(dialogs, d =>
+        {
+            Assert.Equal("{StaticResource DefaultContentDialogStyle}", (string?)d.Root.Attribute("Style"));
+            Assert.Null(d.Root.Attribute("CornerRadius"));
+            Assert.DoesNotContain(d.Root.Elements(), e => e.Name.LocalName.EndsWith("ButtonStyle", StringComparison.Ordinal));
+        });
+    }
+
     private static int LineOf(string code, int index) => code.AsSpan(0, index).Count('\n') + 1;
 
-    private static IEnumerable<(string File, string Code)> SourceFiles()
+    private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "WingetUSoft.slnx")))
             dir = dir.Parent;
 
         Assert.True(dir is not null, "No se encontró la raíz del repositorio (WingetUSoft.slnx) desde " + AppContext.BaseDirectory);
+        return dir!.FullName;
+    }
 
-        string src = Path.Combine(dir!.FullName, "src", "WingetUSoft");
+    private static IEnumerable<(string File, string Code)> SourceFiles()
+    {
+        string src = Path.Combine(RepoRoot(), "src", "WingetUSoft");
         char sep = Path.DirectorySeparatorChar;
 
         return Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)

@@ -41,6 +41,35 @@ public sealed class LogPaletteTests
     }
 
     /// <summary>
+    /// Con Mica (F-11) la tarjeta del registro ya no es un color fijo: su fondo translúcido deja pasar el tinte
+    /// del fondo de escritorio. La paleta tiene que aguantar esa variación, no solo el valor nominal.
+    /// </summary>
+    /// <remarks>
+    /// Medido en pantalla el 2026-09-17 con Mica activo, la tarjeta se movió entre <c>#FBFBFB</c> y
+    /// <c>#FDFBFB</c> en claro y entre <c>#2B2B2B</c> y <c>#2D2A2A</c> en oscuro, y el margen de página, hasta
+    /// <c>#F9F0F0</c> / <c>#231F1F</c>. Se exige el 4,5:1 contra un fondo varios niveles más desfavorable que lo
+    /// medido. El color que menos margen tiene es el aviso en claro, que deja de cumplir por debajo de
+    /// <c>#EDEDED</c>.
+    /// </remarks>
+    [Theory]
+    [InlineData(false, 0xF4)]
+    [InlineData(true, 0x33)]
+    public void EveryLogColor_KeepsWcagAa_WhenMicaTintsTheCard(bool darkTheme, byte worstCardGray)
+    {
+        Color worstCard = Color.FromArgb(255, worstCardGray, worstCardGray, worstCardGray);
+
+        var offenders = Enum.GetValues<LogLineKind>()
+            .Select(kind => (kind, ratio: LogPalette.ContrastRatio(LogPalette.For(kind, darkTheme), worstCard)))
+            .Where(x => x.ratio < WcagAaNormalText)
+            .Select(x => $"{x.kind}: {x.ratio:F2}:1")
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            $"Sobre una tarjeta #{worstCardGray:X2}{worstCardGray:X2}{worstCardGray:X2} no llegan al {WcagAaNormalText}:1: "
+                + string.Join(" | ", offenders));
+    }
+
+    /// <summary>
     /// El punto de tener una paleta por tema: los tipos con significado NO pueden pintarse igual en
     /// claro que en oscuro. Si alguien "simplifica" volviendo a un solo color por tipo, esto lo caza.
     /// </summary>
@@ -71,8 +100,6 @@ public sealed class LogPaletteTests
     /// </para>
     /// <para>
     /// Por eso este test no mide colores: lee el código fuente y comprueba **quién** decide el color.
-    /// <c>TitleBarHelper</c> queda fuera a propósito, porque sus literales son para la API de barra de
-    /// título de Win32, que no tiene nada que ver con la paleta del registro.
     /// </para>
     /// <para>
     /// <b>Desde T2-05 el alcance cambió, no se relajó.</b> Antes exigía que las cuatro ventanas con

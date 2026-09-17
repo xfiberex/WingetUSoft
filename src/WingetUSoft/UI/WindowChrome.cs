@@ -1,6 +1,8 @@
 using Microsoft.UI;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using WinRT.Interop;
 
@@ -54,19 +56,54 @@ internal static class WindowChrome
 
         window.ExtendsContentIntoTitleBar = true;
         window.SetTitleBar(titleBar);
-        window.SystemBackdrop = new MicaBackdrop();
+        ApplyBackdrop(window);
 
         if (window.Content is FrameworkElement root)
         {
             root.RequestedTheme = ToElementTheme(themeMode);
+            // Loaded para el tema inicial (antes de cargar, ActualTheme aún no está resuelto) y
+            // ActualThemeChanged para el cambio en caliente, tanto desde Configuración como desde Windows.
+            root.Loaded += (_, _) => ApplyTitleBarTheme(appWindow, root);
             root.ActualThemeChanged += (_, _) =>
             {
-                TitleBarHelper.UpdateButtonColors(appWindow, window.Content, themeMode);
+                ApplyTitleBarTheme(appWindow, root);
                 onThemeChanged?.Invoke();
             };
         }
 
         return new WindowHandles(appWindow, hWnd);
+    }
+
+    /// <summary>
+    /// Botones de la barra de título (minimizar, maximizar, cerrar) en el tema que muestra la ventana (F-13).
+    /// </summary>
+    /// <remarks>
+    /// Se usa el tema <b>resuelto</b> del contenido y no el ajuste: con «el del sistema», el ajuste no dice si
+    /// la ventana está clara u oscura. Hasta F-13, <c>TitleBarHelper</c> fijaba a mano el blanco o el negro y
+    /// los colores de hover, pulsado e inactivo, y cada ventana tenía que acordarse de llamarlo; desde Windows
+    /// App SDK 1.7 el sistema los pinta con <c>PreferredTheme</c>.
+    /// </remarks>
+    private static void ApplyTitleBarTheme(AppWindow appWindow, FrameworkElement root) =>
+        appWindow.TitleBar.PreferredTheme = root.ActualTheme == ElementTheme.Dark ? TitleBarTheme.Dark : TitleBarTheme.Light;
+
+    /// <summary>
+    /// Mica donde el sistema lo admite; el fondo sólido del XAML donde no (F-11).
+    /// </summary>
+    /// <remarks>
+    /// Hasta F-11 se pedía Mica y la raíz de cada ventana lo tapaba entero con
+    /// <c>ApplicationPageBackgroundThemeBrush</c>, que es opaco: los márgenes salían <c>#F3F3F3</c> / <c>#202020</c>
+    /// planos. El XAML conserva ese pincel como reserva para Windows 10, que no tiene Mica (la app admite 19041);
+    /// aquí solo se retira cuando Mica va a verse de verdad. Las tarjetas usan
+    /// <c>CardBackgroundFillColorDefaultBrush</c>, que está pensado para ir encima.
+    /// </remarks>
+    private static void ApplyBackdrop(Window window)
+    {
+        if (!MicaController.IsSupported())
+            return;
+
+        window.SystemBackdrop = new MicaBackdrop();
+        if (window.Content is Panel page)
+            page.Background = new SolidColorBrush(Colors.Transparent);
     }
 
     /// <summary>Ruta del icono de la aplicación, junto al ejecutable.</summary>

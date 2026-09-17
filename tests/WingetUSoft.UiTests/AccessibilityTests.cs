@@ -143,6 +143,52 @@ public sealed class AccessibilityTests(AppFixture fixture)
         Assert.Equal(label!.Name, control.Name);
     }
 
+    /// <summary>
+    /// F-15: el patrón de arriba, en Historial. Hasta F-15 el buscador se anunciaba con su placeholder
+    /// («Nombre o Id...») y el filtro de estado con el valor elegido («Todos»).
+    /// </summary>
+    /// <remarks>
+    /// Historial se abre sin winget ni red, así que se conduce de verdad. Desinstalar lanza <c>winget list</c> al
+    /// abrirse y lo cubre <c>XamlAccessibilityTests.SearchAndFilterControls_AreLabeledByTheirVisibleLabel</c>.
+    /// </remarks>
+    [Fact]
+    public void HistoryFilters_AreNamedAfterTheirVisibleLabel()
+    {
+        MenuActions.ClickPath(Window, "btnHerramientas", "menuVerHistorial");
+
+        var result = Retry.WhileNull(
+            () => fixture.App.GetAllTopLevelWindows(fixture.Automation)
+                .FirstOrDefault(w => w.FindFirstDescendant(cf => cf.ByAutomationId("lvHistory")) is not null),
+            timeout: TimeSpan.FromSeconds(10),
+            interval: TimeSpan.FromMilliseconds(250),
+            ignoreException: true);
+        Assert.True(result.Success && result.Result is not null, "No se abrió la ventana de Historial.");
+        var history = result.Result!;
+
+        try
+        {
+            foreach (var (controlId, labelId) in new[] { ("txtBuscar", "txtBuscarLabel"), ("btnFiltroEstado", "txtEstadoLabel") })
+            {
+                var control = history.FindFirstDescendant(cf => cf.ByAutomationId(controlId));
+                var label = history.FindFirstDescendant(cf => cf.ByAutomationId(labelId));
+
+                Assert.NotNull(control);
+                Assert.NotNull(label);
+                Assert.Equal(label!.Name, control!.Name);
+            }
+        }
+        finally
+        {
+            history.Close();
+            Retry.WhileTrue(
+                () => fixture.App.GetAllTopLevelWindows(fixture.Automation)
+                    .Any(w => w.FindFirstDescendant(cf => cf.ByAutomationId("lvHistory")) is not null),
+                timeout: TimeSpan.FromSeconds(10),
+                interval: TimeSpan.FromMilliseconds(250),
+                ignoreException: true);
+        }
+    }
+
     // ── Apoyo (mismo enfoque que SettingsTests) ────────────────────────────
 
     private void SelectLanguageAndSave(int languageIndex)

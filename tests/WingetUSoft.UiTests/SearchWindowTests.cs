@@ -60,9 +60,14 @@ public sealed class SearchWindowTests(AppFixture fixture)
             // Se fija la cadena exacta, y no un "no está vacío", porque eso último **no** detectaba nada:
             // sin nombre propio WinUI deduce uno del PlaceholderText y el control reporta "Nombre o
             // Id...", que no es una etiqueta sino un ejemplo de lo que escribir. Comprobado quitando el
-            // SetName. La cadena es la de `search.placeholderAccessible` en español, el idioma con el que
-            // arranca la suite; si se retoca la traducción, hay que retocarla aquí.
+            // SetName. La cadena es la de `search.catalogLabel` en español, el idioma con el que arranca la
+            // suite; si se retoca la traducción, hay que retocarla aquí.
             Assert.Equal("Buscar en el catálogo de winget", box!.Name);
+
+            // Desde F-15 ese nombre sale de una etiqueta que se ve (LabeledBy), no de un SetName invisible.
+            var label = searchWindow.FindFirstDescendant(cf => cf.ByAutomationId("txtBuscarLabel"));
+            Assert.NotNull(label);
+            Assert.Equal(label!.Name, box.Name);
         }
         finally
         {

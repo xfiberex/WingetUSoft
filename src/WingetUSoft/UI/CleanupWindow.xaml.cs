@@ -42,11 +42,7 @@ public sealed partial class CleanupWindow : Window
 
         if (Content is FrameworkElement root)
         {
-            root.Loaded += async (_, _) =>
-            {
-                UpdateTitleBarButtonColors();
-                await ScanAsync();
-            };
+            root.Loaded += async (_, _) => await ScanAsync();
         }
     }
 
@@ -251,11 +247,6 @@ public sealed partial class CleanupWindow : Window
 
     private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal) =>
         activityLog.Append(text, kind);
-
-    // ---- Theme --------------------------------------------------------------
-
-    private void UpdateTitleBarButtonColors() =>
-        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     // ---- Dialogs ------------------------------------------------------------
 

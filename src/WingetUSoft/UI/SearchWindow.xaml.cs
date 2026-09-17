@@ -72,14 +72,10 @@ public sealed partial class SearchWindow : Window
 
         lvResults.ItemsSource = _results;
         ApplyLocalizedStrings();
-        UpdateTitleBarButtonColors();
 
         if (Content is FrameworkElement root)
             root.Loaded += (_, _) => txtBuscar.Focus(FocusState.Programmatic);
     }
-
-    private void UpdateTitleBarButtonColors() =>
-        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     private void ApplyLocalizedStrings()
     {
@@ -88,7 +84,7 @@ public sealed partial class SearchWindow : Window
         txtHeaderTitle.Text = L.T("search.header");
         txtSubtitulo.Text = L.T("search.subtitle");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(txtBuscar, L.T("search.placeholderAccessible"));
+        txtBuscarLabel.Text = L.T("search.catalogLabel");
         btnBuscar.Content = L.T("search.search");
         btnInstalar.Content = L.T("search.install");
         btnCancelar.Content = L.T("btn.cancel");

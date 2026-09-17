@@ -26,6 +26,8 @@ public sealed partial class AboutDialog : ContentDialog
 
         PrimaryButtonText = L.T("about.github");
         CloseButtonText   = L.T("btn.close");
+        // «Ver en GitHub» no es la acción principal de Acerca de: el acento (y el Intro) van a Cerrar (F-12).
+        DefaultButton     = ContentDialogButton.Close;
 
         // Abrir el repositorio sin cerrar el diálogo.
         PrimaryButtonClick += async (_, args) =>

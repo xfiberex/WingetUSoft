@@ -49,6 +49,34 @@ public sealed class XamlAccessibilityTests
                 + string.Join(", ", unnamed));
     }
 
+    /// <summary>
+    /// Cada buscador y filtro toma su nombre accesible de la etiqueta que se ve a su lado (T2-08 y F-15).
+    /// </summary>
+    /// <remarks>
+    /// T2-08 lo hizo en la ventana principal y las otras tres se quedaron fuera: sus controles se anunciaban con
+    /// el placeholder o con el valor elegido. La lista es explícita a propósito: un control nuevo sin etiqueta
+    /// no se detecta solo, pero uno de estos que pierda el <c>LabeledBy</c>, o cuya etiqueta cambie de nombre, sí.
+    /// </remarks>
+    [Theory]
+    [InlineData("MainWindow.xaml", "cmbFuente", "txtFuenteLabel")]
+    [InlineData("MainWindow.xaml", "btnFiltroExcluidos", "txtExcluidosLabel")]
+    [InlineData("MainWindow.xaml", "txtBuscar", "txtBuscarLabel")]
+    [InlineData("HistoryWindow.xaml", "txtBuscar", "txtBuscarLabel")]
+    [InlineData("HistoryWindow.xaml", "btnFiltroEstado", "txtEstadoLabel")]
+    [InlineData("UninstallWindow.xaml", "txtBuscar", "txtBuscarLabel")]
+    [InlineData("SearchWindow.xaml", "txtBuscar", "txtBuscarLabel")]
+    public void SearchAndFilterControls_AreLabeledByTheirVisibleLabel(string file, string controlName, string labelName)
+    {
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var doc = XDocument.Load(UiXamlFiles().Single(f => Path.GetFileName(f) == file));
+        XElement Named(string name) => doc.Descendants().Single(e => (string?)e.Attribute(xaml + "Name") == name);
+
+        Assert.Equal(Presentation + "TextBlock", Named(labelName).Name);
+        Assert.Equal(
+            "{Binding ElementName=" + labelName + "}",
+            (string?)Named(controlName).Attribute("AutomationProperties.LabeledBy"));
+    }
+
     /// <summary>Primer elemento dentro del <c>DataTemplate</c>: el que representa la fila.</summary>
     private static XElement? RowRoot(XElement itemTemplate) =>
         itemTemplate.Element(Presentation + "DataTemplate")?.Elements().FirstOrDefault();

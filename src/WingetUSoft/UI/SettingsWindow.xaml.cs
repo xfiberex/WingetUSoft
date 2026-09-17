@@ -18,17 +18,13 @@ public sealed partial class SettingsWindow : Window
         _settings = settings;
         InitializeComponent();
 
-        var (appWindow, _) = WindowChrome.Apply(
+        WindowChrome.Apply(
             this, AppTitleBar, settings.ThemeMode,
             designWidthDip: 760, designHeightDip: 560, minWidthDip: 640, minHeightDip: 480);
-        UpdateTitleBarButtonColors(appWindow);
 
         ApplyLocalizedStrings();
         LoadFromSettings();
     }
-
-    private void UpdateTitleBarButtonColors(AppWindow appWindow) =>
-        TitleBarHelper.UpdateButtonColors(appWindow, Content, _settings.ThemeMode);
 
     private void ApplyLocalizedStrings()
     {

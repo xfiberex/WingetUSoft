@@ -258,7 +258,7 @@ public static class L
         ["search.header"]        = ["Buscar e instalar programas", "Search and install programs", "Buscar e instalar programas", "Rechercher et installer des programmes", "Cerca e installa programmi"],
         ["search.subtitle"]      = ["Busca en el catálogo de winget e instala lo que necesites.", "Search the winget catalog and install what you need.", "Busque no catálogo do winget e instale o que precisar.", "Cherchez dans le catalogue winget et installez ce dont vous avez besoin.", "Cerca nel catalogo di winget e installa ciò che ti serve."],
         ["search.placeholder"]   = ["Nombre, Id o palabra clave...", "Name, Id or keyword...", "Nome, Id ou palavra-chave...", "Nom, Id ou mot-clé...", "Nome, Id o parola chiave..."],
-        ["search.placeholderAccessible"] = ["Buscar en el catálogo de winget", "Search the winget catalog", "Buscar no catálogo do winget", "Rechercher dans le catalogue winget", "Cerca nel catalogo di winget"],
+        ["search.catalogLabel"] = ["Buscar en el catálogo de winget", "Search the winget catalog", "Buscar no catálogo do winget", "Rechercher dans le catalogue winget", "Cerca nel catalogo di winget"],
         ["search.search"]        = ["Buscar", "Search", "Buscar", "Rechercher", "Cerca"],
         ["search.install"]       = ["Instalar seleccionado", "Install selected", "Instalar selecionado", "Installer la sélection", "Installa selezionato"],
         ["search.results"]       = ["Resultados", "Results", "Resultados", "Résultats", "Risultati"],

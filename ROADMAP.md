@@ -27,7 +27,7 @@
 | **C** | Auditoría de UI/UX (flujo, datos, color, accesibilidad) | ✅ Completado | 1.5.0 / 1.6.0 |
 | **D** | Cara pública (licencia in-app, README, capturas) | ✅ Completado | 1.7.0 |
 | **E** | Gestión completa de software ⚠️ *cambio de alcance* | ✅ Completado | 1.8.0 |
-| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (11 de 26) | — |
+| **F** | Auditoría Fluent y UI/UX verificada en la app real ([Parte III](#parte-iii--tier-f-auditoría-fluent-y-uiux)) | 🚧 En curso (15 de 26) | — |
 
 El único tier abierto es el **F**, con sus tareas en la Parte III. Las decisiones ya tomadas (y lo que se
 descartó a propósito) están al final de la Parte I.
@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-16): 11 de 26.** ✅ F-01, F-02, F-03, F-04, F-05, F-06, F-07, F-08, F-09, F-10 y F-25.
+**Progreso (2026-09-17): 15 de 26.** ✅ F-01 a F-13, F-15 y F-25.
 
 ---
 
@@ -1773,7 +1773,7 @@ explícita.
 
 ## 🟠 F·2 — Alineación con Fluent / WinUI 3
 
-- [ ] **[F-11] Hacer visible Mica (o dejar de pedirlo)**
+- [x] **[F-11] Hacer visible Mica (o dejar de pedirlo)**
   - **Área:** Fluent / theming
   - **Ubicación:** `src/WingetUSoft/UI/WindowChrome.cs:57`; fondo opaco en la raíz de las seis ventanas (`MainWindow.xaml:9`, `SearchWindow.xaml:9`, `HistoryWindow.xaml:9`, `UninstallWindow.xaml:9`, `CleanupWindow.xaml:9`, `SettingsWindow.xaml:8`)
   - **Qué hacer:** `ApplicationPageBackgroundThemeBrush` es opaco y tapa por completo el `MicaBackdrop`.
@@ -1785,10 +1785,22 @@ explícita.
     planos; con Mica no disponible el fondo sigue siendo sólido; `LogPaletteTests` en verde.
   - **Evidencia (2026-09-14):** en las capturas de `docs/screenshots` (copia literal de la pantalla),
     todos los márgenes muestreados son `#F3F3F3` (claro) y `#202020` (oscuro) exactos.
+  - **Al implementarlo:** `WindowChrome.ApplyBackdrop` pide Mica solo si `MicaController.IsSupported()` y, en
+    ese caso, cambia a `Transparent` la raíz de la ventana. El XAML conserva
+    `ApplicationPageBackgroundThemeBrush` como reserva para Windows 10. `LogPalette` no cambia: el fondo
+    medido de la tarjeta apenas se mueve, y se añadió margen al test.
+  - **Verificado (2026-09-17):** en pantalla (captura del escritorio, porque Mica solo se ve en la ventana
+    activa), los márgenes entre tarjetas toman el tinte del fondo de escritorio y varían dentro de la
+    ventana: `#F5F2F2`–`#F9F0F0` en claro y `#212020`–`#231F1F` en oscuro. La tarjeta del registro queda
+    entre `#FBFBFB`–`#FDFBFB` y `#2B2B2B`–`#2D2A2A`, y el peor color del registro, a 5,07:1 (aviso, claro)
+    y 6,62:1 (acento, oscuro). Nuevo `LogPaletteTests.EveryLogColor_KeepsWcagAa_WhenMicaTintsTheCard`, que
+    exige 4,5:1 contra `#F4F4F4` y `#333333`, peores que lo medido; el color con menos margen, el aviso en
+    claro, deja de cumplir por debajo de `#EDEDED`. `WindowChromeTests` fija el orden: primero comprobar
+    el soporte y después pedir Mica y retirar el fondo.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-12] Estilo moderno en los diálogos definidos en XAML**
+- [x] **[F-12] Estilo moderno en los diálogos definidos en XAML**
   - **Área:** Fluent
   - **Ubicación:** `src/WingetUSoft/UI/AboutDialog.xaml:2-17`, `WhatsNewDialog.xaml:2-17` y `LegalTextDialog.xaml:2-12`
   - **Qué hacer:** el estilo implícito de `ContentDialog` no alcanza a las subclases, así que estos tres
@@ -1800,10 +1812,17 @@ explícita.
     igual que los diálogos creados por código; no queda ningún `CornerRadius` ni estilo de botón local.
   - **Evidencia (2026-09-14):** en tema oscuro, el diálogo genérico tiene el contenido en `#2B2B2B` y los
     botones en `#202020`; Acerca de es `#202020` uniforme de arriba abajo.
+  - **Al implementarlo:** `Style="{StaticResource DefaultContentDialogStyle}"` en los tres, sin
+    `CornerRadius` ni `PrimaryButtonStyle`/`CloseButtonStyle` locales. En Acerca de, `DefaultButton = Close`,
+    así que el acento y el Intro pasan a «Cerrar».
+  - **Verificado (2026-09-17):** en oscuro, Acerca de y Licencia muestran contenido `#2B2B2B` y botones
+    `#202020`, igual que el diálogo genérico, y el foco inicial de Acerca de está en `CloseButton`
+    (capturas). `DialogPreparationTests.XamlDialogs_UseTheModernStyle_WithoutLocalPatches` falla con el
+    XAML anterior.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-13] Barra de título con `PreferredTheme` en vez de colores cableados**
+- [x] **[F-13] Barra de título con `PreferredTheme` en vez de colores cableados**
   - **Área:** Theming
   - **Ubicación:** `src/WingetUSoft/UI/TitleBarHelper.cs:9-38` y `src/WingetUSoft/UI/WindowChrome.cs:59-66`
   - **Qué hacer:** `TitleBarHelper` fija a mano el blanco o el negro y los colores de hover, pulsado e
@@ -1813,6 +1832,17 @@ explícita.
     título y zonas de arrastre (hoy el icono se pinta a mano en `MainWindow.xaml.cs:134`).
   - **Criterio de aceptación:** `TitleBarHelper` desaparece o se reduce a `PreferredTheme`; los botones de
     la barra son correctos en claro, en oscuro y al cambiar de tema en caliente; `SnapLayoutTests` en verde.
+  - **Al implementarlo:** `TitleBarHelper.cs` desaparece. `WindowChrome.ApplyTitleBarTheme` fija
+    `PreferredTheme` según el tema **resuelto** del contenido, porque con «el del sistema» el ajuste no dice
+    si la ventana es clara u oscura. Se aplica en `Loaded` y en `ActualThemeChanged`, y las seis ventanas
+    pierden su `UpdateTitleBarButtonColors`.
+  - **Desviación:** no se adopta el control `TitleBar`. Cambiaría la zona de arrastre que fijan
+    `SnapLayoutTests` y el icono pintado a mano funciona; queda para F-14 si se reorganiza la cabecera.
+  - **Verificado (2026-09-17):** botón cerrar medido en pantalla: glifo `#1F1F1F` sobre `#F4F2F2` en claro y
+    `#E3E3E3` sobre `#212020` en oscuro. Arrancando en claro y pasando a oscuro desde Configuración, sin
+    reiniciar, la ventana principal repinta el glifo a `#E3E3E3`. El fondo de los botones deja ver Mica.
+    43/43 UI tests, con `SnapLayoutTests` incluido. `WindowChromeTests` impide volver a fijar colores
+    `TitleBar.Button*` a mano.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -1829,7 +1859,7 @@ explícita.
   - **Esfuerzo:** medio
   - **Depende de:** F-05, F-07
 
-- [ ] **[F-15] Etiquetas reales en la búsqueda y los filtros de Historial, Desinstalar y Buscar**
+- [x] **[F-15] Etiquetas reales en la búsqueda y los filtros de Historial, Desinstalar y Buscar**
   - **Área:** Accesibilidad (WCAG 2.2 AA · 1.3.1, 3.3.2 y 4.1.2)
   - **Ubicación:** `src/WingetUSoft/UI/HistoryWindow.xaml:53-73`, `UninstallWindow.xaml:97-104` y `SearchWindow.xaml:62-66` (con el nombre puesto por código en `SearchWindow.xaml.cs:91`)
   - **Qué hacer:** T2-08 asoció las etiquetas de la ventana principal y las otras tres se quedaron fuera.
@@ -1840,6 +1870,17 @@ explícita.
     se extiende a Historial y Desinstalar: el `Name` coincide con la etiqueta visible.
   - **Evidencia (2026-09-14):** en Historial y Desinstalar el buscador se anuncia «Nombre o Id...» (el
     placeholder) y el filtro de estado, «Todos»; ninguno tiene `LabeledBy`.
+  - **Al implementarlo:** `LabeledBy` en el buscador y el filtro de Historial y en el buscador de
+    Desinstalar. Buscar e instalar gana una etiqueta visible propia, «Buscar en el catálogo de winget»
+    (`search.catalogLabel`, que sustituye a `search.placeholderAccessible`, antes solo un `SetName`
+    invisible), en su propia línea para no ensanchar la fila de botones.
+  - **Desviación:** no se adopta `AutoSuggestBox`. Intro ya busca, y cambiaría el tipo de control que
+    anuncian los lectores y que fijan los tests, sin ganar nada visible.
+  - **Verificado (2026-09-17):** nuevo UI test `AccessibilityTests.HistoryFilters_AreNamedAfterTheirVisibleLabel`,
+    y `SearchWindowTests.SearchBox_HasAnAccessibleName` exige ahora que el nombre coincida con la etiqueta
+    visible (43/43). Desinstalar lanza `winget list` al abrirse, así que su caso lo cubre
+    `XamlAccessibilityTests.SearchAndFilterControls_AreLabeledByTheirVisibleLabel` (7 casos, 4 fallan con el
+    XAML anterior). Captura de Buscar e instalar con la etiqueta sobre el buscador.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -2033,11 +2074,11 @@ explícita.
 | Bloque | Total | Completadas | Pendientes | % |
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
-| F·2 — Fluent / WinUI 3 | 6 | 0 | 6 | 0 % |
+| F·2 — Fluent / WinUI 3 | 6 | 4 | 2 | 67 % |
 | F·3 — Experiencia de uso | 7 | 0 | 7 | 0 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **11** | **15** | **42 %** |
+| **Total** | **26** | **15** | **11** | **58 %** |
 
 ### Registro de tareas completadas
 
@@ -2054,6 +2095,10 @@ explícita.
 | 2026-09-16 | F-08 | Una sola instancia por ventana secundaria | UI test falla contra 1.8.8 · 42/42 UI tests · 1 ventana de Historial en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-09 | Menú en el icono de bandeja, con «Salir» | 314/314 unitarios · icono, clic simple, menú y «Salir» en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-10 | Sin salto de maquetación al seleccionar una fila | guard estructural · 0 px de salto en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-17 | F-11 | Mica visible, con fondo sólido de reserva | márgenes con tinte medidos en pantalla · registro ≥ 5,07:1 sobre Mica · 338/338 unitarios | *(pendiente)* | — |
+| 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | *(pendiente)* | — |
+| 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | *(pendiente)* | — |
+| 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | *(pendiente)* | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

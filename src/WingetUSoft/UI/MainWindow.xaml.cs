@@ -190,7 +190,6 @@ public sealed partial class MainWindow : Window
         {
             root.Loaded += async (_, _) =>
             {
-                UpdateTitleBarButtonColors();
                 ShowSettingsLoadWarningIfNeeded();
 
                 string? version = await WingetService.CheckWingetAvailableAsync();
@@ -653,11 +652,7 @@ public sealed partial class MainWindow : Window
         {
             rootElement.RequestedTheme = WindowChrome.ToElementTheme(themeMode);
         }
-        UpdateTitleBarButtonColors();
     }
-
-    private void UpdateTitleBarButtonColors() =>
-        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     private bool TrySaveSettings(string userMessage, bool updateStatusLabel = true)
     {

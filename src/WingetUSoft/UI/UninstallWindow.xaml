@@ -94,6 +94,7 @@
                                  PlaceholderText="Nombre o Id..."
                                  Width="260" Height="32"
                                  VerticalAlignment="Center"
+                                 AutomationProperties.LabeledBy="{Binding ElementName=txtBuscarLabel}"
                                  TextChanged="TxtBuscar_TextChanged" />
                         <TextBlock x:Name="txtContador"
                                    VerticalAlignment="Center"

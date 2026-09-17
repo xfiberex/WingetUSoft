@@ -56,10 +56,14 @@
                          PlaceholderText="Nombre o Id..."
                          Width="220" Height="32"
                          VerticalAlignment="Center"
+                         AutomationProperties.LabeledBy="{Binding ElementName=txtBuscarLabel}"
                          TextChanged="TxtBuscar_TextChanged" />
                 <TextBlock x:Name="txtEstadoLabel" Text="Estado:" VerticalAlignment="Center"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <DropDownButton x:Name="btnFiltroEstado" Content="Todos" Height="32" MinWidth="130">
+                <!-- Nombre accesible desde la etiqueta visible: sin LabeledBy, el buscador se anunciaba con su
+                     placeholder y el filtro con el valor elegido («Todos») (F-15). -->
+                <DropDownButton x:Name="btnFiltroEstado" Content="Todos" Height="32" MinWidth="130"
+                                AutomationProperties.LabeledBy="{Binding ElementName=txtEstadoLabel}">
                     <DropDownButton.Flyout>
                         <MenuFlyout>
                             <RadioMenuFlyoutItem x:Name="menuEstadoTodos" Text="Todos" IsChecked="True"

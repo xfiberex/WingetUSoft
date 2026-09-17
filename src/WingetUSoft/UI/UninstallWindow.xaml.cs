@@ -68,11 +68,7 @@ public sealed partial class UninstallWindow : Window
         var root = Content as FrameworkElement;
         if (root is not null)
         {
-            root.Loaded += async (_, _) =>
-            {
-                UpdateTitleBarButtonColors();
-                await LoadPackagesAsync();
-            };
+            root.Loaded += async (_, _) => await LoadPackagesAsync();
         }
 
         _initialized = true;
@@ -268,11 +264,6 @@ public sealed partial class UninstallWindow : Window
 
     private void AppendLog(string text, LogLineKind kind = LogLineKind.Normal) =>
         activityLog.Append(text, kind);
-
-    // --- Theme ---
-
-    private void UpdateTitleBarButtonColors() =>
-        TitleBarHelper.UpdateButtonColors(_appWindow, Content, _settings.ThemeMode);
 
     // --- Dialogs ---
 
