@@ -2043,17 +2043,17 @@ explícita.
 
 | Fecha | ID | Tarea | Verificado con | Commit | Versión |
 |---|---|---|---|---|---|
-| 2026-09-16 | F-25 | Los UI tests respaldan el `settings.json` real | 4 tests nuevos · 41/41 UI tests · datos idénticos por SHA-256 | *(pendiente)* | — |
-| 2026-09-16 | F-01 | La tabla principal desplaza por sí misma, no la página | 325/325 unitarios · 42/42 UI tests · guard falla al revertir · lista 13,8 % y página 100 % en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-02 | Nombre accesible en las filas de Historial y Desinstalar | 298/298 unitarios · guard XAML falla al revertir · 0 filas con nombre de tipo en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-03 | Los diálogos genéricos siguen el tema elegido | 300/300 unitarios · guard falla al revertir · diálogo claro en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-04 | Confirmaciones con verbo y Cancelar por defecto en lo destructivo | 305/305 unitarios · guard falla al revertir · foco en «Cancelar» en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-05 | Botón de peligro con contraste AA, estados completos y papelera | 324/324 unitarios · guards fallan al revertir · 3 estados × 2 temas medidos en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-06 | Filas atenuadas con el gris secundario, sin `Opacity` | 313/313 unitarios · guard falla al revertir · texto `#CFCFCF` en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-07 | Cabeceras alineadas con las celdas | guard falla al revertir · 0 px de desfase en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-08 | Una sola instancia por ventana secundaria | UI test falla contra 1.8.8 · 42/42 UI tests · 1 ventana de Historial en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-09 | Menú en el icono de bandeja, con «Salir» | 314/314 unitarios · icono, clic simple, menú y «Salir» en la app real | *(pendiente)* | — |
-| 2026-09-16 | F-10 | Sin salto de maquetación al seleccionar una fila | guard estructural · 0 px de salto en la app real | *(pendiente)* | — |
+| 2026-09-16 | F-25 | Los UI tests respaldan el `settings.json` real | 4 tests nuevos · 41/41 UI tests · datos idénticos por SHA-256 | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-01 | La tabla principal desplaza por sí misma, no la página | 325/325 unitarios · 42/42 UI tests · guard falla al revertir · lista 13,8 % y página 100 % en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-02 | Nombre accesible en las filas de Historial y Desinstalar | 298/298 unitarios · guard XAML falla al revertir · 0 filas con nombre de tipo en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-03 | Los diálogos genéricos siguen el tema elegido | 300/300 unitarios · guard falla al revertir · diálogo claro en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-04 | Confirmaciones con verbo y Cancelar por defecto en lo destructivo | 305/305 unitarios · guard falla al revertir · foco en «Cancelar» en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-05 | Botón de peligro con contraste AA, estados completos y papelera | 324/324 unitarios · guards fallan al revertir · 3 estados × 2 temas medidos en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-06 | Filas atenuadas con el gris secundario, sin `Opacity` | 313/313 unitarios · guard falla al revertir · texto `#CFCFCF` en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-07 | Cabeceras alineadas con las celdas | guard falla al revertir · 0 px de desfase en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-08 | Una sola instancia por ventana secundaria | UI test falla contra 1.8.8 · 42/42 UI tests · 1 ventana de Historial en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-09 | Menú en el icono de bandeja, con «Salir» | 314/314 unitarios · icono, clic simple, menú y «Salir» en la app real | `9b77a78` | 1.8.9 |
+| 2026-09-16 | F-10 | Sin salto de maquetación al seleccionar una fila | guard estructural · 0 px de salto en la app real | `9b77a78` | 1.8.9 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

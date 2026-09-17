@@ -256,6 +256,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-17 | **1.8.9** | **Tier F · bloque F·1 completo** — la bandeja por fin funciona (icono y menú con «Salir»), la tabla desplaza por sí misma, confirmaciones con verbo, botón de peligro AA y diálogos con el tema elegido; CI, CodeQL y Dependabot en GitHub |
 | 2026-08-23 | **1.8.8** | **Tier T4 y cierre del plan de auditoría** — MainWindow dividido, el flujo de lotes por fin probable, cobertura en local, y SECURITY/CONTRIBUTING/CHANGELOG |
 | 2026-08-22 | **1.8.7** | **Tier T3 completo** — el ajuste de notificaciones ya no oculta el resumen del lote, arreglo del flujo de auto-actualización, `.editorconfig` con comprobación de estilo y diagnósticos que por fin van a algún sitio |
 | 2026-08-22 | **1.8.6** | **Tier T2 completo** — filtros accesibles y que envuelven, fechas y nombres de archivo por idioma, `verify.ps1` + hook de pre-push, y pruebas del protocolo del worker elevado |
@@ -271,6 +272,53 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-17 — Tier F, bloque F·1: defectos verificados en la app real (F-01 a F-10 y F-25, release v1.8.9)
+
+**11 de 26** del Tier F ([`ROADMAP.md`](ROADMAP.md) Parte III), con el bloque F·1 completo. Build 0/0,
+**326/326 unitarios**, **42/42 UI tests**. Cada defecto se reprodujo primero conduciendo la v1.8.8, y cada
+guard nuevo se hizo fallar contra el código anterior antes de darlo por bueno.
+
+**1. La bandeja nunca funcionó (F-09).** Con «Minimizar a la bandeja al cerrar» activo, cerrar ocultaba la
+ventana y el proceso seguía vivo **sin icono**: no quedaba otra salida que el Administrador de tareas. Lo
+destapó la prueba manual del menú nuevo, no un test. El `TaskbarIcon` se creaba desde código, fuera del
+árbol XAML, y H.NotifyIcon solo lo registra en el `Loaded` o con `ForceCreate`, que nunca se llamaba. Ahora
+se crea sin modo eficiencia (la consulta automática sigue en segundo plano) y tiene menú Abrir · Consultar
+actualizaciones · Salir. Sus entradas llevan `Command` y no `Click`, porque el menú nativo de H.NotifyIcon
+solo ejecuta el comando.
+
+**2. La tabla desplaza por sí misma (F-01).** El `ScrollViewer` de página medía con alto infinito: la fila
+`*` se comportaba como `Auto`, la lista se medía entera, sin scroll propio ni virtualización, y empujaba el
+registro fuera de la ventana. `Height` atado al viewport y un `MinHeight` calculado desde las tarjetas
+superiores conservan el scroll de página solo donde hace falta (snap de cuarto de pantalla).
+
+**3. Diálogos y confirmaciones (F-03, F-04).** Los diálogos genéricos no seguían el tema forzado de la
+app: `ContentDialog` no hereda el `RequestedTheme` de la ventana, y ahora todos pasan por
+`WindowDialogHelper.Prepare`. Las confirmaciones dicen la acción («Desinstalar», «Eliminar») en lugar de
+«Sí / No», y en lo destructivo el botón por defecto es Cancelar, así que Intro ya no borra.
+
+**4. Contraste y accesibilidad (F-02, F-05, F-06).** El botón de peligro bajaba a 3,34:1; ahora es un
+diccionario compartido con reposo, hover y pulsado ≥ 4,5:1 en los dos temas, alto contraste con los
+colores del sistema y papelera para no depender del color. No es un `Style`: la plantilla de `Button` lee
+los recursos de cada estado directamente, y un `Style` solo alcanza el reposo. Las filas excluidas pasan de
+`Opacity 0.4` (2,50:1) al gris secundario del tema, y las filas de Historial y Desinstalar dejan de
+anunciarse como un nombre de tipo .NET.
+
+**5. Pulido de tablas y ventanas (F-07, F-08, F-10).** Cabeceras alineadas con sus celdas (el
+`ListViewItem` traía 16/12 px de relleno), una sola instancia por ventana secundaria y ningún salto de
+36 px al seleccionar una fila.
+
+**6. Los UI tests respaldaban una carpeta que no existe (F-25).** Corrían sobre el `settings.json` real del
+usuario. Ahora respaldan `%LocalAppData%\WingetUSoft`, restauran después de que la app termine de vaciar su
+registro y fallan si algo no queda idéntico byte a byte.
+
+**Fuera de la app:** con el repositorio ya público se reabrió la decisión sobre CI (§4): `verify.ps1` sin
+`-Full` en GitHub Actions, CodeQL `security-extended`, Dependabot y secret scanning. Dependabot resultó casi
+ciego para NuGet con un proyecto `net10.0-windows`, así que los parches de esta versión (Windows App SDK
+1.8.260804001, SDK.BuildTools 10.0.28000.2705, Test.Sdk 18.10.1) se subieron a mano. CodeQL destapó que
+ningún test comprobaba que las cinco traducciones usen los mismos marcadores de formato; ya lo hay.
 
 ---
 
