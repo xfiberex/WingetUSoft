@@ -543,7 +543,7 @@ public sealed partial class MainWindow : Window
             string sufijo = includeUnknown ? L.T("list.suffixUnknown") : "";
             txtEstado.Text = _packages.Count == 0
                 ? L.T("status.noUpdatesFound", sufijo)
-                : L.T("status.updatesFound", _packages.Count, sufijo);
+                : L.P("status.updatesFound", _packages.Count, _packages.Count, sufijo);
         }
         catch (OperationCanceledException)
         {
@@ -631,7 +631,7 @@ public sealed partial class MainWindow : Window
         string lista = string.Join("\n  \u2022 ", pendientes.Take(10).Select(p => p.Name));
         if (pendientes.Count > 10) lista += L.T("list.andMore", pendientes.Count - 10);
         if (!await ShowConfirmDialogAsync(L.T("confirm.updateTitle"),
-                L.T("confirm.updateBody", pendientes.Count, lista),
+                L.P("confirm.updateBody", pendientes.Count, pendientes.Count, lista),
                 L.T("confirm.updatePrimary")))
             return;
         await UpdatePackagesAsync(pendientes);

@@ -100,7 +100,7 @@ public sealed partial class CleanupWindow : Window
             else
             {
                 txtSubtitulo.Text = L.T("cleanup.potentialResidues", pkgList);
-                txtEstado.Text    = L.T("cleanup.foundResidues", found.Count);
+                txtEstado.Text    = L.P("cleanup.foundResidues", found.Count, found.Count);
                 btnEliminar.IsEnabled = true;
                 panelListState.Hide();
             }
@@ -147,7 +147,7 @@ public sealed partial class CleanupWindow : Window
         bool confirmed = await WindowDialogHelper.ShowConfirmDialogAsync(
             Content.XamlRoot,
             L.T("cleanup.confirmDeleteTitle"),
-            L.T("cleanup.confirmDeleteBody", toDelete.Count, lista),
+            L.P("cleanup.confirmDeleteBody", toDelete.Count, toDelete.Count, lista),
             L.T("cleanup.confirmPrimary"),
             destructive: true);
         if (!confirmed) return;

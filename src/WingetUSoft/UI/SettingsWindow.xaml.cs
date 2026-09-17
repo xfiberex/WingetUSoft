@@ -155,7 +155,7 @@ public sealed partial class SettingsWindow : Window
     {
         bool any = _excluded.Count > 0;
         cardExcluded.Description = any
-            ? L.T("settings.excludedCount", _excluded.Count)
+            ? L.P("settings.excludedCount", _excluded.Count, _excluded.Count)
             : L.T("settings.excludedEmpty");
         panelExcluidos.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
         btnLimpiar.IsEnabled = any;

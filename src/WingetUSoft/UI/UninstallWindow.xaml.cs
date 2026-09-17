@@ -25,6 +25,7 @@ public sealed class InstalledPackageViewModel(WingetPackage package)
     public string Name => Package.Name;
     public string Id => Package.Id;
     public string Version => Package.Version;
+    public string VersionText => L.VersionText(Version);
     public string Source => Package.Source;
 
     /// <summary>
@@ -32,8 +33,8 @@ public sealed class InstalledPackageViewModel(WingetPackage package)
     /// en ese caso la etiqueta no termina en un «origen» vacío.
     /// </summary>
     public string RowLabel => string.IsNullOrWhiteSpace(Source)
-        ? L.T("uninstall.rowAccessibleNoSource", Name, Version)
-        : L.T("uninstall.rowAccessible", Name, Version, Source);
+        ? L.T("uninstall.rowAccessibleNoSource", Name, VersionText)
+        : L.T("uninstall.rowAccessible", Name, VersionText, Source);
 }
 
 public sealed partial class UninstallWindow : Window
@@ -117,7 +118,7 @@ public sealed partial class UninstallWindow : Window
             _allPackages = await WingetService.GetInstalledPackagesAsync(_cts.Token);
             _listState = ListState.Ready;
             ApplyFilter();
-            txtEstado.Text = L.T("uninstall.foundCount", _allPackages.Count);
+            txtEstado.Text = L.P("uninstall.foundCount", _allPackages.Count, _allPackages.Count);
         }
         catch (OperationCanceledException)
         {
@@ -194,7 +195,7 @@ public sealed partial class UninstallWindow : Window
             _packageViewModels.Add(new InstalledPackageViewModel(pkg));
 
         txtContador.Text = _packageViewModels.Count == _allPackages.Count
-            ? L.T("uninstall.countAll", _allPackages.Count)
+            ? L.P("uninstall.countAll", _allPackages.Count, _allPackages.Count)
             : L.T("uninstall.countFiltered", _packageViewModels.Count, _allPackages.Count);
 
         // Filtrar puede vaciar la lista: el panel lo explica en cuanto hay datos cargados.

@@ -366,6 +366,6 @@ public sealed partial class MainWindow
         string sufijo = _lastIncludeUnknown ? L.T("list.suffixUnknown") : "";
         txtEstado.Text = _packages.Count == 0
             ? L.T("status.noUpdatesFound", sufijo)
-            : L.T("status.updatesFound", _packages.Count, sufijo);
+            : L.P("status.updatesFound", _packages.Count, _packages.Count, sufijo);
     }
 }

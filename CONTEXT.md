@@ -68,6 +68,8 @@ src/WingetUSoft/
 │  ├─ SettingsWindow         Configuración: único hogar de las preferencias (Tier C)
 │  ├─ UninstallWindow · CleanupWindow · HistoryWindow
 │  ├─ AboutDialog · LegalTextDialog · WhatsNewDialog
+│  ├─ ActivityLog · ListStatePanel · SettingsCard   Controles propios que comparten las ventanas
+│  ├─ Styles.xaml · DangerButtonResources.xaml      Estilos y colores compartidos
 │  └─ WindowSizer · WrapPanel · Notifier · TaskbarProgress · Converters · helpers
 │
 └─ installer/                Inno Setup (installer.iss) + build-installer.ps1 → Output/ (gitignored)
@@ -124,6 +126,9 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
   `settings.json` previo); después manda la elección del usuario.
   ⚠️ **`L.T` devuelve la propia clave si no la conoce** — un error de tipeo no rompe el build ni los
   tests, se ve como texto raro en la UI. `LocalizationUsageTests` escanea el código y lo caza (Tier E).
+  **Los recuentos van con `L.P("clave", recuento, args…)`**, que elige entre `clave.one` y `clave.other`
+  según la regla CLDR del idioma (en FR y PT-BR el 0 es singular). Nada de «(s)» ni «(es)»: hay un test
+  estructural que los prohíbe (F-20). En español se tutea, también en los diálogos.
 - **Nunca parsear la salida de winget por el nombre de la cabecera ni por el texto de una etiqueta:**
   winget **traduce su salida** al idioma de Windows. Las tablas se parsean por **posición de columna**
   (`Core/WingetTable`) y las etiquetas de `winget show` tienen su tabla de 10 idiomas
@@ -273,6 +278,56 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-17 — Tier F, bloque F·3: experiencia de uso (F-18, F-20 a F-23, **sin publicar todavía**)
+
+**22 de 26** del Tier F. Build 0/0, **395/395 unitarios**, **58/58 UI tests**. Cinco de las siete tareas del
+bloque; queda F-19 (tabla usable durante los lotes) y F-17 (densidad), que es la que cambiará la cabecera.
+Todo verificado conduciendo la app con teclas y ratón reales, con `settings.json` idéntico al terminar.
+
+**1. Atajos en su control y `Ctrl+F` (F-21).** Los cuatro aceleradores colgaban de `Content`, así que su tooltip
+saltaba al pasar el ratón por cualquier parte de la ventana; se había ocultado, y los atajos acabaron listados en
+una línea fija de la cabecera. Ahora cada acelerador cuelga del control que ejecuta, la línea sobra y aparece
+`Ctrl+F`. Dos detalles que solo se ven al hacerlo:
+- Un acelerador **sin** `Invoked` ejecuta el `Click` de su botón, y no se dispara si el botón está deshabilitado:
+  F5 y Esc se quedaron sin guardas propias. Un `SplitButton` no es un `ButtonBase` y sí necesita manejador.
+- WinUI **no** rellena `AutomationProperties.AcceleratorKey` a partir del acelerador, así que el Narrador no
+  anunciaba ninguna tecla. Se declara a mano.
+- El rótulo de Supr en el menú contextual saldría en el idioma de Windows, no en el de la app: va por
+  `KeyboardAcceleratorTextOverride` con una clave propia, el mismo problema que los interruptores en F-16.
+
+**2. Una acción de consulta y un solo acento (F-23).** «Consultar actualizaciones» y «Consultar con desconocidas»
+eran dos botones hermanos para lo mismo; ahora son un `SplitButton` que recuerda y rotula la última variante. El
+acento se mueve a la acción del momento —«Actualizar seleccionados (N)» o «Actualizar todo»— y el `Style` se
+cambia entero, porque los estados de puntero y pulsado leen sus propios recursos (la lección de F-05). Se midió
+por saturación del píxel: nunca hay dos acentos a la vez.
+
+**3. Aviso de versión nueva breve (F-22).** La `InfoBar` cargaba hasta 500 caracteres de changelog dentro de un
+control pensado para un estado breve. Se queda en una línea, sale de la tarjeta de cabecera a su propia fila
+—es un estado de la app, no parte del título— y el changelog entero va a un clic, en «Ver novedades». Para
+probarlo de verdad se compiló una copia marcada como 1.8.0, de modo que el aviso saltara contra la 1.9.0
+publicada; no se tocó «Instalar ahora».
+
+**4. Estados de lista accionables (F-18).** La instrucción del arranque aparecía **tres veces** —línea de detalle,
+panel y barra de estado— y ninguna se podía pulsar. Ahora vive solo en el panel, con su botón, y el panel es un
+`UserControl` compartido (`ListStatePanel`) que usan también Buscar, Desinstalar y Limpieza, donde una lista
+vacía era un hueco en blanco. Cancelado y error ofrecen «Reintentar». Dos cosas aprendidas al probarlo:
+- Un `UserControl` sin plantilla **no aparece en la vista de control de UI Automation**: no se puede localizar por
+  su nombre, hay que nombrar sus piezas (`txtEstadoTitulo`, `txtEstadoCuerpo`, `btnEstadoAccion`).
+- El panel medía más que la zona de tabla a 1180×820 y el botón salía recortado; va dentro de un `ScrollViewer`.
+
+**5. Pulido de textos (F-20).** Los recuentos se escribían con «(s)» y «(es)», que no es ningún idioma. Entra
+`L.P("clave", recuento, args…)`, que elige entre `clave.one` y `clave.other` con la regla CLDR de cada idioma —en
+francés y portugués de Brasil el 0 es singular—, con el recuento **aparte** de los argumentos, porque no siempre
+es el primero («{0} de {1} registros»). Además: el español tutea también en los diálogos (fuera «¿Desea
+continuar?», que además sobra con el verbo en el botón), el «Unknown» que emite winget se traduce **solo para
+mostrarlo** (las versiones crudas siguen alimentando `VersionOrder`), la columna «Excl.» pasa a icono con su
+nombre completo en el tooltip, y Nombre e Id llevan tooltip con el valor entero en las tres tablas.
+
+**Pendiente antes del próximo corte:** las capturas de `docs/screenshots` siguen mostrando los dos botones de
+consulta y la cabecera anterior. Se regeneran cuando F-17 haya cambiado también la cabecera.
 
 ---
 

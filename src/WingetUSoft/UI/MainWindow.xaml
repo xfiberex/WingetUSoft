@@ -474,8 +474,12 @@
                                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                             </StackPanel>
                                         </Button>
-                                        <TextBlock x:Name="colExcl" Grid.Column="6" Text="Excl." VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
-                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Text, ElementName=colExcl}" />
+                                        <!-- La columna es de iconos, así que su cabecera también: «Excl.» no se entendía
+                                             y no cabía completo. El nombre entero va en el tooltip y en el árbol de
+                                             automatización (F-20). -->
+                                        <FontIcon x:Name="colExcl" Grid.Column="6" Glyph="&#xE8D8;" FontSize="14"
+                                                  VerticalAlignment="Center" Margin="8,0,0,0"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Grid>
 
                                     <ListView x:Name="lvPackages" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
@@ -506,13 +510,16 @@
                                                               IsEnabled="{Binding IsSelectable}"
                                                               VerticalAlignment="Center" MinWidth="0"
                                                               AutomationProperties.Name="{Binding SelectLabel}" />
+                                                    <!-- Nombre e Id se recortan a menudo: el tooltip enseña el valor entero (F-20). -->
                                                     <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                               ToolTipService.ToolTip="{Binding Name}"
                                                                Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
                                                     <TextBlock Grid.Column="2" Text="{Binding Id}"
+                                                               ToolTipService.ToolTip="{Binding Id}"
                                                                Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
-                                                    <TextBlock Grid.Column="3" Text="{Binding Version}"
+                                                    <TextBlock Grid.Column="3" Text="{Binding VersionText}"
                                                                Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
-                                                    <TextBlock Grid.Column="4" Text="{Binding Available}"
+                                                    <TextBlock Grid.Column="4" Text="{Binding AvailableText}"
                                                                Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />
                                                     <TextBlock Grid.Column="5" Text="{Binding Source}"
                                                                Style="{Binding IsDimmed, Converter={StaticResource PackageCellStyleConverter}}" />

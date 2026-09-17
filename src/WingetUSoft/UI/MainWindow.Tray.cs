@@ -169,7 +169,7 @@ public sealed partial class MainWindow
     private void ShowBatchResultInStatusBar(int success, int failed)
     {
         string message = failed == 0
-            ? L.T("notif.updatedSuccess", success)
+            ? L.P("notif.updatedSuccess", success, success)
             : L.T("notif.updatedMixed", success, failed);
 
         txtEstado.Text = message;

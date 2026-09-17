@@ -151,10 +151,12 @@
                                             <ColumnDefinition Width="80" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                                                   ToolTipService.ToolTip="{Binding Name}"
                                                    TextTrimming="CharacterEllipsis" Margin="4,0,0,0" />
                                         <TextBlock Grid.Column="1" Text="{Binding Id}" VerticalAlignment="Center"
+                                                   ToolTipService.ToolTip="{Binding Id}"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="2" Text="{Binding Version}" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="2" Text="{Binding VersionText}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
                                         <TextBlock Grid.Column="3" Text="{Binding Source}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0"

@@ -128,7 +128,7 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 - **Historial** — registra cada actualización **y cada instalación** con fecha, versiones y resultado (máx. 500 entradas), con búsqueda, filtros y exportación a CSV.
 - **Exportación** — exporta la lista a CSV o TSV con neutralización de fórmulas (seguro para Excel/Calc).
 - **Tema claro / oscuro** — integrado con el sistema de temas de Windows y configurable manualmente.
-- **Idioma** — español, inglés, portugués, francés e italiano, aplicados en caliente.
+- **Idioma** — español, inglés, portugués, francés e italiano, aplicados en caliente y con plurales reales en cada uno («1 programa» / «113 programas», nunca «programa(s)»).
 - **Modo de actualización** — silenciosa o interactiva, y opción de ejecutar como administrador.
 - **Auto-comprobación** — comprueba actualizaciones de forma periódica configurable (30 / 60 / 120 min).
 - **Aviso al terminar** — sonido + parpadeo de la barra de tareas al acabar un lote largo, y progreso en el icono de la barra de tareas.
@@ -209,6 +209,30 @@ instalador, hace commit + tag, lo sube y crea el **GitHub Release** con el insta
 Flags: `-DryRun`, `-SkipTests`, `-SkipUiTests` (para sesiones sin escritorio interactivo), `-AllowDirty`,
 `-NotesFile <archivo.md>` y los de firma.
 
+### Qué comprueba GitHub en cada cambio
+
+Los dos distintivos de arriba enlazan a estos workflows, que se ejecutan en `main` y en cada pull request:
+
+| Workflow | Cuándo | Qué hace | Dónde se ven los resultados |
+|---|---|---|---|
+| **CI** (`.github/workflows/ci.yml`) | Cada push a `main`, cada PR y a mano | Ejecuta **el mismo `verify.ps1`** que se lanza en local: compila con las advertencias como error, comprueba el estilo contra el `.editorconfig`, pasa las pruebas unitarias y busca dependencias con vulnerabilidades conocidas | Pestaña **Actions** |
+| **CodeQL** (`.github/workflows/codeql.yml`) | Cada push a `main`, cada PR, los lunes y a mano | Análisis estático de seguridad del C# con la consulta `security-extended` | **Security → Code scanning** |
+
+Dos decisiones que explican por qué están así:
+
+- **Los tests de UI no corren en GitHub.** Conducen la aplicación real y necesitan una sesión de escritorio
+  interactiva, que un runner hospedado no tiene. Siguen siendo obligatorios en local: `release.ps1` no corta
+  una versión si no pasan.
+- **CodeQL compila de verdad** (`build-mode: manual`) en lugar de analizar solo el código fuente: el código que
+  genera el compilador XAML de WinUI solo existe después de compilar, y sin él CodeQL no vería los manejadores
+  enlazados desde el XAML.
+
+**Dependabot** (`.github/dependabot.yml`) revisa las dependencias cada lunes. Para las **acciones de GitHub**
+funciona bien; para **NuGet** apenas propone nada, porque las resuelve en Linux y este proyecto tiene como
+objetivo `net10.0-windows`. La señal fiable de paquetes desactualizados es la que `verify.ps1` deja en el log
+de CI. Además, un PR en verde **no basta** para subir Windows App SDK o H.NotifyIcon: esos cambian lo que se
+ve, y eso solo lo verifican los tests de UI en local.
+
 ### Regenerar las capturas del README
 
 ```powershell
@@ -258,6 +282,8 @@ WingetUSoft/
 │   │   ├── AboutDialog.xaml/.cs     # Acerca de
 │   │   ├── LegalTextDialog.xaml/.cs # Licencia / Avisos de terceros
 │   │   ├── WhatsNewDialog.xaml/.cs  # Novedades de la versión
+│   │   ├── ActivityLog, ListStatePanel, SettingsCard  # Controles propios compartidos
+│   │   ├── Styles.xaml, DangerButtonResources.xaml    # Estilos y colores compartidos
 │   │   └── WrapPanel.cs, WindowSizer.cs, Converters.cs, ...
 │   │
 │   └── installer/             # Inno Setup (installer.iss) + build-installer.ps1
@@ -266,6 +292,7 @@ WingetUSoft/
 ├── tests/WingetUSoft.UiTests/  # Tests de UI end-to-end (FlaUI + UIA3, xUnit)
 ├── tools/                      # capture-screenshots.ps1 (capturas del README)
 ├── docs/screenshots/           # Capturas usadas en este README
+├── .github/workflows/          # CI (verify.ps1) y CodeQL; .github/dependabot.yml para las dependencias
 ├── .githooks/pre-push          # Lanza verify.ps1 antes de cada push
 ├── verify.ps1                  # Verificación completa en local (build + tests + dependencias)
 ├── release.ps1                 # Corta una versión de principio a fin (delega en verify.ps1)

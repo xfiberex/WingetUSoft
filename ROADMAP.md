@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 21 de 26.** ✅ F-01 a F-16, F-18, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-17): 22 de 26.** ✅ F-01 a F-16, F-18, F-20, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -2029,7 +2029,7 @@ explícita.
   - **Esfuerzo:** medio
   - **Depende de:** F-01
 
-- [ ] **[F-20] Pulido de textos: plurales, tratamiento, abreviaturas y truncados**
+- [x] **[F-20] Pulido de textos: plurales, tratamiento, abreviaturas y truncados**
   - **Área:** Redacción / i18n
   - **Ubicación:** `src/WingetUSoft/Localization/Localization.cs` (p. ej. `status.updatesFound`, `uninstall.countAll`, `history.summaryAll`, `confirm.updateBody` en `:414`, `confirm.openWingetRunBody` en `:416`, `uninstall.confirmBody` en `:495` y `list.colExcluded` en `:321`); plantillas de las tablas
   - **Qué hacer:** (1) formas de singular y plural reales, con un ayudante `L.Plural` según CLDR (en FR y
@@ -2041,6 +2041,27 @@ explícita.
     español sin formas de «usted»; `LocalizationTests` en verde.
   - **Evidencia (2026-09-14):** «Se encontraron 26 actualización(es) disponible(s).», «113 programa(s)» y
     «104 registro(s) cargados»; «Unknown» visible en Desinstalar; Ids truncados sin tooltip en tres tablas.
+  - **Al implementarlo:**
+    - `L.P("clave", recuento, args…)` elige entre `clave.one` y `clave.other` con la regla CLDR de cada idioma
+      (`L.UsesSingular`): en francés y portugués de Brasil el 0 va en singular; en español, inglés e italiano,
+      no. El recuento va aparte de los argumentos porque no siempre es el primero («{0} de {1} registros»).
+    - 12 claves partidas en dos formas × 5 idiomas, y sus 13 llamadas pasadas a `L.P`.
+    - Tuteo en español: fuera «¿Desea continuar?» de los cuerpos —el verbo ya está en el botón (F-04)— y
+      «Verifique» → «Comprueba». La confirmación de desinstalar pasa a «Vas a desinstalar…».
+    - `L.VersionText` traduce el «Unknown» que emite winget. Las propiedades crudas siguen ahí: con ellas se
+      ordena y se compara (`VersionOrder` reconoce «Unknown», no «Desconocida»).
+    - La cabecera «Excl.» pasa a icono, con «Excluido u omitido» en el tooltip y en el árbol de automatización.
+    - Nombre e Id llevan tooltip con el valor entero en las tres tablas.
+  - **Verificado (2026-09-17):** conduciendo la app:
+    - «Se encontraron 25 actualizaciones disponibles.» y «113 programas», sin paréntesis.
+    - La confirmación de «Actualizar todo» empieza por «Se van a actualizar 18 programas:» y ya no pregunta
+      «¿Desea continuar?». Se cerró con Escape: no se actualizó nada.
+    - Cabecera de estado: icono que se anuncia y muestra «Excluido u omitido».
+    - Tooltip de una celda Id truncada: «CPUID.CPU-Z».
+    - Desinstalar: 0 filas con «Unknown» y una con «Desconocida».
+    - `settings.json` queda idéntico.
+    - Tests: `TextPolishTests` (34 casos). Al revertir, el proyecto ni siquiera compila —`L.P` y
+      `L.VersionText` no existen— y 4 guards fallan contra el XAML y los textos anteriores.
   - **Esfuerzo:** medio
   - **Depende de:** F-04
 
@@ -2214,10 +2235,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 4 | 3 | 57 % |
+| F·3 — Experiencia de uso | 7 | 5 | 2 | 71 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **21** | **5** | **81 %** |
+| **Total** | **26** | **22** | **4** | **85 %** |
 
 ### Registro de tareas completadas
 
@@ -2243,7 +2264,8 @@ explícita.
 | 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | — |
 | 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | `ca083cb` | — |
 | 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | — |
-| 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | — | — |
+| 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | — |
+| 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

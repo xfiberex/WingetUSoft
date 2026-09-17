@@ -19,6 +19,10 @@ public sealed class PackageViewModel : INotifyPropertyChanged
     public string Id => Package.Id;
     public string Version => Package.Version;
     public string Available => Package.Available;
+
+    /// <summary>Lo que ve el usuario. Version y Available siguen crudas: con ellas se ordena y se compara.</summary>
+    public string VersionText => L.VersionText(Version);
+    public string AvailableText => L.VersionText(Available);
     public string Source => Package.Source;
 
     public bool IsSelected
@@ -51,7 +55,7 @@ public sealed class PackageViewModel : INotifyPropertyChanged
     /// <summary>Etiqueta accesible (localizada) del icono de estado: sin ella, un lector de pantalla no lo anuncia.</summary>
     public string StatusLabel => IsExcluded
         ? L.T("grid.excludedAccessible")
-        : IsVersionSkipped ? L.T("grid.skippedAccessible", Available) : "";
+        : IsVersionSkipped ? L.T("grid.skippedAccessible", AvailableText) : "";
 
     /// <summary>Etiqueta accesible de la casilla de la fila: sin ella se anuncia solo como "casilla".</summary>
     public string SelectLabel => L.T("grid.selectAccessible", Name);
@@ -61,7 +65,7 @@ public sealed class PackageViewModel : INotifyPropertyChanged
     /// del ViewModel y un lector de pantalla anuncia literalmente "WingetUSoft.PackageViewModel"
     /// (comprobado en el árbol de automatización de la app real).
     /// </summary>
-    public string RowLabel => L.T("grid.rowAccessible", Name, Version, Available);
+    public string RowLabel => L.T("grid.rowAccessible", Name, VersionText, AvailableText);
 
     public PackageViewModel(WingetPackage package) => Package = package;
 

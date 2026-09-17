@@ -112,8 +112,8 @@ public sealed partial class HistoryWindow : Window
         int successCount = history.Count(e => e.Success);
         int failedCount = history.Count - successCount;
         txtSummary.Text = history.Count == totalCount
-            ? L.T("history.summaryAll", history.Count, successCount, failedCount)
-            : L.T("history.summaryFiltered", history.Count, totalCount, successCount, failedCount);
+            ? L.P("history.summaryAll", history.Count, history.Count, successCount, failedCount)
+            : L.P("history.summaryFiltered", totalCount, history.Count, totalCount, successCount, failedCount);
 
         // Hay historial pero la busqueda/filtro no deja nada visible: estado "sin coincidencias".
         if (history.Count == 0)

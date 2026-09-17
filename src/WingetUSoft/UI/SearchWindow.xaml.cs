@@ -19,6 +19,7 @@ public sealed class SearchResultViewModel(WingetSearchResult result)
     public string Name => result.Name;
     public string Id => result.Id;
     public string Version => result.Version;
+    public string VersionText => L.VersionText(Version);
     public string Source => result.Source;
     public bool IsInstalled => result.IsInstalled;
     public string InstalledLabel => L.T("search.installed");
@@ -29,8 +30,8 @@ public sealed class SearchResultViewModel(WingetSearchResult result)
     /// se vio en la tabla de la ventana principal al conducir la app real).
     /// </summary>
     public string RowLabel => IsInstalled
-        ? L.T("search.rowAccessibleInstalled", Name, Version, Source)
-        : L.T("search.rowAccessible", Name, Version, Source);
+        ? L.T("search.rowAccessibleInstalled", Name, VersionText, Source)
+        : L.T("search.rowAccessible", Name, VersionText, Source);
 }
 
 /// <summary>
@@ -154,8 +155,8 @@ public sealed partial class SearchWindow : Window
 
             txtEstado.Text = found.Count == 0
                 ? L.T("search.noResults", query)
-                : L.T("search.found", found.Count);
-            txtContador.Text = found.Count == 0 ? "" : L.T("search.countLabel", found.Count);
+                : L.P("search.found", found.Count, found.Count);
+            txtContador.Text = found.Count == 0 ? "" : L.P("search.countLabel", found.Count, found.Count);
             _listState = ListState.Ready;
         }
         catch (OperationCanceledException)
