@@ -138,7 +138,9 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 ### Accesibilidad
 - **Manejable solo con teclado** — incluidas las cabeceras de la tabla (botones enfocables que anuncian
   por qué columna y en qué dirección está ordenada) y el **menú contextual de la fila**, que se abre con
-  Shift+F10 o la tecla Menú, no solo con el ratón.
+  Shift+F10 o la tecla Menú, no solo con el ratón. Atajos en la ventana principal: `F5` consultar, `Ctrl+F`
+  buscar, `Ctrl+A` marcar todo, `Supr` excluir y `Esc` cancelar; cada uno aparece en el tooltip o el menú de su
+  acción.
 - **Filas con nombre accesible** — un lector de pantalla anuncia "*programa*, versión instalada X,
   disponible Y", no el nombre interno del objeto.
 - **Contraste verificado** — los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema

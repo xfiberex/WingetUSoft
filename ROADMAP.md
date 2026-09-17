@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 17 de 26.** ✅ F-01 a F-16 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-17): 18 de 26.** ✅ F-01 a F-16, F-21 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -2014,7 +2014,7 @@ explícita.
   - **Esfuerzo:** medio
   - **Depende de:** F-04
 
-- [ ] **[F-21] Atajos donde se usan, y `Ctrl+F`**
+- [x] **[F-21] Atajos donde se usan, y `Ctrl+F`**
   - **Área:** UX / teclado
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:199-250` (`KeyboardAcceleratorPlacementMode.Hidden` en `:204`) y `MainWindow.xaml:98-101`
   - **Qué hacer:** los aceleradores cuelgan de `Content`, así que su tooltip saltaba al pasar el ratón por
@@ -2024,6 +2024,30 @@ explícita.
     (`KeyboardAcceleratorTextOverride`); añadir `Ctrl+F` para el buscador; y retirar la línea fija.
   - **Criterio de aceptación:** cada atajo se descubre en el tooltip o el menú de su acción; un UI test
     comprueba que `Ctrl+F` enfoca `txtBuscar`; `header.shortcuts` deja de usarse.
+  - **Al implementarlo:**
+    - Los aceleradores se declaran en `MainWindow.xaml`, cada uno en su control: F5 en `btnConsultar`, Esc
+      en `btnCancelar`, Ctrl+A en `chkSelectAll`, Ctrl+F en `txtBuscar` y Supr en `lvPackages`.
+    - F5 y Esc no tienen manejador. Sin `Invoked`, el acelerador ejecuta el `Click` de su botón, y con el
+      botón deshabilitado no se dispara, así que sobran las guardas sobre `_cts`. F5 lanza ahora la consulta
+      normal, la que indica su tooltip, y no repite la última variante.
+    - Supr no muestra tooltip sobre toda la tabla (`KeyboardAcceleratorPlacementMode="Hidden"` solo en
+      `lvPackages`). La tecla se ve en «Excluir» del menú contextual, con `KeyboardAcceleratorTextOverride`
+      desde la clave nueva `key.delete`, porque WinUI la rotularía en el idioma de Windows.
+    - Ctrl+A sobre la casilla se marca siempre como manejado, porque si no la casilla alternaría la
+      selección. Con el foco en un cuadro de texto, selecciona su texto.
+    - WinUI no rellena `AutomationProperties.AcceleratorKey` a partir del acelerador, así que se declara a
+      mano para que el Narrador anuncie la tecla.
+    - Salen `txtShortcuts` y la clave `header.shortcuts`.
+  - **Verificado (2026-09-17):** conduciendo la app con teclas y ratón reales:
+    - Tooltips: «F5» al pasar por Consultar, «Ctrl+F» en el buscador y ninguno sobre la cabecera.
+    - Buscador: Ctrl+A y escribir deja «x»; Inicio y Supr deja «bc».
+    - F5 lanza la consulta y Esc la cancela («Consulta cancelada.»).
+    - Tabla: Ctrl+A marca 18 de 20 filas (el resto están excluidas) y Supr excluye la fila resaltada
+      (seleccionados de 18 a 17).
+    - El menú contextual muestra «Excluir de actualizaciones · Supr».
+    - `settings.json` queda idéntico.
+    - Tests: `KeyboardShortcutTests` unitario (acelerador en cada control, ninguno en `Content`, sin línea
+      fija) y UI test (Ctrl+F enfoca `txtBuscar`; `AcceleratorKey` en 4 controles).
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -2123,10 +2147,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 0 | 7 | 0 % |
+| F·3 — Experiencia de uso | 7 | 1 | 6 | 14 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **17** | **9** | **65 %** |
+| **Total** | **26** | **18** | **8** | **69 %** |
 
 ### Registro de tareas completadas
 
@@ -2149,6 +2173,7 @@ explícita.
 | 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | 1.9.0 |
 | 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | 1.9.0 |
 | 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
+| 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

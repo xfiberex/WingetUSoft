@@ -42,10 +42,12 @@ public sealed partial class MainWindow
         ctxCopiarId.Text = L.T("ctx.copyId");
         ctxBuscarWeb.Text = L.T("ctx.viewOnWingetRun");
         ctxExcluir.Text = L.T("ctx.exclude");
+        // Solo el texto: la tecla la atiende el acelerador de lvPackages. Se traduce aquí porque WinUI la
+        // rotularía en el idioma de Windows, no en el de la aplicación.
+        ctxExcluir.KeyboardAcceleratorTextOverride = L.T("key.delete");
 
         txtHeaderTitle.Text = L.T("header.title");
         txtSubtitulo.Text = L.T("header.subtitle");
-        txtShortcuts.Text = L.T("header.shortcuts");
         btnInstalarUpdate.Content = L.T("btn.installNow");
         txtAccionesTitle.Text = L.T("actions.title");
         btnConsultar.Content = L.T("btn.checkUpdates");

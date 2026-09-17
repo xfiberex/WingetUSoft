@@ -90,10 +90,6 @@
                                    Text="Consulta, filtra y actualiza paquetes desde una sola vista."
                                    Style="{StaticResource BodyTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock x:Name="txtShortcuts"
-                                   Text="Atajos: F5 consultar · Ctrl+A marcar · Supr excluir · Esc cancelar"
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                         <InfoBar x:Name="infoBarUpdate"
                                  IsOpen="False"
                                  Severity="Informational"
@@ -122,11 +118,22 @@
                         <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
                                    Style="{StaticResource BodyStrongTextBlockStyle}"
                                    Margin="0,0,0,8" />
+                        <!-- Cada atajo cuelga del control que ejecuta (F-21): así su tooltip sale solo al pasar
+                             por ese control y no por toda la ventana, como cuando colgaban de Content. Un
+                             acelerador sin Invoked que lo marque Handled ejecuta el Click del botón, y uno sobre
+                             un control deshabilitado no se dispara: F5 y Esc ya no necesitan guardas propias.
+                             AutomationProperties.AcceleratorKey no lo rellena WinUI a partir del acelerador: sin él,
+                             el Narrador no anunciaría la tecla. -->
                         <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                             <Button x:Name="btnConsultar" Style="{StaticResource AccentButtonStyle}"
                                     Content="Consultar actualizaciones"
                                     Click="BtnConsultar_Click"
-                                    MinWidth="180" Height="36" />
+                                    AutomationProperties.AcceleratorKey="F5"
+                                    MinWidth="180" Height="36">
+                                <Button.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="F5" />
+                                </Button.KeyboardAccelerators>
+                            </Button>
                             <Button x:Name="btnConsultarDesconocidas"
                                     Content="Consultar con desconocidas"
                                     Click="BtnConsultarDesconocidas_Click"
@@ -146,7 +153,12 @@
                                     Content="Cancelar"
                                     Click="BtnCancelar_Click"
                                     IsEnabled="False"
-                                    MinWidth="120" Height="36" />
+                                    AutomationProperties.AcceleratorKey="Esc"
+                                    MinWidth="120" Height="36">
+                                <Button.KeyboardAccelerators>
+                                    <KeyboardAccelerator Key="Escape" />
+                                </Button.KeyboardAccelerators>
+                            </Button>
 
                             <!-- Solo ACCIONES. Las preferencias (modo, tema, idioma) se mudaron a la
                                  ventana de Configuración, donde ya vivía el resto (Tier C #5). -->
@@ -279,7 +291,12 @@
                                          Width="200" Height="32"
                                          VerticalAlignment="Center"
                                          AutomationProperties.LabeledBy="{Binding ElementName=txtBuscarLabel}"
-                                         TextChanged="TxtBuscar_TextChanged" />
+                                         AutomationProperties.AcceleratorKey="Ctrl+F"
+                                         TextChanged="TxtBuscar_TextChanged">
+                                    <TextBox.KeyboardAccelerators>
+                                        <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="SearchAccelerator_Invoked" />
+                                    </TextBox.KeyboardAccelerators>
+                                </TextBox>
                             </StackPanel>
                         </local:WrapPanel>
                         <!-- Panel de información del paquete seleccionado. Siempre visible y con alto fijo: al
@@ -382,7 +399,12 @@
                                                   IsThreeState="True"
                                                   IsEnabled="False"
                                                   VerticalAlignment="Center"
-                                                  Click="ChkSelectAll_Click" />
+                                                  AutomationProperties.AcceleratorKey="Ctrl+A"
+                                                  Click="ChkSelectAll_Click">
+                                            <CheckBox.KeyboardAccelerators>
+                                                <KeyboardAccelerator Key="A" Modifiers="Control" Invoked="SelectAllAccelerator_Invoked" />
+                                            </CheckBox.KeyboardAccelerators>
+                                        </CheckBox>
                                         <!-- Sortable header cells -->
                                         <Button x:Name="btnColNombre" Grid.Column="1" Tag="1"
                                                 Style="{StaticResource ColumnHeaderButtonStyle}" Click="SortHeader_Click">
@@ -437,7 +459,13 @@
                                               Grid.Row="1"
                                               SelectionMode="Single"
                                               SelectionChanged="LvPackages_SelectionChanged"
-                                              ContextRequested="LvPackages_ContextRequested">
+                                              ContextRequested="LvPackages_ContextRequested"
+                                              KeyboardAcceleratorPlacementMode="Hidden">
+                                        <!-- Supr excluye la fila resaltada. Sin tooltip sobre toda la tabla: la tecla se
+                                             descubre en «Excluir» del menú contextual (KeyboardAcceleratorTextOverride). -->
+                                        <ListView.KeyboardAccelerators>
+                                            <KeyboardAccelerator Key="Delete" Invoked="ExcludeAccelerator_Invoked" />
+                                        </ListView.KeyboardAccelerators>
                                         <ListView.ItemTemplate>
                                             <DataTemplate>
                                                 <Grid Height="36" Padding="8,0"

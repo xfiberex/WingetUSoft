@@ -217,70 +217,42 @@ public sealed partial class MainWindow : Window
             };
         }
 
-        // Keyboard accelerators
-        AddKeyboardAccelerators();
-
         _initialized = true;
     }
 
-    private void AddKeyboardAccelerators()
+    // --- Atajos de teclado ---
+    // Declarados en MainWindow.xaml sobre el control de su acción (F-21). F5 y Esc no tienen manejador: sin
+    // Invoked, el acelerador ejecuta el Click de su botón, y no se dispara si el botón está deshabilitado.
+
+    /// <summary>Ctrl+A marca todas las filas visibles; para desmarcar, la casilla de la cabecera.</summary>
+    private void SelectAllAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
     {
-        // Por defecto WinUI muestra un tooltip con la tecla del atajo (ese "F5" flotante al detener el
-        // puntero). Los atajos ya se listan en la barra superior, así que el globito solo estorba: lo
-        // ocultamos para todos los aceleradores enganchados a Content.
-        Content.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
-
-        // F5 - Refresh
-        var f5 = new KeyboardAccelerator { Key = Windows.System.VirtualKey.F5 };
-        f5.Invoked += (_, _) => { if (_cts is null) _ = LoadPackagesAsync(_lastIncludeUnknown); };
-        Content.KeyboardAccelerators.Add(f5);
-
-        // Ctrl+A - Marcar todo (para desmarcar, la casilla de la cabecera)
-        var ctrlA = new KeyboardAccelerator
-        {
-            Key = Windows.System.VirtualKey.A,
-            Modifiers = Windows.System.VirtualKeyModifiers.Control
-        };
-        ctrlA.Invoked += (_, args) =>
-        {
-            if (IsTextInputFocused()) return;   // deja que Ctrl+A seleccione el texto del cuadro
+        // Sin marcarlo como manejado, la casilla ejecutaría su acción por defecto y alternaría la selección.
+        args.Handled = true;
+        if (FocusManager.GetFocusedElement(Content.XamlRoot) is TextBox box)
+            box.SelectAll();   // en un cuadro de texto, Ctrl+A selecciona su texto
+        else
             SetAllVisibleSelected(true);
-            args.Handled = true;
-        };
-        Content.KeyboardAccelerators.Add(ctrlA);
-
-        // Escape - Cancel
-        var esc = new KeyboardAccelerator { Key = Windows.System.VirtualKey.Escape };
-        esc.Invoked += (_, _) =>
-        {
-            if (_cts is not null)
-            {
-                _cts.Cancel();
-                btnCancelar.IsEnabled = false;
-                txtEstado.Text = GetCancelStatusText();
-            }
-        };
-        Content.KeyboardAccelerators.Add(esc);
-
-        // Delete - Exclude
-        var del = new KeyboardAccelerator { Key = Windows.System.VirtualKey.Delete };
-        del.Invoked += (_, args) =>
-        {
-            if (IsTextInputFocused()) return;   // en el buscador, Supr borra caracteres
-            if (GetSelectedPackage() is not null)
-            {
-                CtxExcluir_Click(null, null);
-                args.Handled = true;
-            }
-        };
-        Content.KeyboardAccelerators.Add(del);
     }
 
-    /// <summary>
-    /// Los aceleradores viven en la raíz del contenido, así que se disparan también con el foco dentro
-    /// del buscador: sin esta guarda, Ctrl+A marcaba todos los paquetes en vez de seleccionar el texto,
-    /// y Supr excluía un paquete en vez de borrar un carácter.
-    /// </summary>
+    /// <summary>Ctrl+F lleva al buscador con su texto seleccionado, listo para sobrescribir.</summary>
+    private void SearchAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        txtBuscar.Focus(FocusState.Keyboard);
+        txtBuscar.SelectAll();
+    }
+
+    /// <summary>Supr excluye (o vuelve a incluir) la fila resaltada.</summary>
+    private void ExcludeAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        // Los aceleradores se disparan con el foco en cualquier parte de la ventana: en el buscador, Supr
+        // tiene que borrar caracteres y no excluir un paquete.
+        if (IsTextInputFocused() || GetSelectedPackage() is null) return;
+        CtxExcluir_Click(null, null);
+        args.Handled = true;
+    }
+
     private bool IsTextInputFocused() =>
         FocusManager.GetFocusedElement(Content.XamlRoot) is TextBox or PasswordBox or AutoSuggestBox or RichEditBox;
 
