@@ -43,6 +43,10 @@ public sealed partial class UninstallWindow : Window
     private List<WingetPackage> _allPackages = [];
     private string _searchFilter = "";
     private CancellationTokenSource? _cts;
+
+    /// <summary>Estado de la lista, que decide qué cuenta el panel superpuesto (F-18).</summary>
+    private enum ListState { Loading, Ready, Cancelled, Error }
+    private ListState _listState = ListState.Loading;
     private bool _initialized;
 
     private AppWindow _appWindow = null!;
@@ -105,20 +109,25 @@ public sealed partial class UninstallWindow : Window
         _cts = new CancellationTokenSource();
         SetUIBusy(true);
         txtEstado.Text = L.T("uninstall.loadingList");
+        _listState = ListState.Loading;
+        UpdateListState();
 
         try
         {
             _allPackages = await WingetService.GetInstalledPackagesAsync(_cts.Token);
+            _listState = ListState.Ready;
             ApplyFilter();
             txtEstado.Text = L.T("uninstall.foundCount", _allPackages.Count);
         }
         catch (OperationCanceledException)
         {
             txtEstado.Text = L.T("uninstall.loadCancelled");
+            _listState = ListState.Cancelled;
         }
         catch (Exception ex)
         {
             txtEstado.Text = L.T("uninstall.loadError");
+            _listState = ListState.Error;
             await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
@@ -126,7 +135,48 @@ public sealed partial class UninstallWindow : Window
             _cts?.Dispose();
             _cts = null;
             SetUIBusy(false);
+            UpdateListState();
         }
+    }
+
+    /// <summary>
+    /// Cuenta en la propia lista si está cargando, si falló o por qué está vacía (F-18): hasta entonces solo lo
+    /// decía la barra de estado del pie.
+    /// </summary>
+    private void UpdateListState()
+    {
+        switch (_listState)
+        {
+            case ListState.Loading:
+                panelListState.ShowLoading(L.T("uninstall.loadingList"), L.T("list.stateLoadingBody"));
+                return;
+            case ListState.Cancelled:
+                panelListState.Show(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"),
+                    ListStatePanel.Glyph.Sync, L.T("btn.retry"));
+                return;
+            case ListState.Error:
+                panelListState.Show(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"),
+                    ListStatePanel.Glyph.Warning, L.T("btn.retry"));
+                return;
+        }
+
+        if (_packageViewModels.Count > 0)
+            panelListState.Hide();
+        else if (_allPackages.Count == 0)
+            panelListState.Show(L.T("uninstall.stateEmptyTitle"), L.T("uninstall.stateEmptyBody"),
+                ListStatePanel.Glyph.CheckMark);
+        else if (_searchFilter.Trim() is { Length: > 0 } search)
+            panelListState.Show(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchSearch", search),
+                ListStatePanel.Glyph.Search);
+        else
+            panelListState.Show(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchFilters"),
+                ListStatePanel.Glyph.Search);
+    }
+
+    /// <summary>Reintentar la carga desde el propio panel.</summary>
+    private async void PanelListState_ActionInvoked(object sender, RoutedEventArgs e)
+    {
+        if (_cts is null) await LoadPackagesAsync();
     }
 
     private void ApplyFilter()
@@ -146,6 +196,9 @@ public sealed partial class UninstallWindow : Window
         txtContador.Text = _packageViewModels.Count == _allPackages.Count
             ? L.T("uninstall.countAll", _allPackages.Count)
             : L.T("uninstall.countFiltered", _packageViewModels.Count, _allPackages.Count);
+
+        // Filtrar puede vaciar la lista: el panel lo explica en cuanto hay datos cargados.
+        if (_listState == ListState.Ready) UpdateListState();
     }
 
     // --- Uninstall ---

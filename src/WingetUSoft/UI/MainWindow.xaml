@@ -535,41 +535,9 @@
                                         </ListView.ItemTemplate>
                                     </ListView>
 
-                                    <!-- Estado de la tabla: cargando, sin datos todavía, todo al día o
-                                         sin coincidencias. Se dibuja ENCIMA del ListView en vez de
-                                         sustituirlo: colapsar el ListView lo sacaría del árbol de
-                                         automatización, donde lectores de pantalla y tests de UI lo
-                                         buscan por AutomationId aunque no tenga filas. -->
-                                    <StackPanel x:Name="panelListState"
-                                                Grid.Row="1"
-                                                Visibility="Collapsed"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                MaxWidth="440"
-                                                Spacing="8"
-                                                Padding="24">
-                                        <ProgressRing x:Name="ringListState"
-                                                      IsActive="False"
-                                                      Visibility="Collapsed"
-                                                      Width="32" Height="32"
-                                                      HorizontalAlignment="Center" />
-                                        <FontIcon x:Name="iconListState"
-                                                  Glyph="&#xE895;"
-                                                  FontSize="28"
-                                                  HorizontalAlignment="Center"
-                                                  Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-                                        <TextBlock x:Name="txtListStateTitle"
-                                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                                   HorizontalAlignment="Center"
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock x:Name="txtListStateBody"
-                                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                   HorizontalAlignment="Center"
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
+                                    <local:ListStatePanel x:Name="panelListState"
+                                                          Grid.Row="1"
+                                                          ActionInvoked="PanelListState_ActionInvoked" />
                                 </Grid>
                             </ScrollViewer>
                         </Grid>

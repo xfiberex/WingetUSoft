@@ -80,6 +80,7 @@ public sealed partial class CleanupWindow : Window
         SetUIBusy(true);
         txtEstado.Text = L.T("cleanup.scanningStatus");
         btnEliminar.IsEnabled = false;
+        panelListState.ShowLoading(L.T("cleanup.scanning"), L.T("list.stateLoadingBody"));
 
         try
         {
@@ -92,21 +93,29 @@ public sealed partial class CleanupWindow : Window
             {
                 txtSubtitulo.Text = L.T("cleanup.noResiduesFound", pkgList);
                 txtEstado.Text    = L.T("cleanup.noResiduesStatus");
+                // Un escaneo limpio es un buen resultado, y así se cuenta en la propia lista (F-18).
+                panelListState.Show(L.T("cleanup.stateCleanTitle"), L.T("cleanup.noResiduesStatus"),
+                    ListStatePanel.Glyph.CheckMark);
             }
             else
             {
                 txtSubtitulo.Text = L.T("cleanup.potentialResidues", pkgList);
                 txtEstado.Text    = L.T("cleanup.foundResidues", found.Count);
                 btnEliminar.IsEnabled = true;
+                panelListState.Hide();
             }
         }
         catch (OperationCanceledException)
         {
             txtEstado.Text = L.T("cleanup.scanCancelled");
+            panelListState.Show(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"),
+                ListStatePanel.Glyph.Sync, L.T("btn.retry"));
         }
         catch (Exception ex)
         {
             txtEstado.Text = L.T("cleanup.scanError");
+            panelListState.Show(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"),
+                ListStatePanel.Glyph.Warning, L.T("btn.retry"));
             await ShowDialogAsync(L.T("error.title"), ex.Message);
         }
         finally
@@ -210,6 +219,10 @@ public sealed partial class CleanupWindow : Window
     // ---- Event Handlers -----------------------------------------------------
 
     private async void BtnEscanear_Click(object sender, RoutedEventArgs e) =>
+        await ScanAsync();
+
+    /// <summary>Reintentar el escaneo desde el propio panel de estado (F-18).</summary>
+    private async void PanelListState_ActionInvoked(object sender, RoutedEventArgs e) =>
         await ScanAsync();
 
     private async void BtnEliminar_Click(object sender, RoutedEventArgs e) =>

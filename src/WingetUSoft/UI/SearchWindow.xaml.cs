@@ -51,6 +51,11 @@ public sealed partial class SearchWindow : Window
     private readonly ObservableCollection<SearchResultViewModel> _results = [];
     private CancellationTokenSource? _cts;
 
+    /// <summary>Estado de la lista de resultados, que decide qué cuenta el panel superpuesto (F-18).</summary>
+    private enum ListState { Initial, Loading, Ready, Cancelled, Error }
+    private ListState _listState = ListState.Initial;
+    private string _lastQuery = "";
+
     private AppWindow _appWindow = null!;
     private IntPtr _hWnd;
 
@@ -72,6 +77,7 @@ public sealed partial class SearchWindow : Window
 
         lvResults.ItemsSource = _results;
         ApplyLocalizedStrings();
+        UpdateListState();
 
         if (Content is FrameworkElement root)
             root.Loaded += (_, _) => txtBuscar.Focus(FocusState.Programmatic);
@@ -129,6 +135,9 @@ public sealed partial class SearchWindow : Window
         _results.Clear();
         txtContador.Text = "";
         txtEstado.Text = L.T("search.searching", query);
+        _lastQuery = query;
+        _listState = ListState.Loading;
+        UpdateListState();
 
         try
         {
@@ -147,15 +156,18 @@ public sealed partial class SearchWindow : Window
                 ? L.T("search.noResults", query)
                 : L.T("search.found", found.Count);
             txtContador.Text = found.Count == 0 ? "" : L.T("search.countLabel", found.Count);
+            _listState = ListState.Ready;
         }
         catch (OperationCanceledException)
         {
             txtEstado.Text = L.T("search.cancelled");
+            _listState = ListState.Cancelled;
         }
         catch (Exception ex)
         {
             txtEstado.Text = L.T("search.error");
             AppendLog(L.T("error.genericPrefix", ex.Message), LogLineKind.Error);
+            _listState = ListState.Error;
         }
         finally
         {
@@ -165,7 +177,45 @@ public sealed partial class SearchWindow : Window
             // que ya haya publicado el suyo no se queda sin token de cancelación.
             if (ReferenceEquals(_cts, cts)) _cts = null;
             UpdateInstallButton();
+            UpdateListState();
         }
+    }
+
+    /// <summary>
+    /// Cuenta en la propia lista en qué punto está la búsqueda (F-18). Hasta entonces, una lista vacía era un
+    /// hueco en blanco y lo único que lo explicaba era la barra de estado del pie.
+    /// </summary>
+    private void UpdateListState()
+    {
+        switch (_listState)
+        {
+            case ListState.Loading:
+                panelListState.ShowLoading(L.T("list.stateLoadingTitle"), L.T("list.stateLoadingBody"));
+                return;
+            case ListState.Cancelled:
+                panelListState.Show(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"),
+                    ListStatePanel.Glyph.Sync, L.T("btn.retry"));
+                return;
+            case ListState.Error:
+                panelListState.Show(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"),
+                    ListStatePanel.Glyph.Warning, L.T("btn.retry"));
+                return;
+        }
+
+        if (_results.Count > 0)
+            panelListState.Hide();
+        else if (_listState == ListState.Initial)
+            panelListState.Show(L.T("search.stateInitialTitle"), L.T("search.stateInitialBody"),
+                ListStatePanel.Glyph.Search);
+        else
+            panelListState.Show(L.T("list.stateNoMatchTitle"), L.T("search.noResults", _lastQuery),
+                ListStatePanel.Glyph.Search);
+    }
+
+    /// <summary>Reintentar la última búsqueda desde el propio panel.</summary>
+    private async void PanelListState_ActionInvoked(object sender, RoutedEventArgs e)
+    {
+        if (_cts is null) await SearchAsync();
     }
 
     /// <summary>Ids instalados, en un set case-insensitive. Si la consulta falla, se devuelve vacío: no

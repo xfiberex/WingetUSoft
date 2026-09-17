@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="WingetUSoft.ListStatePanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Visibility="Collapsed">
+
+    <!-- Estado de una tabla: cargando, sin datos todavía, vacía o con un error. Se dibuja ENCIMA de la lista
+         en vez de sustituirla: colapsar el ListView lo sacaría del árbol de automatización, donde lectores de
+         pantalla y tests de UI lo buscan por AutomationId aunque no tenga filas.
+         El ScrollViewer es la red de seguridad: con la ventana baja, la zona de tabla puede ser más corta que el
+         propio estado, y sin él el botón quedaba recortado por abajo. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollMode="Disabled"
+                  HorizontalScrollBarVisibility="Disabled"
+                  ZoomMode="Disabled">
+        <StackPanel Spacing="4"
+                    Padding="12"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <ProgressRing x:Name="ring"
+                          IsActive="False"
+                          Visibility="Collapsed"
+                          Width="28" Height="28"
+                          HorizontalAlignment="Center" />
+            <FontIcon x:Name="icon"
+                      Glyph="&#xE895;"
+                      FontSize="24"
+                      HorizontalAlignment="Center"
+                      Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            <TextBlock x:Name="txtEstadoTitulo"
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+            <TextBlock x:Name="txtEstadoCuerpo"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+            <!-- La salida del estado, en el propio estado: hasta F-18 el panel decía qué pulsar y el usuario tenía
+                 que ir a buscarlo a la barra de acciones. Lleva el acento porque, mientras se ve, es la acción
+                 principal de la ventana (F-23). -->
+            <Button x:Name="btnEstadoAccion"
+                    Style="{StaticResource AccentButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="0,4,0,0"
+                    Visibility="Collapsed"
+                    Height="32"
+                    Click="BtnEstadoAccion_Click" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

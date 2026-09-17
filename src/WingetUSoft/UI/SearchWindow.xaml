@@ -159,6 +159,10 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+                        <!-- Estado de la lista: cargando, vacía o con error (F-18). Encima del ListView, no en su lugar. -->
+                        <local:ListStatePanel x:Name="panelListState"
+                                              Grid.Row="2"
+                                              ActionInvoked="PanelListState_ActionInvoked" />
                     </Grid>
                 </Border>
 

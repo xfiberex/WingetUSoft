@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 20 de 26.** ✅ F-01 a F-16, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-17): 21 de 26.** ✅ F-01 a F-16, F-18, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -1968,7 +1968,7 @@ explícita.
   - **Esfuerzo:** medio
   - **Depende de:** F-01, F-14
 
-- [ ] **[F-18] Estados vacíos accionables y un único mensaje de arranque**
+- [x] **[F-18] Estados vacíos accionables y un único mensaje de arranque**
   - **Área:** UX / redacción
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:510-539` (`panelListState`), `MainWindow.xaml.cs:391-445` y `:618-633`; listas de `SearchWindow`, `UninstallWindow` y `CleanupWindow`
   - **Qué hacer:** al arrancar, la misma instrucción aparece en la línea de detalle, en el estado vacío y
@@ -1981,6 +1981,36 @@ explícita.
     consulta (UI test); las otras tres listas muestran el panel de estado al cargar y al quedar vacías.
   - **Evidencia (2026-09-14):** «Pulsa "Consultar actualizaciones"» aparece **3 veces** en la pantalla
     inicial, sin botón en el panel.
+  - **Al implementarlo:**
+    - `UI/ListStatePanel.xaml`, un `UserControl` como `ActivityLog`, con `ShowLoading`, `Show(título, cuerpo,
+      glifo, acción?)`, `Hide()` y el evento `ActionInvoked`. Sus glifos son ahora `ListStatePanel.Glyph`.
+    - Lo usan las cuatro listas. Buscar, Desinstalar y Limpieza llevan su propio `ListState`, así que una lista
+      vacía ya no es un hueco en blanco que solo explicaba la barra de estado del pie.
+    - Acciones: «Consultar actualizaciones» en el arranque de la principal y «Reintentar» en cancelado y error
+      (relanza la consulta, la carga o el escaneo, según la ventana).
+    - La instrucción del arranque se queda solo en el panel: la barra de estado dice «Listo.» y la línea de
+      detalle, «Selecciona un programa…». Salen las claves `header.detailEmpty` y `status.readyToStart`; entran
+      `btn.retry`, `search.stateInitialTitle/Body`, `uninstall.stateEmptyTitle/Body` y `cleanup.stateCleanTitle`,
+      y `list.stateCancelledBody` deja de nombrar un botón concreto porque ahora lo comparten cuatro ventanas.
+    - El ajuste opcional «Consultar al abrir» no se hizo: sigue sin haber ninguna consulta automática al abrir.
+  - **Defectos encontrados en la prueba en la app:**
+    - El botón del estado salía recortado por abajo: el panel medía más que la zona de tabla a 1180×820. Ahora va
+      dentro de un `ScrollViewer` y con los tamaños ajustados.
+    - Un `UserControl` sin plantilla no aparece en la vista de control de UI Automation, así que el panel no se
+      podía localizar por su nombre. Sus textos se llaman `txtEstadoTitulo` y `txtEstadoCuerpo`, y el botón,
+      `btnEstadoAccion`.
+  - **Verificado (2026-09-17):** conduciendo la app:
+    - Arranque: «Todavía no hay datos», con el botón «Consultar actualizaciones»; la barra dice «Listo.» y la
+      línea de detalle no repite la instrucción (de 3 veces a 1).
+    - El botón lanza la consulta; Esc la cancela y el panel pasa a «Consulta cancelada» con «Reintentar», que
+      vuelve a lanzarla.
+    - Filtrando sin coincidencias: «Sin coincidencias / Ningún programa coincide con "zzqqxx"».
+    - Desinstalar: «Cargando lista de programas instalados…», luego la lista, y «Sin coincidencias» al filtrar.
+    - Buscar: «Busca un programa» al abrir y «Sin coincidencias» tras una búsqueda sin resultados.
+    - Limpieza solo se comprobó por código: abrirla exige desinstalar un programa de verdad.
+    - `settings.json` queda idéntico.
+    - Tests: `ListStateTests` (6, todos fallan al revertir) y `EmptyStateTests` en la app real (botón del estado
+      y la instrucción una sola vez).
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
@@ -2184,10 +2214,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 3 | 4 | 43 % |
+| F·3 — Experiencia de uso | 7 | 4 | 3 | 57 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **20** | **6** | **77 %** |
+| **Total** | **26** | **21** | **5** | **81 %** |
 
 ### Registro de tareas completadas
 
@@ -2212,7 +2242,8 @@ explícita.
 | 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
 | 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | — |
 | 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | `ca083cb` | — |
-| 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | — | — |
+| 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | — |
+| 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

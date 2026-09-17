@@ -101,7 +101,7 @@ los toca: preferencias, historial y exclusiones siguen ahí después de volver a
 ### Exploración y filtrado
 - **Búsqueda en tiempo real** — filtra la lista de paquetes por nombre o ID mientras escribes.
 - **Columnas ordenables** — ordena por nombre, ID, versión instalada, versión disponible o fuente haciendo clic en el encabezado. Las versiones se ordenan **numéricamente** (`1.9.0` antes que `1.10.0`), no como texto.
-- **Estados de la tabla** — la tabla dice siempre en qué punto está: consultando, sin datos todavía, todo al día, sin coincidencias con los filtros, o consulta cancelada/fallida.
+- **Estados de la tabla** — las cuatro listas (principal, Buscar, Desinstalar y Limpieza) dicen siempre en qué punto están: consultando, sin datos todavía, todo al día, sin coincidencias con los filtros, o consulta cancelada/fallida. Cuando hay algo que hacer, el propio estado trae el botón: «Consultar actualizaciones» al empezar y «Reintentar» tras un fallo o una cancelación.
 - **Panel de información** — al seleccionar un paquete muestra su descripción, un enlace a la página oficial y otro a las notas de versión. Funciona **en cualquier idioma de Windows** (winget traduce las etiquetas de su salida).
 - **Ver en winget.run** — abre la página del paquete en [winget.run](https://winget.run) desde el menú contextual.
 

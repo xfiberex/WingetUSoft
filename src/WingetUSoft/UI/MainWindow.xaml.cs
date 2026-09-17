@@ -214,7 +214,8 @@ public sealed partial class MainWindow : Window
                     : "";
                 Title = L.T("app.titleBase");
                 TitleTextBlock.Text = Title;
-                txtEstado.Text = L.T("status.readyToStart");
+                // Sin instrucción: la del arranque vive en el panel de la tabla, con su botón (F-18).
+                txtEstado.Text = L.T("status.ready");
                 UpdateSelectionDetails();
                 await MaybeShowWhatsNewAsync();
                 _ = CheckForAppUpdateAsync();
@@ -397,55 +398,44 @@ public sealed partial class MainWindow : Window
         switch (_listState)
         {
             case ListState.Loading:
-                ShowListState(L.T("list.stateLoadingTitle"), L.T("list.stateLoadingBody"), loading: true);
+                panelListState.ShowLoading(L.T("list.stateLoadingTitle"), L.T("list.stateLoadingBody"));
                 return;
 
+            // Cancelado y error salen con el mismo bot\u00F3n: reintentar la consulta (F-18).
             case ListState.Cancelled:
-                ShowListState(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"), Glyph.Sync);
+                panelListState.Show(L.T("list.stateCancelledTitle"), L.T("list.stateCancelledBody"),
+                    ListStatePanel.Glyph.Sync, L.T("btn.retry"));
                 return;
 
             case ListState.Error:
-                ShowListState(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"), Glyph.Warning);
+                panelListState.Show(L.T("list.stateErrorTitle"), L.T("list.stateErrorBody"),
+                    ListStatePanel.Glyph.Warning, L.T("btn.retry"));
                 return;
         }
 
         if (_packageViewModels.Count > 0)
         {
-            ringListState.IsActive = false;
-            panelListState.Visibility = Visibility.Collapsed;
+            panelListState.Hide();
             return;
         }
 
         if (_listState == ListState.Initial)
-            ShowListState(L.T("list.stateInitialTitle"), L.T("list.stateInitialBody"), Glyph.Sync);
+            // La instrucci\u00F3n del arranque vive aqu\u00ED y solo aqu\u00ED, con su bot\u00F3n: hasta F-18 la repet\u00EDan
+            // tambi\u00E9n la l\u00EDnea de detalle y la barra de estado, y ninguna de las tres pod\u00EDa pulsarse.
+            panelListState.Show(L.T("list.stateInitialTitle"), L.T("list.stateInitialBody"),
+                ListStatePanel.Glyph.Sync, L.T("btn.checkUpdates"));
         else if (_packages.Count == 0)
-            ShowListState(L.T("list.stateUpToDateTitle"), L.T("list.stateUpToDateBody"), Glyph.CheckMark);
+            panelListState.Show(L.T("list.stateUpToDateTitle"), L.T("list.stateUpToDateBody"), ListStatePanel.Glyph.CheckMark);
         else if (_searchFilter.Trim() is { Length: > 0 } search)
-            ShowListState(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchSearch", search), Glyph.Search);
+            panelListState.Show(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchSearch", search), ListStatePanel.Glyph.Search);
         else
-            ShowListState(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchFilters"), Glyph.Search);
+            panelListState.Show(L.T("list.stateNoMatchTitle"), L.T("list.stateNoMatchFilters"), ListStatePanel.Glyph.Search);
     }
 
-    /// <summary>Glifos de Segoe MDL2 Assets usados por el panel de estado de la tabla.</summary>
-    private static class Glyph
+    /// <summary>Consultar o reintentar desde el propio panel, seg\u00FAn el estado que se est\u00E9 mostrando.</summary>
+    private void PanelListState_ActionInvoked(object sender, RoutedEventArgs e)
     {
-        public const string Sync = "\uE895";
-        public const string CheckMark = "\uE73E";
-        public const string Search = "\uE721";
-        public const string Warning = "\uE7BA";
-    }
-
-    private void ShowListState(string title, string body, string glyph = "", bool loading = false)
-    {
-        txtListStateTitle.Text = title;
-        txtListStateBody.Text = body;
-
-        ringListState.IsActive = loading;
-        ringListState.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
-        iconListState.Visibility = loading ? Visibility.Collapsed : Visibility.Visible;
-        if (!loading) iconListState.Glyph = glyph;
-
-        panelListState.Visibility = Visibility.Visible;
+        if (_cts is null) _ = LoadPackagesAsync(_lastIncludeUnknown);
     }
 
     private string GetCancelStatusText() => _cancelStopsCurrentProcess
@@ -670,7 +660,7 @@ public sealed partial class MainWindow : Window
     {
         if (GetSelectedPackage() is not null) return;
 
-        txtInfoDescripcion.Text = _packages.Count == 0 ? L.T("header.detailEmpty") : L.T("header.detailDefault");
+        txtInfoDescripcion.Text = L.T("header.detailDefault");
     }
 
     private void ApplyTheme(int themeMode)
