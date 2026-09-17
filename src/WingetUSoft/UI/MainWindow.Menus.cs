@@ -49,6 +49,7 @@ public sealed partial class MainWindow
         txtHeaderTitle.Text = L.T("header.title");
         txtSubtitulo.Text = L.T("header.subtitle");
         btnInstalarUpdate.Content = L.T("btn.installNow");
+        lnkVerNovedades.Content = L.T("update.viewNotes");
         txtAccionesTitle.Text = L.T("actions.title");
         menuConsultarNormal.Text = L.T("btn.checkUpdates");
         menuConsultarDesconocidas.Text = L.T("btn.checkUnknown");

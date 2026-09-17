@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 19 de 26.** ✅ F-01 a F-16, F-21, F-23 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-17): 20 de 26.** ✅ F-01 a F-16, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -2051,7 +2051,7 @@ explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-22] Aviso de nueva versión breve**
+- [x] **[F-22] Aviso de nueva versión breve**
   - **Área:** UX
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.AppUpdate.cs:26-50` y `MainWindow.xaml:102-119`
   - **Qué hacer:** la `InfoBar` llega a cargar 500 caracteres de changelog, cuando está pensada para un
@@ -2059,6 +2059,20 @@ explícita.
     las notas, y sacar la `InfoBar` de la tarjeta de cabecera a lo alto del contenido.
   - **Criterio de aceptación:** el mensaje de la `InfoBar` no pasa de dos líneas y el changelog queda a
     un clic.
+  - **Al implementarlo:**
+    - La `InfoBar` sale de la tarjeta de cabecera y pasa a la fila 0 de `ContentGrid`, con una fila nueva
+      (`TableRow` pasa de 3 a 4). Es un estado de la aplicación, no parte del título.
+    - `ShowUpdateInfoBar(info)` reúne en un sitio lo que antes se repetía en el arranque y en «Buscar
+      actualización»: mensaje de una línea (`update.pressInstallNow`) y datos del release guardados para el
+      diálogo. `BuildChangelogMessage` se queda solo para el diálogo de confirmación, donde sí cabe.
+    - Enlace «Ver novedades» (`update.viewNotes`, 5 idiomas) que abre `WhatsNewDialog` con las notas de la
+      versión nueva; se oculta si el release no trae notas.
+  - **Verificado (2026-09-17):** con una copia compilada como 1.8.0, para que el aviso salte de verdad:
+    - Título «Nueva versión 1.9.0 disponible», mensaje de **30 caracteres sin saltos de línea** y aviso de
+      83 px, por encima de la tarjeta de cabecera.
+    - «Ver novedades» abre el diálogo de Novedades con las **2 787** caracteres del changelog de 1.9.0.
+    - No se tocó «Instalar ahora»; `settings.json` queda idéntico.
+    - Tests: `UpdateNoticeTests` (2, ambos fallan al revertir).
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -2170,10 +2184,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 2 | 5 | 29 % |
+| F·3 — Experiencia de uso | 7 | 3 | 4 | 43 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **19** | **7** | **73 %** |
+| **Total** | **26** | **20** | **6** | **77 %** |
 
 ### Registro de tareas completadas
 
@@ -2197,7 +2211,8 @@ explícita.
 | 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | 1.9.0 |
 | 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
 | 2026-09-17 | F-21 | Atajos donde se usan, y `Ctrl+F` | teclas y ratón reales en la app · 7 guards fallan al revertir · 350/350 unitarios · 56/56 UI tests | `1ce1eed` | — |
-| 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | — | — |
+| 2026-09-17 | F-23 | «Consultar» como `SplitButton` y un solo acento | acento medido por saturación en 3 estados · 2 guards fallan al revertir · 353/353 unitarios · 56/56 UI tests | `ca083cb` | — |
+| 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

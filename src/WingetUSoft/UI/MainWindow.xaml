@@ -74,13 +74,42 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <!-- Piso de la zona tabla+log: por debajo de esto el ScrollViewer desplaza la
                          página en vez de seguir encogiendo la tabla hasta hacerla inservible. -->
                     <RowDefinition Height="*" MinHeight="300" />
                 </Grid.RowDefinitions>
 
+                <!-- Aviso de versión nueva, a lo alto del contenido y no dentro de la tarjeta de cabecera (F-22):
+                     es un estado de la aplicación, no parte de su título. El mensaje se queda en una línea y el
+                     changelog entero va a un clic, en «Ver novedades». -->
+                <InfoBar x:Name="infoBarUpdate"
+                         Grid.Row="0"
+                         IsOpen="False"
+                         Severity="Informational"
+                         IsClosable="True"
+                         Margin="0,0,0,12">
+                    <InfoBar.Content>
+                        <StackPanel Margin="0,0,0,4" Spacing="4">
+                            <HyperlinkButton x:Name="lnkVerNovedades"
+                                             Content="Ver novedades"
+                                             Padding="0,4"
+                                             Click="LnkVerNovedades_Click" />
+                            <ProgressBar x:Name="pbUpdate"
+                                         Visibility="Collapsed"
+                                         Minimum="0" Maximum="1"
+                                         IsIndeterminate="False" />
+                        </StackPanel>
+                    </InfoBar.Content>
+                    <InfoBar.ActionButton>
+                        <Button x:Name="btnInstalarUpdate"
+                                Content="Instalar ahora"
+                                Click="LnkDescargarUpdate_Click" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
                 <!-- Header Card -->
-                <Border Grid.Row="0" Style="{StaticResource HeaderCardStyle}"
+                <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
                         Margin="0,0,0,12">
                     <StackPanel Spacing="4">
                         <TextBlock x:Name="txtHeaderTitle"
@@ -90,29 +119,11 @@
                                    Text="Consulta, filtra y actualiza paquetes desde una sola vista."
                                    Style="{StaticResource BodyTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <InfoBar x:Name="infoBarUpdate"
-                                 IsOpen="False"
-                                 Severity="Informational"
-                                 IsClosable="True"
-                                 Margin="0,4,0,0">
-                            <InfoBar.Content>
-                                <ProgressBar x:Name="pbUpdate"
-                                             Visibility="Collapsed"
-                                             Minimum="0" Maximum="1"
-                                             IsIndeterminate="False"
-                                             Margin="0,4,0,4" />
-                            </InfoBar.Content>
-                            <InfoBar.ActionButton>
-                                <Button x:Name="btnInstalarUpdate"
-                                        Content="Instalar ahora"
-                                        Click="LnkDescargarUpdate_Click" />
-                            </InfoBar.ActionButton>
-                        </InfoBar>
                     </StackPanel>
                 </Border>
 
                 <!-- Actions Bar -->
-                <Border Grid.Row="1" Style="{StaticResource CardStyle}"
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}"
                         Margin="0,0,0,12">
                     <StackPanel>
                         <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
@@ -259,7 +270,7 @@
                 </Border>
 
                 <!-- Source Filter + Search + Package Info -->
-                <Border Grid.Row="2" Style="{StaticResource CompactCardStyle}"
+                <Border Grid.Row="3" Style="{StaticResource CompactCardStyle}"
                         Margin="0,0,0,8">
                     <StackPanel Spacing="8">
                         <!-- Filters row. WrapPanel y no StackPanel horizontal: con anchos fijos (200 + 200)
@@ -351,7 +362,7 @@
                 </Border>
 
                 <!-- Main Split: DataGrid + Log -->
-                <Grid Grid.Row="3" Margin="0,0,0,8">
+                <Grid Grid.Row="4" Margin="0,0,0,8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="2*" MinHeight="160" />
                         <RowDefinition Height="Auto" />

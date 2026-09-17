@@ -28,15 +28,41 @@ public sealed partial class MainWindow
         GitHubReleaseInfo? info = await GitHubUpdateService.CheckForUpdateAsync();
         if (info is null) return;
 
-        _appUpdateUrl = info.DownloadUrl;
-        _appUpdateChecksumUrl = info.ChecksumUrl;
-        infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
-        infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
-        infoBarUpdate.IsOpen = true;
+        ShowUpdateInfoBar(info);
         menuBuscarActualizacion.Text = L.T("menu.installVersion", info.Version);
     }
 
-    /// <summary>Antepone el changelog (si lo hay) al mensaje base, truncado para no desbordar el diálogo/InfoBar.</summary>
+    /// <summary>
+    /// Abre el aviso de versión nueva: título y una línea (F-22). Hasta entonces el mensaje cargaba hasta 500
+    /// caracteres de changelog, que es más de lo que una <c>InfoBar</c> puede decir sin convertirse en un muro
+    /// de texto; ahora las notas enteras están a un clic en «Ver novedades».
+    /// </summary>
+    private void ShowUpdateInfoBar(GitHubReleaseInfo info)
+    {
+        _appUpdateUrl = info.DownloadUrl;
+        _appUpdateChecksumUrl = info.ChecksumUrl;
+        _appUpdateVersion = info.Version;
+        _appUpdateNotes = info.Notes;
+        _appUpdateHtmlUrl = info.HtmlUrl;
+
+        infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
+        infoBarUpdate.Message = L.T("update.pressInstallNow");
+        lnkVerNovedades.Content = L.T("update.viewNotes");
+        lnkVerNovedades.Visibility = string.IsNullOrWhiteSpace(info.Notes) ? Visibility.Collapsed : Visibility.Visible;
+        infoBarUpdate.IsOpen = true;
+    }
+
+    /// <summary>Muestra el changelog completo de la versión nueva, el mismo diálogo que <em>Ayuda → Novedades…</em>.</summary>
+    private async void LnkVerNovedades_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = WindowDialogHelper.Prepare(
+            new WhatsNewDialog(_appUpdateVersion, _appUpdateNotes,
+                string.IsNullOrEmpty(_appUpdateHtmlUrl) ? "https://github.com/xfiberex/WingetUSoft/releases" : _appUpdateHtmlUrl),
+            Content.XamlRoot);
+        await dlg.ShowAsync();
+    }
+
+    /// <summary>Antepone el changelog (si lo hay) al mensaje base, truncado para no desbordar el diálogo.</summary>
     private static string BuildChangelogMessage(string notesMarkdown, string baseMessage)
     {
         string plain = ReleaseNotes.ToPlainText(notesMarkdown);
@@ -135,12 +161,8 @@ public sealed partial class MainWindow
             }
             else
             {
-                _appUpdateUrl = info.DownloadUrl;
-                _appUpdateChecksumUrl = info.ChecksumUrl;
                 menuBuscarActualizacion.Text = L.T("menu.installVersion", info.Version);
-                infoBarUpdate.Title = L.T("update.newVersionTitle", info.Version);
-                infoBarUpdate.Message = BuildChangelogMessage(info.Notes, L.T("update.pressInstallNow"));
-                infoBarUpdate.IsOpen = true;
+                ShowUpdateInfoBar(info);
 
                 string confirmBody = BuildChangelogMessage(info.Notes,
                     L.T("update.confirmInstall"));

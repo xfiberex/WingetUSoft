@@ -433,6 +433,8 @@ public static class L
 
         ["update.newVersionTitle"] = ["Nueva versión {0} disponible", "New version {0} available", "Nova versão {0} disponível", "Nouvelle version {0} disponible", "Nuova versione {0} disponibile"],
         ["update.pressInstallNow"] = ["Pulsa 'Instalar ahora' para descargar e instalar automáticamente.", "Click 'Install now' to download and install automatically.", "Clique em 'Instalar agora' para baixar e instalar automaticamente.", "Cliquez sur « Installer maintenant » pour télécharger et installer automatiquement.", "Premi 'Installa ora' per scaricare e installare automaticamente."],
+        // Enlace del aviso de versión nueva: abre el changelog entero en el diálogo de novedades (F-22).
+        ["update.viewNotes"] = ["Ver novedades", "See what's new", "Ver novidades", "Voir les nouveautés", "Vedi le novità"],
         ["btn.downloading"] = ["Descargando...", "Downloading...", "Baixando...", "Téléchargement...", "Download in corso..."],
         ["update.downloadingProgress"] = ["Descargando... {0}{1}", "Downloading... {0}{1}", "Baixando... {0}{1}", "Téléchargement... {0}{1}", "Download in corso... {0}{1}"],
         ["update.installingRestart"] = ["Instalando... La aplicación se reiniciará automáticamente.", "Installing... The app will restart automatically.", "Instalando... O aplicativo será reiniciado automaticamente.", "Installation... L'application redémarrera automatiquement.", "Installazione... L'app si riavvierà automaticamente."],

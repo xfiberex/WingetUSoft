@@ -65,6 +65,10 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource? _packageInfoCts;
     private string? _appUpdateUrl;
     private string? _appUpdateChecksumUrl;
+    /// <summary>Datos del release nuevo, para el diálogo de novedades del aviso (F-22).</summary>
+    private string _appUpdateVersion = "";
+    private string _appUpdateNotes = "";
+    private string _appUpdateHtmlUrl = "";
     private H.NotifyIcon.TaskbarIcon? _trayIcon;
     private DispatcherTimer? _searchDebounceTimer;
 
@@ -81,7 +85,7 @@ public sealed partial class MainWindow : Window
     private MenuFlyoutItem ctxOmitirVersion = null!;
 
     /// <summary>Fila de <c>ContentGrid</c> con la tabla y el registro; las anteriores son las tarjetas superiores.</summary>
-    private const int TableRow = 3;
+    private const int TableRow = 4;
 
     /// <summary>
     /// El alto mínimo de la página se recalcula cada vez que cambia una tarjeta superior: la de filtros crece al
