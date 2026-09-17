@@ -2143,12 +2143,12 @@ explícita.
 | 2026-09-16 | F-08 | Una sola instancia por ventana secundaria | UI test falla contra 1.8.8 · 42/42 UI tests · 1 ventana de Historial en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-09 | Menú en el icono de bandeja, con «Salir» | 314/314 unitarios · icono, clic simple, menú y «Salir» en la app real | `9b77a78` | 1.8.9 |
 | 2026-09-16 | F-10 | Sin salto de maquetación al seleccionar una fila | guard estructural · 0 px de salto en la app real | `9b77a78` | 1.8.9 |
-| 2026-09-17 | F-11 | Mica visible, con fondo sólido de reserva | márgenes con tinte medidos en pantalla · registro ≥ 5,07:1 sobre Mica · 338/338 unitarios | `50119e5` | — |
-| 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | `50119e5` | — |
-| 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | `50119e5` | — |
-| 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | — |
-| 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | — |
-| 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | *(pendiente)* | — |
+| 2026-09-17 | F-11 | Mica visible, con fondo sólido de reserva | márgenes con tinte medidos en pantalla · registro ≥ 5,07:1 sobre Mica · 338/338 unitarios | `50119e5` | 1.9.0 |
+| 2026-09-17 | F-12 | Estilo moderno en los diálogos XAML | franjas `#2B2B2B`/`#202020` como el genérico · guard falla al revertir | `50119e5` | 1.9.0 |
+| 2026-09-17 | F-13 | Barra de título con `PreferredTheme` | glifo correcto en claro, oscuro y en caliente · 43/43 UI tests | `50119e5` | 1.9.0 |
+| 2026-09-17 | F-15 | Etiquetas reales en búsquedas y filtros | UI test nuevo en Historial · 4 guards fallan al revertir · 43/43 UI tests | `50119e5` | 1.9.0 |
+| 2026-09-17 | F-14 | Estilos compartidos en `App.xaml` | 30 tarjetas en 4 estilos · capturas antes/después · 3 guards fallan al revertir · 43/43 UI tests | `7ddfd17` | 1.9.0 |
+| 2026-09-17 | F-16 | Configuración con un único patrón de fila | capturas en 2 temas y 2 idiomas · Quitar y Abrir carpeta en la app real · 51/51 UI tests | `d3d634c` | 1.9.0 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

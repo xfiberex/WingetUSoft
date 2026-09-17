@@ -132,7 +132,8 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
 - **Modo de actualización** — silenciosa o interactiva, y opción de ejecutar como administrador.
 - **Auto-comprobación** — comprueba actualizaciones de forma periódica configurable (30 / 60 / 120 min).
 - **Aviso al terminar** — sonido + parpadeo de la barra de tareas al acabar un lote largo, y progreso en el icono de la barra de tareas.
-- **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`, con purga automática de los de más de 30 días.
+- **Bandeja del sistema** — opcionalmente, cerrar la ventana la deja en el área de notificación: un clic en el icono la devuelve, y su menú ofrece abrir, consultar actualizaciones y salir.
+- **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`, con purga automática de los de más de 30 días y un botón en Configuración para abrir la carpeta.
 
 ### Accesibilidad
 - **Manejable solo con teclado** — incluidas las cabeceras de la tabla (botones enfocables que anuncian

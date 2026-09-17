@@ -256,6 +256,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-17 | **1.9.0** | **Tier F · bloque F·2 completo** — Mica visible, diálogos y barra de título modernos, estilos compartidos, etiquetas reales en búsquedas y filtros, y Configuración rehecha con un único patrón de fila |
 | 2026-09-17 | **1.8.9** | **Tier F · bloque F·1 completo** — la bandeja por fin funciona (icono y menú con «Salir»), la tabla desplaza por sí misma, confirmaciones con verbo, botón de peligro AA y diálogos con el tema elegido; CI, CodeQL y Dependabot en GitHub |
 | 2026-08-23 | **1.8.8** | **Tier T4 y cierre del plan de auditoría** — MainWindow dividido, el flujo de lotes por fin probable, cobertura en local, y SECURITY/CONTRIBUTING/CHANGELOG |
 | 2026-08-22 | **1.8.7** | **Tier T3 completo** — el ajuste de notificaciones ya no oculta el resumen del lote, arreglo del flujo de auto-actualización, `.editorconfig` con comprobación de estilo y diagnósticos que por fin van a algún sitio |
@@ -272,6 +273,45 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-17 — Tier F, bloque F·2: alineación con Fluent y WinUI 3 (F-11 a F-16, release v1.9.0)
+
+**17 de 26** del Tier F, con F·1 y F·2 completos. Build 0/0, **343/343 unitarios**, **51/51 UI tests**. Salto de
+versión menor y no de parche: cambia cómo se ve toda la app y Configuración se rehace entera.
+
+**1. Mica de verdad (F-11).** Se pedía `MicaBackdrop` y la raíz de cada ventana lo tapaba con
+`ApplicationPageBackgroundThemeBrush`, que es opaco. Ahora la raíz pasa a transparente solo si
+`MicaController.IsSupported()`: el pincel sólido del XAML queda como reserva para Windows 10. El riesgo estaba en
+el registro, cuyo contraste se calculaba contra un fondo fijo. Medido en pantalla, la tarjeta apenas se mueve
+(`#FBFBFB`–`#FDFBFB`, `#2B2B2B`–`#2D2A2A`), y el test exige ya 4,5:1 contra fondos más desfavorables que lo medido.
+El aviso en tema claro es el color con menos margen: deja de cumplir por debajo de `#EDEDED`.
+
+**2. Diálogos y barra de título (F-12, F-13).** El estilo implícito de `ContentDialog` no alcanza a las subclases
+definidas en XAML, así que Acerca de, Novedades y Licencia usaban la plantilla antigua con parches de esquinas.
+`TitleBarHelper` pintaba a mano blanco o negro en cada estado y cada ventana tenía que acordarse de llamarlo. Lo
+sustituye `AppWindow.TitleBar.PreferredTheme`, fijado desde el tema **resuelto** del contenido, porque con «el del
+sistema» el ajuste no dice si la ventana es clara u oscura.
+
+**3. Estilos compartidos (F-14).** El bloque de tarjeta estaba 30 veces con cinco rellenos. `UI/Styles.xaml` lo
+reduce a cuatro estilos, con radios del sistema y espaciados en la rampa de 4 px. Se comprobó con capturas antes
+y después, píxel a píxel: las diferencias empiezan exactamente en el primer espaciado normalizado. El botón de
+peligro sigue siendo un diccionario y no un `Style`, por lo mismo que en F-05.
+
+**4. Etiquetas y Configuración (F-15, F-16).** Búsquedas y filtros de Historial, Desinstalar y Buscar e instalar
+toman el nombre de su etiqueta visible. Configuración mezclaba cuatro patrones de rotulado y pasa a uno:
+`SettingsCard`, una fila con título y descripción a la izquierda y control a la derecha, sin la dependencia del
+Community Toolkit. Las descripciones salen del código y no de lo que se suponía: `--silent`, un proceso elevado
+por lote en el que Cancelar no detiene el programa en curso, avisos solo en operaciones de 10 s o más, y 30 días
+de registros. La prueba en la app destapó dos defectos:
+- La fila también nombraba los botones desde su título, así que «Limpiar lista» se anunciaba con el título de la
+  fila.
+- Los interruptores decían «Activado» con la app en inglés, porque WinUI toma ese texto del idioma de Windows.
+  Pasaba ya en 1.8.9.
+
+**Capturas del README** regeneradas con `tools/capture-screenshots.ps1`: las anteriores mostraban la Configuración
+vieja, los diálogos sin franja de botones y el fondo sin Mica.
 
 ---
 
