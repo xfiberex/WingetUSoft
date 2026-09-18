@@ -9,7 +9,7 @@ para que puedas avisar por un canal privado antes de que sea público.
 
 | Versión | Soporte |
 |---|---|
-| Última publicada (1.10.x) | ✅ |
+| Última publicada (1.11.x) | ✅ |
 | Cualquier versión anterior | ❌ |
 
 Es un proyecto de autor único: no hay ramas de mantenimiento. Las correcciones salen en la siguiente

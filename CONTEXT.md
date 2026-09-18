@@ -264,6 +264,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-18 | **1.11.0** | **Tier F · F-19 y arreglo urgente** — los lotes sin elevación volvían a romperse tras el primer paquete desde la 1.8.8 (`ConfigureAwait(false)` en el bucle); estado por fila durante el lote y tabla en modo lectura en vez de deshabilitada |
 | 2026-09-17 | **1.10.0** | **Tier F · bloque F·3 (5 de 7)** — atajos en su propio control y `Ctrl+F`, «Consultar» como `SplitButton` con el acento en la acción del momento, aviso de versión nueva breve, estados de lista accionables en las cuatro ventanas y textos con plurales reales |
 | 2026-09-17 | **1.9.0** | **Tier F · bloque F·2 completo** — Mica visible, diálogos y barra de título modernos, estilos compartidos, etiquetas reales en búsquedas y filtros, y Configuración rehecha con un único patrón de fila |
 | 2026-09-17 | **1.8.9** | **Tier F · bloque F·1 completo** — la bandeja por fin funciona (icono y menú con «Salir»), la tabla desplaza por sí misma, confirmaciones con verbo, botón de peligro AA y diálogos con el tema elegido; CI, CodeQL y Dependabot en GitHub |
@@ -282,6 +283,38 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-18 — F-19 y los lotes sin elevación, rotos desde la v1.8.8 (release v1.11.0)
+
+**23 de 26** del Tier F. Build 0/0, **405/405 unitarios**, **58/58 UI tests**. Se corta ya, sin esperar a
+F-17, por el arreglo: afecta a todo el que use la configuración de fábrica.
+
+**1. El defecto.** T4-03 (v1.8.8) sacó el bucle del lote a `Core/UpgradeBatchRunner` y esperó a winget con
+`ConfigureAwait(false)`, siguiendo la regla de `Core`. Pero lo de después del await **avisa a la ventana**
+(`IUpgradeBatchObserver`): tras el primer paquete, la ventana se tocaba desde un hilo de fondo, WinUI lanzaba
+una excepción sin mensaje y el lote acababa en un «Error de actualización» vacío. Con un paquete, winget
+lo actualizaba pero la app decía que no; con varios, solo se ejecutaba el primero. Tres cosas lo escondieron:
+- El modo administrador, que es el que usa el autor, va por el worker elevado y no pasa por ese bucle.
+- Los tests del lote instalaban `InlineSynchronizationContext`, que ejecuta todo en línea: con él no existe
+  «otro hilo».
+- Hasta F-19 nunca se lanzó un lote real sin elevación.
+
+El arreglo es quitar el `ConfigureAwait(false)` (con un comentario que explica por qué no vuelve).
+`UpgradeBatchThreadingTests` lo fija con un contexto de **un solo hilo** y un winget que responde desde otro:
+contra el código anterior, 5 de los 6 avisos llegan fuera de hilo. Y un error sin mensaje enseña ahora su tipo
+y su HRESULT, en el diálogo y en el registro, para que el próximo no llegue en blanco.
+
+**2. Estado por fila y tabla en modo lectura (F-19).** `Core/BatchRowTracker` guarda el estado por Id (en
+cola, en curso, correcto, fallido con motivo) porque filtrar u ordenar reconstruye las filas. La tabla deja de
+deshabilitarse: se recorre y se ordena, pero casillas, `Supr` y menú contextual se bloquean, y el panel de
+detalle no lanza un `winget show` por fila. Tras la recarga se conservan solo los fallos.
+
+**Verificado** con un lote real de dos paquetes sin elevación: Edge falló por su cuenta y el lote siguió con
+Postman, que se actualizó. **Sin verificar en la app real:** el estado «En cola» y el lote elevado.
+
+**Capturas:** no se regeneran; el estado por fila solo existe durante un lote y la pantalla en reposo no cambia.
 
 ---
 

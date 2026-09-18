@@ -2298,7 +2298,7 @@ explícita.
 | 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | 1.10.0 |
 | 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | 1.10.0 |
 | 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | `b80212d` | 1.10.0 |
-| 2026-09-18 | F-19 | Tabla usable durante los lotes, con estado por fila | lote real de 2 paquetes · el lote sigue tras un fallo · 405/405 unitarios · 58/58 UI tests | — | — |
+| 2026-09-18 | F-19 | Tabla usable durante los lotes, con estado por fila | lote real de 2 paquetes · el lote sigue tras un fallo · 405/405 unitarios · 58/58 UI tests | `1121ded` | 1.11.0 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 
