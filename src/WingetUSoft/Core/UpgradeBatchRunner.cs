@@ -100,9 +100,13 @@ public static class UpgradeBatchRunner
 
             try
             {
+                // SIN ConfigureAwait(false), a propósito: el observador es la ventana y toca controles, así que
+                // tiene que volver al contexto desde el que se llamó al lote. Con ConfigureAwait(false) (v1.8.8 a
+                // v1.10.0) todo aviso posterior al primer paquete llegaba desde un hilo de fondo y el lote se
+                // cortaba con un «Error de actualización» vacío. La regla de ConfigureAwait(false) es para la capa
+                // Services, que no habla con la interfaz; este bucle sí. Lo fija UpgradeBatchThreadingTests.
                 UpgradeResult result = await winget
-                    .UpgradePackageAsync(package.Id, silent, progress, cancellationToken, log)
-                    .ConfigureAwait(false);
+                    .UpgradePackageAsync(package.Id, silent, progress, cancellationToken, log);
 
                 if (result.Success)
                 {

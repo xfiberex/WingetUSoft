@@ -46,6 +46,7 @@ public sealed partial class MainWindow
 
         _cts = new CancellationTokenSource();
         _cancelStopsCurrentProcess = !runAsAdministrator;
+        _rowTracker.Begin(packagesToUpdate);   // todas las filas del lote, «en cola» (F-19)
         SetUIBusy(true);
 
         int success = 0;
@@ -112,7 +113,13 @@ public sealed partial class MainWindow
         catch (Exception ex)
         {
             txtEstado.Text = L.T("status.updateError");
-            await ShowDialogAsync(L.T("error.updateTitle"), ex.Message);
+            // Algunas excepciones de WinRT llegan sin mensaje, y el diálogo salía vacío: sin nada que buscar ni que
+            // contar en un issue. El tipo y el HRESULT siempre están, y también quedan en el registro.
+            string detail = string.IsNullOrWhiteSpace(ex.Message)
+                ? $"{ex.GetType().Name} (0x{ex.HResult:X8})"
+                : ex.Message;
+            AppendLog($"  ✖ {detail}", LogLineKind.Error);
+            await ShowDialogAsync(L.T("error.updateTitle"), detail);
         }
         finally
         {
@@ -122,6 +129,7 @@ public sealed partial class MainWindow
             TaskbarProgress.Clear(_hWnd);
             _cts?.Dispose();
             _cts = null;
+            _rowTracker.Finish();   // lo que no llegó a acabar, sin estado: el lote ya no va a volver a ello
             SetUIBusy(false);
         }
 
@@ -138,7 +146,7 @@ public sealed partial class MainWindow
             Notifier.OperationFinished(_hWnd);
 
         if (shouldReload)
-            await LoadPackagesAsync(_lastIncludeUnknown);
+            await LoadPackagesAsync(_lastIncludeUnknown, keepBatchFailures: true);
     }
 
     private async Task<(int Success, int Failed, bool Cancelled)> UpdatePackagesAsAdministratorAsync(List<WingetPackage> packagesToUpdate)
@@ -207,6 +215,7 @@ public sealed partial class MainWindow
                 failed++;
                 AppendLog(L.T("log.resultUnavailable", i + 1, packagesToUpdate.Count, pkg.Name, pkg.Id));
                 RecordFailedUpgrade(pkg, L.T("msg.noElevatedResult"));
+                _rowTracker.MarkFailed(pkg.Id, L.T("msg.noElevatedResult"));
                 continue;
             }
 
@@ -217,11 +226,14 @@ public sealed partial class MainWindow
             {
                 success++;
                 RecordSuccessfulUpgrade(pkg);
+                _rowTracker.MarkSucceeded(pkg.Id);
             }
             else
             {
                 failed++;
-                RecordFailedUpgrade(pkg, item.Result.GetFailureReason());
+                string reason = item.Result.GetFailureReason();
+                RecordFailedUpgrade(pkg, reason);
+                _rowTracker.MarkFailed(pkg.Id, reason);
             }
         }
 
@@ -237,6 +249,7 @@ public sealed partial class MainWindow
                 break;
             case "running" when packagesById.TryGetValue(status.PackageId, out var pkg):
                 txtEstado.Text = L.T("status.adminUpdatingProgress", status.CurrentIndex, status.TotalCount, pkg.Name);
+                _rowTracker.MarkRunning(pkg.Id);
                 AppendLog(L.T("log.packageRunning", status.CurrentIndex, status.TotalCount, pkg.Name, pkg.Id));
                 break;
             case "cancelled":

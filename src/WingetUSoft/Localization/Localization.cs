@@ -349,9 +349,9 @@ public static class L
         ["list.colVersion"]   = ["Versión", "Version", "Versão", "Version", "Versione"],
         ["list.colAvailable"] = ["Disponible", "Available", "Disponível", "Disponible", "Disponibile"],
         ["list.colSource"]    = ["Fuente", "Source", "Fonte", "Source", "Fonte"],
-        // Cabecera de la columna de estado: ya no se abrevia, porque ahora es un icono y esto es su tooltip (F-20).
-        ["list.colExcluded"]  = ["Excluido u omitido", "Excluded or skipped", "Excluído ou ignorado", "Exclu ou ignoré", "Escluso o ignorato"],
-        // winget escribe «Unknown» en su salida, en inglés, sea cual sea el idioma del sistema.
+        // Cabecera de la columna de estado: ya no se abrevia, porque ahora es un icono y esto es su tooltip (F-20).
+        ["list.colExcluded"]  = ["Excluido u omitido", "Excluded or skipped", "Excluído ou ignorado", "Exclu ou ignoré", "Escluso o ignorato"],
+        // winget escribe «Unknown» en su salida, en inglés, sea cual sea el idioma del sistema.
         ["version.unknown"]   = ["Desconocida", "Unknown", "Desconhecida", "Inconnue", "Sconosciuta"],
         // Nombre accesible de las cabeceras ordenables (Tier C #6). Un lector de pantalla anuncia el
         // botón con {0} = columna y {1} = uno de los tres estados de orden de abajo.
@@ -360,6 +360,11 @@ public static class L
         ["list.sortDescending"] = ["orden descendente", "sorted descending", "ordem decrescente", "tri décroissant", "ordine decrescente"],
         ["list.sortNone"]       = ["sin ordenar", "not sorted", "sem ordenação", "non trié", "non ordinato"],
         ["grid.excludedAccessible"] = ["Paquete excluido", "Excluded package", "Pacote excluído", "Paquet exclu", "Pacchetto escluso"],
+        // Estado de cada fila durante un lote (F-19): icono, tooltip y nombre accesible de la fila.
+        ["grid.opQueued"]    = ["En cola", "Queued", "Na fila", "En attente", "In coda"],
+        ["grid.opRunning"]   = ["Actualizando…", "Updating…", "Atualizando…", "Mise à jour…", "Aggiornamento…"],
+        ["grid.opSucceeded"] = ["Actualizado", "Updated", "Atualizado", "Mis à jour", "Aggiornato"],
+        ["grid.opFailed"]    = ["Falló: {0}", "Failed: {0}", "Falhou: {0}", "Échec : {0}", "Non riuscito: {0}"],
         ["grid.selectAccessible"]   = ["Marcar {0} para actualizar", "Select {0} for update", "Marcar {0} para atualizar", "Sélectionner {0} pour la mise à jour", "Seleziona {0} per l'aggiornamento"],
         ["grid.selectAllAccessible"] = ["Marcar o desmarcar todos los programas visibles", "Select or clear all visible programs", "Marcar ou desmarcar todos os programas visíveis", "Sélectionner ou désélectionner tous les programmes visibles", "Seleziona o deseleziona tutti i programmi visibili"],
         ["btn.updateSelectedCount"] = ["Actualizar seleccionados ({0})", "Update selected ({0})", "Atualizar selecionados ({0})", "Mettre à jour la sélection ({0})", "Aggiorna selezionati ({0})"],

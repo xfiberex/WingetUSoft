@@ -137,7 +137,10 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
 - **`ConfigureAwait(false)` en toda la capa `Services`.** No toca la UI —habla con winget, la red y el
   disco—, así que no necesita volver al hilo de la interfaz después de un await, y hacerlo encola una
   continuación que compite con el repintado. En `UI` es al revés: ahí **no** se configura, porque el
-  código de después del await sí toca controles. Lo impone el analizador **CA2007**, activado como
+  código de después del await sí toca controles. ⚠️ **Tampoco en `Core` cuando lo de después avisa a la
+  ventana**: `UpgradeBatchRunner` lo llevaba desde la v1.8.8 y rompió todos los lotes sin elevación (F-19).
+  Lo fija `UpgradeBatchThreadingTests`, que usa un contexto de un solo hilo: el `InlineSynchronizationContext`
+  de los demás tests ejecuta todo en línea y **no puede ver** este tipo de fallo. Lo impone el analizador **CA2007**, activado como
   advertencia en `src/WingetUSoft/Services/.editorconfig`, y `verify.ps1` compila con `-warnaserror`:
   un await nuevo sin configurar en esa carpeta rompe el build. Única excepción, con `#pragma` y motivo
   al lado: las declaraciones `await using` con tipo explícito, donde `.ConfigureAwait(false)` devuelve

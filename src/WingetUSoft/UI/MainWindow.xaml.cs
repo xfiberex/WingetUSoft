@@ -40,6 +40,12 @@ public sealed partial class MainWindow : Window
     /// <summary>Si las acciones están habilitadas por estado (winget disponible, no ocupado).</summary>
     private bool _actionsEnabled = true;
 
+    /// <summary>Estado de cada paquete del lote en curso, por Id: sobrevive a reconstruir las filas (F-19).</summary>
+    private readonly BatchRowTracker _rowTracker = new();
+
+    /// <summary>La tabla en modo lectura mientras corre una operación: se recorre, pero no se marca ni se excluye (F-19).</summary>
+    private bool _listLocked;
+
     private readonly ObservableCollection<PackageViewModel> _packageViewModels = [];
     private List<WingetPackage> _allPackages = [];
     private List<WingetPackage> _packages = [];
@@ -121,6 +127,7 @@ public sealed partial class MainWindow : Window
         // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
         // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
         LiveRegion.TrackStatusText(txtEstado);
+        _rowTracker.Changed += OnRowOperationChanged;
         _fileLog = new FileLog(OnFileLogFailed);
 
         // Purga de registros viejos: al arrancar es el único momento en que nadie escribe todavía.
@@ -263,7 +270,7 @@ public sealed partial class MainWindow : Window
     {
         // Los aceleradores se disparan con el foco en cualquier parte de la ventana: en el buscador, Supr
         // tiene que borrar caracteres y no excluir un paquete.
-        if (IsTextInputFocused() || GetSelectedPackage() is null) return;
+        if (IsTextInputFocused() || _listLocked || GetSelectedPackage() is null) return;
         CtxExcluir_Click(null, null);
         args.Handled = true;
     }
@@ -349,11 +356,36 @@ public sealed partial class MainWindow : Window
         UpdateSelectionSummary();
     }
 
+    /// <summary>
+    /// Modo lectura de la tabla durante una operación (F-19). Hasta entonces se deshabilitaba entera: quedaba en
+    /// gris y no se podía ni recorrer para ver cómo iba el lote. Ahora se recorre, se ordena y se filtra; lo que
+    /// no se puede es marcar, excluir ni abrir el menú contextual, que cambiarían el lote que ya está en marcha.
+    /// </summary>
+    private void SetListLocked(bool locked)
+    {
+        _listLocked = locked;
+        foreach (var vm in _packageViewModels)
+            vm.IsLocked = locked;
+    }
+
+    /// <summary>Lleva a su fila, si está visible, el estado que acaba de cambiar en el lote.</summary>
+    private void OnRowOperationChanged(string packageId, RowOperation operation)
+    {
+        foreach (var vm in _packageViewModels)
+        {
+            if (string.Equals(vm.Id, packageId, StringComparison.OrdinalIgnoreCase))
+            {
+                vm.Operation = operation;
+                return;
+            }
+        }
+    }
+
     private void SetUIBusy(bool busy)
     {
         SetActionButtonsEnabled(!busy);
         btnCancelar.IsEnabled = busy;
-        lvPackages.IsEnabled = !busy;
+        SetListLocked(busy);
         progressRing.IsActive = busy;
         if (!busy)
         {
@@ -459,6 +491,8 @@ public sealed partial class MainWindow : Window
                 IsExcluded = _settings.ExcludedIds.Contains(pkg.Id),
                 IsVersionSkipped = SkippedVersions.IsSkipped(_settings.SkippedVersions, pkg.Id, pkg.Available),
                 IsSelected = _selectedIds.Contains(pkg.Id),   // la marca sobrevive a buscar/ordenar/filtrar
+                Operation = _rowTracker.Get(pkg.Id),          // y el estado del lote, también (F-19)
+                IsLocked = _listLocked,
             });
 
         if (_excludedFilter == 1) viewModels = viewModels.Where(v => !v.IsExcluded);
@@ -499,8 +533,13 @@ public sealed partial class MainWindow : Window
                 : items.OrderBy(key, comparer);
     }
 
-    private async Task LoadPackagesAsync(bool includeUnknown)
+    private async Task LoadPackagesAsync(bool includeUnknown, bool keepBatchFailures = false)
     {
+        // Tras un lote solo siguen interesando sus fallos, que es lo que el usuario buscará para reintentar;
+        // una consulta pedida a mano empieza sin marcas de un lote anterior (F-19).
+        if (keepBatchFailures) _rowTracker.KeepOnlyFailures();
+        else _rowTracker.Clear();
+
         _lastIncludeUnknown = includeUnknown;
         UpdateCheckVariant();
         _cancelStopsCurrentProcess = true;

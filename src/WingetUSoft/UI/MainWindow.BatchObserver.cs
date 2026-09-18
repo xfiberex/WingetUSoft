@@ -41,9 +41,13 @@ public sealed partial class MainWindow
         // para sumarle uno daría saltos si el progreso de descarga la había dejado a medio tramo.
         private int _index;
 
+        // El estado por fila (F-19) lo lleva el rastreador de la ventana: cada paso del lote se le reenvía.
+        private readonly IUpgradeBatchObserver _rows = window._rowTracker;
+
         public void PackageStarting(int index, int total, WingetPackage package)
         {
             _index = index;
+            _rows.PackageStarting(index, total, package);
             window.txtEstado.Text = L.T("status.updating", index + 1, total, package.Name);
             window.SetProgressValue(index);
             TaskbarProgress.SetValue(window._hWnd, index * 100 / total);
@@ -75,6 +79,7 @@ public sealed partial class MainWindow
         public void PackageSucceeded(WingetPackage package)
         {
             window.RecordSuccessfulUpgrade(package);
+            _rows.PackageSucceeded(package);
             window.SetProgressValue(_index + 1);
         }
 
@@ -85,6 +90,7 @@ public sealed partial class MainWindow
         public void PackageFailed(WingetPackage package, string reason)
         {
             window.AppendLog($"  ✖ {package.Name}: {reason}", LogLineKind.Error);
+            _rows.PackageFailed(package, reason);
             window.SetProgressValue(_index + 1);
         }
     }

@@ -536,7 +536,18 @@
                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                               AutomationProperties.Name="{Binding StatusLabel}"
                                                               ToolTipService.ToolTip="{Binding StatusLabel}"
-                                                              Visibility="{Binding HasStatusIcon, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                              Visibility="{Binding ShowStatusGlyph, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                    <!-- El paquete que se está actualizando lleva un anillo; en cola, correcto
+                                                         y fallido llevan su glifo, con el motivo del fallo en el tooltip (F-19). -->
+                                                    <ProgressRing Grid.Column="6"
+                                                                  IsActive="{Binding IsOperationRunning}"
+                                                                  Width="16" Height="16"
+                                                                  HorizontalAlignment="Left"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="8,0,0,0"
+                                                                  AutomationProperties.Name="{Binding StatusLabel}"
+                                                                  ToolTipService.ToolTip="{Binding StatusLabel}"
+                                                                  Visibility="{Binding IsOperationRunning, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ListView.ItemTemplate>

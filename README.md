@@ -96,6 +96,7 @@ los toca: preferencias, historial y exclusiones siguen ahí después de volver a
 - **Modo silencioso / interactivo** — compatible con las flags `--silent` e `--interactive` de winget.
 - **Elevación de permisos** — ejecuta lotes elevados mediante un worker interno con comunicación por named pipe, sin scripts temporales en disco. Incluye reporte de progreso de descarga en tiempo real durante la instalación elevada.
 - **Progreso siempre visible** — la barra de estado está anclada al pie de la ventana (fuera de la página desplazable) e incluye una barra de progreso que avanza también *dentro* de cada paquete, según lo descargado.
+- **Estado por fila durante el lote** — cada paquete dice si está en cola, actualizándose, actualizado o si falló (con el motivo al pasar el ratón). La tabla se puede recorrer, ordenar y filtrar mientras tanto; lo que no se puede es cambiar la selección del lote en marcha. Tras la recarga, los que fallaron siguen marcados.
 - **Resumen único de fallos** — si varios paquetes fallan, se informa en un solo diálogo al terminar el lote, en vez de interrumpirlo con un modal por cada fallo.
 
 ### Exploración y filtrado

@@ -1506,7 +1506,7 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-17): 22 de 26.** ✅ F-01 a F-16, F-18, F-20, F-21, F-22, F-23 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-18): 23 de 26.** ✅ F-01 a F-16, F-18 a F-23 y F-25 (F·1 y F·2 completos).
 
 ---
 
@@ -2014,7 +2014,7 @@ explícita.
   - **Esfuerzo:** medio
   - **Depende de:** ninguna
 
-- [ ] **[F-19] Tabla usable durante consultas y lotes, con estado por fila**
+- [x] **[F-19] Tabla usable durante consultas y lotes, con estado por fila**
   - **Área:** UX / feedback
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml.cs:347-358` (`lvPackages.IsEnabled = !busy` en `:351`), `MainWindow.BatchObserver.cs:37-90` y `PackageViewModel.cs`
   - **Qué hacer:** mientras dura la operación, la tabla entera queda deshabilitada y en gris, y el avance
@@ -2026,6 +2026,38 @@ explícita.
     con el motivo del fallo en un tooltip y en el nombre accesible; tests unitarios de las transiciones
     con el doble de `IWingetService`.
   - **Evidencia (2026-09-14):** `lvPackages` expone `IsEnabled=False` durante la consulta.
+  - **Al implementarlo:**
+    - `Core/BatchRowTracker.cs` lleva el estado de cada paquete por Id —en cola, en curso, correcto, fallido
+      con motivo—, porque buscar, ordenar o filtrar reconstruye las filas y el estado no puede vivir en el
+      ViewModel. Es un `IUpgradeBatchObserver`, así que el lote normal lo alimenta solo; el elevado lo hace
+      desde `ReportElevatedBatchStatus` y el volcado de resultados.
+    - La fila enseña un anillo mientras se actualiza y un glifo en los demás estados, con el motivo del fallo
+      en el tooltip y en el nombre accesible («…, Falló: <motivo>»).
+    - La tabla queda en **modo lectura** en vez de deshabilitada: se recorre, se ordena y se filtra, pero las
+      casillas, Supr y el menú contextual se bloquean. El panel de detalle no lanza un `winget show` por fila
+      recorrida: cuenta el estado del paquete en el lote.
+    - Al terminar, lo que quedó en cola (lote cancelado) pierde la marca; tras la recarga automática solo se
+      conservan los **fallos**, que es lo que el usuario querrá reintentar. Una consulta a mano los borra.
+  - **Defecto encontrado al probarlo, anterior a F-19 y grave:** desde la **v1.8.8** (T4-03) el bucle del lote
+    esperaba a winget con `ConfigureAwait(false)`. Tras el primer paquete, los avisos a la ventana llegaban desde
+    un hilo de fondo y el lote se cortaba con un «Error de actualización» **vacío**. Con la configuración de
+    fábrica (sin «como administrador»), un paquete se actualizaba pero la app decía que no, sin historial ni
+    recarga; de varios, solo se ejecutaba el primero. Nadie lo vio porque el modo administrador no pasa por ese
+    bucle y los tests del lote instalaban un contexto que lo ejecuta todo en línea. Se quitó el
+    `ConfigureAwait(false)`, y `UpgradeBatchThreadingTests` lo fija con un contexto de un solo hilo y un winget
+    que responde desde otro: contra el código anterior, 5 de los 6 avisos llegan fuera de hilo. De paso, un
+    error sin mensaje enseña ahora su tipo y su HRESULT, y queda en el registro.
+  - **Verificado (2026-09-18):** con un lote **real** de dos paquetes, autorizado por el usuario, sin elevación:
+    - Microsoft Edge falló por su cuenta (winget `0x8A15008E`) y su fila pasó a «Falló: …»; el lote **siguió**
+      con Postman, que se vio «Actualizando…» y luego «Actualizado» (12.28.3 → 12.28.4, comprobado con winget).
+    - Durante el lote, la tabla habilitada: se seleccionó y recorrió otra fila, su casilla estaba
+      deshabilitada, Mayús+F10 no abrió menú y el panel de detalle no lanzó `winget show`.
+    - Tras la recarga, Edge conserva su marca de fallo; Postman ya no aparece.
+    - `settings.json` restaurado idéntico, así que la actualización de Postman no quedó en el historial.
+    - Tests: `BatchRowTrackerTests` (9, transiciones con el lote real y el doble de winget, cancelación,
+      recarga, modo lectura) y `UpgradeBatchThreadingTests`.
+  - **Sin verificar en la app real:** el estado «En cola» (Edge falló antes del primer muestreo; lo cubren los
+    tests) y el camino **elevado** (`ReportElevatedBatchStatus`), que necesitaría un UAC por lote.
   - **Esfuerzo:** medio
   - **Depende de:** F-01
 
@@ -2235,10 +2267,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 5 | 2 | 71 % |
+| F·3 — Experiencia de uso | 7 | 6 | 1 | 86 % |
 | F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
 | F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **22** | **4** | **85 %** |
+| **Total** | **26** | **23** | **3** | **88 %** |
 
 ### Registro de tareas completadas
 
@@ -2266,6 +2298,7 @@ explícita.
 | 2026-09-17 | F-22 | Aviso de nueva versión breve | aviso real con una copia 1.8.0 · mensaje de 30 caracteres · changelog a un clic · 355/355 unitarios · 56/56 UI tests | `0836a18` | 1.10.0 |
 | 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | 1.10.0 |
 | 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | `b80212d` | 1.10.0 |
+| 2026-09-18 | F-19 | Tabla usable durante los lotes, con estado por fila | lote real de 2 paquetes · el lote sigue tras un fallo · 405/405 unitarios · 58/58 UI tests | — | — |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 
@@ -2295,5 +2328,6 @@ explícita.
   límite que T1-09). Lo que le afecta en F-04 y F-05 sale del código.
 - **Buscar e instalar:** no se condujo en esta pasada; lo que le afecta en F-07 y F-15 sale del código y de
   `docs/screenshots/search-*.png`.
-- **Lotes de actualización reales:** no se lanzó ninguno; F-19 se apoya en el código y en el estado de la
-  tabla durante la consulta.
+- **Lotes de actualización reales:** hasta F-19 no se lanzó ninguno, y eso escondió que los lotes sin elevación
+  estaban rotos desde la v1.8.8 (ver F-19). En F-19 se lanzó uno real, autorizado, de dos paquetes. El lote
+  **elevado** sigue sin probarse de extremo a extremo.

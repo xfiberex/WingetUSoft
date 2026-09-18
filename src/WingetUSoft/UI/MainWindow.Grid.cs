@@ -109,6 +109,18 @@ public sealed partial class MainWindow
         lnkHomepage.Visibility = Visibility.Collapsed;
         lnkNotasVersion.Visibility = Visibility.Collapsed;
 
+        // Durante una operación no se lanza un `winget show` por cada fila que se recorra: el panel cuenta el
+        // estado del paquete en el lote, que es lo que interesa mientras tanto (F-19).
+        if (_listLocked)
+        {
+            var operation = _rowTracker.Get(pkg.Id);
+            var row = _packageViewModels.FirstOrDefault(v => string.Equals(v.Id, pkg.Id, StringComparison.OrdinalIgnoreCase));
+            txtInfoDescripcion.Text = operation.State == RowOperationState.None || row is null
+                ? pkg.Name
+                : $"{pkg.Name} · {row.StatusLabel}";
+            return;
+        }
+
         try
         {
             await Task.Delay(280, token);
@@ -181,6 +193,13 @@ public sealed partial class MainWindow
         // selección: es justo la que el usuario tiene enfocada.
         var row = element?.DataContext as PackageViewModel ?? lvPackages.SelectedItem as PackageViewModel;
         if (row is null) return;
+
+        // En modo lectura no hay menú: todas sus acciones cambiarían el lote en marcha (F-19).
+        if (_listLocked)
+        {
+            e.Handled = true;
+            return;
+        }
 
         lvPackages.SelectedItem = row;
 
