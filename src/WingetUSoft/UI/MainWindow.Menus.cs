@@ -10,9 +10,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Windows.Storage.Pickers;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
 
 namespace WingetUSoft;
 
@@ -110,27 +109,25 @@ public sealed partial class MainWindow
             return;
         }
 
-        var picker = new FileSavePicker
+        var picker = new FileSavePicker(AppWindow.Id)
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = L.ExportFileName("export.fileUpdates")
+            SuggestedFileName = L.ExportFileName("export.fileUpdates"),
         };
         picker.FileTypeChoices.Add("CSV", [".csv"]);
         picker.FileTypeChoices.Add(L.T("export.txtFormat"), [".txt"]);
 
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         var file = await picker.PickSaveFileAsync();
-
         if (file is null) return;
 
-        char sep = file.FileType.Equals(".csv", StringComparison.OrdinalIgnoreCase) ? ',' : '\t';
+        char sep = Path.GetExtension(file.Path).Equals(".csv", StringComparison.OrdinalIgnoreCase) ? ',' : '\t';
         var sb = new StringBuilder();
         sb.AppendLine(DelimitedTextExporter.BuildRow(sep, L.T("list.colName"), L.T("list.colId"), L.T("export.colCurrentVersion"), L.T("list.colAvailable"), L.T("list.colSource")));
         foreach (var pkg in _packages)
             sb.AppendLine(DelimitedTextExporter.BuildRow(sep, pkg.Name, pkg.Id, pkg.Version, pkg.Available, pkg.Source));
 
-        await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
-        txtEstado.Text = L.T("status.listExported", file.Name);
+        await FileExport.WriteTextWithBomAsync(file.Path, sb.ToString());
+        txtEstado.Text = L.T("status.listExported", Path.GetFileName(file.Path));
     }
 
     /// <summary>
@@ -240,21 +237,21 @@ public sealed partial class MainWindow
         if (await dialog.ShowAsync() != ContentDialogResult.Primary)
             return;
 
-        var picker = new FileSavePicker
+        var picker = new FileSavePicker(AppWindow.Id)
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
             SuggestedFileName = L.ExportFileName("export.filePackages"),
         };
         picker.FileTypeChoices.Add("JSON", [".json"]);
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
 
         var file = await picker.PickSaveFileAsync();
         if (file is null) return;
 
+        string exportName = Path.GetFileName(file.Path);
         SetUIBusy(true);
         ShowIndeterminateProgress();
         txtEstado.Text = L.T("status.exportingWinget");
-        AppendLog(L.T("log.exportingWinget", file.Name), LogLineKind.Accent);
+        AppendLog(L.T("log.exportingWinget", exportName), LogLineKind.Accent);
 
         try
         {
@@ -264,7 +261,7 @@ public sealed partial class MainWindow
 
             if (result.Success)
             {
-                txtEstado.Text = L.T("status.wingetExported", file.Name);
+                txtEstado.Text = L.T("status.wingetExported", exportName);
                 AppendLog(L.T("log.exportWingetDone", file.Path), LogLineKind.Success);
             }
             else
@@ -294,14 +291,14 @@ public sealed partial class MainWindow
     /// </summary>
     private async void MenuImportarWinget_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+        var picker = new FileOpenPicker(AppWindow.Id) { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
         picker.FileTypeFilter.Add(".json");
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
 
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
 
-        if (!await ShowConfirmDialogAsync(L.T("import.confirmTitle"), L.T("import.confirmBody", file.Name),
+        string importName = Path.GetFileName(file.Path);
+        if (!await ShowConfirmDialogAsync(L.T("import.confirmTitle"), L.T("import.confirmBody", importName),
                 L.T("import.confirmPrimary")))
             return;
 
@@ -311,7 +308,7 @@ public sealed partial class MainWindow
         SetUIBusy(true);
         ShowIndeterminateProgress();
         txtEstado.Text = L.T("status.importing");
-        AppendLog(L.T("log.importing", file.Name), LogLineKind.Accent);
+        AppendLog(L.T("log.importing", importName), LogLineKind.Accent);
         TaskbarProgress.SetIndeterminate(_hWnd);
 
         try

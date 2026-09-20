@@ -1506,8 +1506,8 @@ tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-18): 26 de 27.** ✅ F-01 a F-26 (F-26 evaluada y descartada). Pendiente: F-27, encontrada al
-verificar F-24.
+**Progreso (2026-09-20): 27 de 27 — Tier F completo.** ✅ F-01 a F-27 (F-26 evaluada y descartada; F-27 salió de
+la propia verificación de F-24).
 
 ---
 
@@ -2296,7 +2296,7 @@ verificar F-24.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
-- [ ] **[F-27] Los selectores de archivos fallan con la app elevada**
+- [x] **[F-27] Los selectores de archivos fallan con la app elevada**
   - **Área:** Defecto / robustez
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.Menus.cs` (`PickSaveFileAsync` en Exportar lista y Exportar
     paquetes, `PickSingleFileAsync` en Importar paquetes) y `src/WingetUSoft/UI/HistoryWindow.xaml.cs`
@@ -2313,6 +2313,21 @@ verificar F-24.
   - **Evidencia (2026-09-18):** encontrado al verificar F-24 con VS Code elevado: tres entradas en `crash.log` con
     `COMException (0x80004005)` en `MenuExportarWinget_Click`, en la línea de `PickSaveFileAsync`. Lanzada sin
     elevar (a través de `explorer.exe`), la misma exportación funciona.
+  - **Al implementarlo:** los cuatro pasan a `Microsoft.Windows.Storage.Pickers`, que recibe la ventana por su
+    `WindowId` en vez del interop `InitializeWithWindow` y devuelve una **ruta**, no un `StorageFile`. Lo que se
+    escribe va por `Core/FileExport`, que conserva el BOM que ponía `FileIO.WriteTextAsync` (es lo que hace que
+    Excel abra un CSV con acentos sin destrozarlos). De paso, siete parciales de `MainWindow` importaban
+    `Windows.Storage.Pickers` sin usarlo: lo destapó el propio test.
+  - **Verificado (2026-09-20)** con la app **elevada**, que es donde fallaba, y `settings.json` y su `.bak`
+    idénticos al terminar:
+    - Exportar lista → CSV de 750 bytes **con BOM** y cabecera correcta; la barra de estado lo confirma.
+    - Exportar paquetes (winget) → JSON de 6,4 KB escrito por winget.
+    - Importar paquetes → el selector devuelve el archivo y sale la confirmación «Importar e instalar paquetes»,
+      que se **cancela**: no se instaló nada.
+    - Historial → CSV con BOM y su resumen en pantalla.
+    - **No se creó `crash.log`**: antes cada intento dejaba ahí una `COMException`.
+    - Tests: `FilePickerTests` (4: prohibición del API viejo, `WindowId` en los cuatro selectores y el BOM).
+      431/431 unitarios · 65/65 UI tests.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
@@ -2367,9 +2382,9 @@ verificar F-24.
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
 | F·3 — Experiencia de uso | 7 | 7 | 0 | 100 % |
-| F·4 — Verificación y QA | 3 | 2 | 1 | 67 % |
+| F·4 — Verificación y QA | 3 | 3 | 0 | 100 % |
 | F·5 — Opcional | 1 | 1 | 0 | 100 % |
-| **Total** | **27** | **26** | **1** | **96 %** |
+| **Total** | **27** | **27** | **0** | **100 %** |
 
 ### Registro de tareas completadas
 
@@ -2401,6 +2416,7 @@ verificar F-24.
 | 2026-09-18 | F-17 | Más espacio para los datos | cabeceras de columna del 49 % al 25,6 % · Desinstalar de 5 a 10 filas · 13 guards fallan al revertir · 422/422 unitarios · 65/65 UI tests | — | 1.12.0 |
 | 2026-09-18 | F-24 | Probar y corregir en contraste alto | «Acuático» y «Desierto» reales, también en caliente · 0 px de color en el registro · 3 guards fallan al revertir · 427/427 unitarios · 65/65 UI tests | — | 1.12.0 |
 | 2026-09-18 | F-26 | Evaluar una ventana única con `NavigationView` | evaluada y descartada, con la alternativa barata anotada (`CONTEXT.md` §4) | — | 1.12.0 |
+| 2026-09-20 | F-27 | Selectores de archivo que funcionan con la app elevada | los cuatro probados con la app elevada · sin `crash.log` · 431/431 unitarios · 65/65 UI tests | — | 1.12.1 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 

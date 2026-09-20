@@ -2,8 +2,7 @@ using System.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
+using Microsoft.Windows.Storage.Pickers;
 
 namespace WingetUSoft;
 
@@ -163,14 +162,13 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        var picker = new FileSavePicker
+        var picker = new FileSavePicker(AppWindow.Id)
         {
             SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
-            SuggestedFileName = L.ExportFileName("export.fileHistory")
+            SuggestedFileName = L.ExportFileName("export.fileHistory"),
         };
         picker.FileTypeChoices.Add("CSV", [".csv"]);
 
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
         var file = await picker.PickSaveFileAsync();
         if (file is null) return;
 
@@ -185,8 +183,8 @@ public sealed partial class HistoryWindow : Window
                 entry.ToVersion,
                 entry.Success ? L.T("history.statusSuccess") : L.T("history.statusFailed")));
 
-        await Windows.Storage.FileIO.WriteTextAsync(file, sb.ToString());
-        txtSummary.Text = L.T("history.exportedTo", file.Name);
+        await FileExport.WriteTextWithBomAsync(file.Path, sb.ToString());
+        txtSummary.Text = L.T("history.exportedTo", Path.GetFileName(file.Path));
     }
 
     private void BtnCerrar_Click(object sender, RoutedEventArgs e) => Close();

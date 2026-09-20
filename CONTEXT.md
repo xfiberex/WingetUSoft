@@ -199,6 +199,10 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
   la rama y el del tag. **Ya está resuelto de raíz:** `release.ps1` y `verify.ps1` envuelven cada
   llamada nativa en `Invoke-Native`, así que ya se pueden invocar redirigiendo la salida. Si se añade
   una llamada a `git`, `gh` o `dotnet` a cualquiera de los dos, tiene que ir dentro del envoltorio.
+- **Selectores de archivo: los de `Microsoft.Windows.Storage.Pickers`, nunca los de `Windows.Storage.Pickers`
+  (F-27).** Los segundos lanzan `COMException 0x80004005` en cuanto la app corre elevada y el fallo es mudo. Los
+  de Windows App SDK reciben el `WindowId` y devuelven una ruta; lo que se escriba va por `Core/FileExport`, que
+  conserva el BOM. Un test lo impone, y **probar esto exige la app elevada**: sin elevar, los dos funcionan.
 - **Seis ventanas, no una con `NavigationView` (F-26, evaluado el 2026-09-18).** Lo que esa migración iba a
   resolver ya lo resolvieron F-08 (una instancia por ventana), F-17 (sin cabeceras repetidas) y F-14 (estilos
   compartidos); queda solo un botón por ventana en la barra de tareas. A cambio, las ventanas tienen ciclo de vida
@@ -285,6 +289,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-20 | **1.12.1** | **Tier F completo (F-27)** — exportar e importar volvían a fallar en silencio si la aplicación se abría como administrador: los selectores de archivo pasan a los de Windows App SDK |
 | 2026-09-20 | **1.12.0** | **Tier F cerrado (F-17, F-24 y F-26)** — sin cabeceras que repitan el título, una barra de órdenes con icono y texto, registro plegable, y los temas de contraste de Windows por fin respetados |
 | 2026-09-18 | **1.11.0** | **Tier F · F-19 y arreglo urgente** — los lotes sin elevación volvían a romperse tras el primer paquete desde la 1.8.8 (`ConfigureAwait(false)` en el bucle); estado por fila durante el lote y tabla en modo lectura en vez de deshabilitada |
 | 2026-09-17 | **1.10.0** | **Tier F · bloque F·3 (5 de 7)** — atajos en su propio control y `Ctrl+F`, «Consultar» como `SplitButton` con el acento en la acción del momento, aviso de versión nueva breve, estados de lista accionables en las cuatro ventanas y textos con plurales reales |
@@ -305,6 +310,23 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-20 — Los selectores de archivo con la app elevada (F-27, release v1.12.1)
+
+**27 de 27** del Tier F. Build 0/0, **431/431 unitarios**, **65/65 UI tests**.
+
+`Windows.Storage.Pickers` lanza `COMException 0x80004005` en un proceso **elevado**, y `CrashLog.IsRecoverable`
+no perdona esa excepción: quien abriera WingetUSoft «como administrador» —algo normal en un gestor de
+actualizaciones— veía que Exportar lista, Exportar paquetes, Importar paquetes y Exportar CSV del historial no
+hacían nada, con la única huella en `crash.log`. Los cuatro pasan a `Microsoft.Windows.Storage.Pickers`, que
+recibe el `WindowId` y devuelve una ruta; lo que se escribe va por `Core/FileExport`, que conserva el BOM que
+ponía `FileIO.WriteTextAsync`.
+
+Salió de la verificación de F-24: la sesión corría elevada y la exportación reventó ahí. Es la segunda vez en
+dos versiones que un defecto así solo aparece **conduciendo la app**, y ninguna de las dos veces lo podían ver
+los tests: el primero (F-19) necesitaba otro hilo, y este, otro nivel de integridad.
 
 ---
 

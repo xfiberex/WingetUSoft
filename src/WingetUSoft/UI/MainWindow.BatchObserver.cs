@@ -11,7 +11,6 @@ using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Windows.ApplicationModel.DataTransfer;
-using Windows.Storage.Pickers;
 using WinRT.Interop;
 
 namespace WingetUSoft;
