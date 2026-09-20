@@ -47,6 +47,7 @@ public sealed partial class MainWindow
         _cts = new CancellationTokenSource();
         _cancelStopsCurrentProcess = !runAsAdministrator;
         _rowTracker.Begin(packagesToUpdate);   // todas las filas del lote, «en cola» (F-19)
+        LogExpander.Reveal(expLog);            // el detalle de cada paquete va al registro (F-17)
         SetUIBusy(true);
 
         int success = 0;

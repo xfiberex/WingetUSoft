@@ -22,22 +22,10 @@
                        Style="{StaticResource CaptionTextBlockStyle}" />
         </Grid>
 
-        <!-- Header Card -->
-        <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
-                Margin="20,4,20,8">
-            <StackPanel Spacing="4">
-                <TextBlock x:Name="txtHeaderTitle" Text="Configuración"
-                           Style="{StaticResource TitleTextBlockStyle}" />
-                <TextBlock x:Name="txtHeaderSubtitle" Text="Ajusta las opciones generales de la aplicación."
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-        </Border>
-
         <!-- Todas las opciones siguen el mismo patrón (F-16): una SettingsCard por opción, con título y descripción a la
              izquierda y el control a la derecha, agrupadas bajo un título. Hasta F-16 convivían radios con subtítulo,
              ComboBox con Header, CheckBox e interruptores con un TextBlock suelto. -->
-        <ScrollViewer Grid.Row="2" Margin="20,0,20,16" Padding="0,0,12,0">
+        <ScrollViewer Grid.Row="2" Margin="20,4,20,16" Padding="0,0,12,0">
             <StackPanel Spacing="4">
 
                 <!-- Apariencia: tema e idioma. Vivían en el menú "Opciones" de la ventana principal

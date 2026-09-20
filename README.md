@@ -96,6 +96,7 @@ los toca: preferencias, historial y exclusiones siguen ahí después de volver a
 - **Modo silencioso / interactivo** — compatible con las flags `--silent` e `--interactive` de winget.
 - **Elevación de permisos** — ejecuta lotes elevados mediante un worker interno con comunicación por named pipe, sin scripts temporales en disco. Incluye reporte de progreso de descarga en tiempo real durante la instalación elevada.
 - **Progreso siempre visible** — la barra de estado está anclada al pie de la ventana (fuera de la página desplazable) e incluye una barra de progreso que avanza también *dentro* de cada paquete, según lo descargado.
+- **La tabla, primero** — sin cabeceras que repitan el título de la ventana: acciones, filtros y detalle del paquete van en una sola barra, con icono y texto en cada orden. El registro de actividad va plegado y se abre solo cuando empieza una actualización, instalación o desinstalación, o cuando algo falla.
 - **Estado por fila durante el lote** — cada paquete dice si está en cola, actualizándose, actualizado o si falló (con el motivo al pasar el ratón). La tabla se puede recorrer, ordenar y filtrar mientras tanto; lo que no se puede es cambiar la selección del lote en marcha. Tras la recarga, los que fallaron siguen marcados.
 - **Resumen único de fallos** — si varios paquetes fallan, se informa en un solo diálogo al terminar el lote, en vez de interrumpirlo con un modal por cada fallo.
 
@@ -148,6 +149,9 @@ solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstala
   claro y oscuro, comprobado por tests. La verificación cubre **las cuatro ventanas con registro**
   (principal, buscar e instalar, desinstalar y limpieza): además de medir el contraste de cada tono,
   un test comprueba que ninguna ventana cablee sus propios colores por su cuenta.
+- **Temas de contraste de Windows** — con «Acuático», «Desierto» o cualquier otro tema de contraste, la app usa
+  los colores que elegiste: el registro deja de colorear las líneas (aciertos y fallos siguen marcados con ✔ y
+  ✖) y el fondo translúcido se sustituye por el color de ventana del tema. Comprobado en la app real.
 
 > 📋 Consulta la **[hoja de ruta](ROADMAP.md)** para ver las características implementadas y las próximas
 > (organizadas por *tiers*).
@@ -285,7 +289,7 @@ WingetUSoft/
 │   │   ├── WhatsNewDialog.xaml/.cs  # Novedades de la versión
 │   │   ├── ActivityLog, ListStatePanel, SettingsCard  # Controles propios compartidos
 │   │   ├── Styles.xaml, DangerButtonResources.xaml    # Estilos y colores compartidos
-│   │   └── WrapPanel.cs, WindowSizer.cs, Converters.cs, ...
+│   │   └── WrapPanel.cs, LogExpander.cs, CommandLabel.cs, ContrastMode.cs, ...
 │   │
 │   └── installer/             # Inno Setup (installer.iss) + build-installer.ps1
 │

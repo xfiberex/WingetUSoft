@@ -23,6 +23,7 @@ public sealed partial class CleanupWindow : Window
     public CleanupWindow(AppSettings settings, IEnumerable<WingetPackage> uninstalledPackages)
     {
         InitializeComponent();
+        LogExpander.Attach(expLog, rowLog, activityLog, expandedMinHeight: 90);
 
         // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
         // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
@@ -50,7 +51,6 @@ public sealed partial class CleanupWindow : Window
     {
         Title = L.T("cleanup.windowTitle");
         txtTitleBar.Text = L.T("cleanup.titleBar");
-        txtHeaderTitle.Text = L.T("cleanup.headerTitle");
         txtSubtitulo.Text = L.T("cleanup.scanning");
         txtWarning.Text = L.T("cleanup.warning");
         btnEscanear.Content = L.T("btn.rescan");
@@ -60,12 +60,11 @@ public sealed partial class CleanupWindow : Window
         btnSelAll.Content = L.T("btn.selectAll");
         btnDeselAll.Content = L.T("btn.deselectAll");
         btnCancelar.Content = L.T("btn.cancel");
-        txtListHeader.Text = L.T("cleanup.listHeader");
         colRuta.Text = L.T("cleanup.colPath");
         colTipo.Text = L.T("cleanup.colType");
         colTamano.Text = L.T("cleanup.colSize");
         colPrograma.Text = L.T("cleanup.colProgram");
-        txtLogHeader.Text = L.T("log.activity");
+        expLog.Header = L.T("log.activity");
         activityLog.SetAccessibleName(L.T("log.activity"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
     }
@@ -153,6 +152,7 @@ public sealed partial class CleanupWindow : Window
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
+        LogExpander.Reveal(expLog);   // cada ruta borrada o fallida se anota en el registro (F-17)
         SetUIBusy(true);
         ClearLog();
         int deleted = 0, failed = 0;

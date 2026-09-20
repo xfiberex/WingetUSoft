@@ -47,7 +47,8 @@ public sealed class SharedStylesTests
             + v.Doc.Descendants(local + "SettingsCard").Count());
 
         Assert.True(inline.Count == 0, "Tarjetas con el bloque repetido en vez de CardStyle: " + string.Join(", ", inline));
-        Assert.True(cards >= 30, $"Solo {cards} tarjetas usan un estilo compartido: el escaneo no está viendo las ventanas.");
+        // 25 desde F-17, que retiró las tarjetas de cabecera y metió los registros en un Expander (eran 36).
+        Assert.True(cards >= 20, $"Solo {cards} tarjetas usan un estilo compartido: el escaneo no está viendo las ventanas.");
     }
 
     /// <summary>Los radios salen de <c>OverlayCornerRadius</c> y <c>ControlCornerRadius</c>, no de un 8 o un 4 escritos a mano.</summary>

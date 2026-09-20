@@ -170,6 +170,59 @@ public sealed class LogPaletteTests
         return dir!.FullName;
     }
 
+    /// <summary>
+    /// F-24: con un tema de contraste de Windows activo, el registro no fuerza ningún color y el texto hereda el del
+    /// sistema. Un RGB fijo (el <c>#1B1B1B</c> de las líneas normales en claro) podía quedar casi invisible sobre el
+    /// fondo negro de un tema de contraste.
+    /// </summary>
+    [Fact]
+    public void HighContrast_ForcesNoColor_AndNormalModeKeepsThePalette()
+    {
+        foreach (LogLineKind kind in Enum.GetValues<LogLineKind>())
+        {
+            foreach (bool darkTheme in (bool[])[false, true])
+            {
+                Assert.Null(LogPalette.For(kind, darkTheme, highContrast: true));
+                Assert.Equal(LogPalette.For(kind, darkTheme), LogPalette.For(kind, darkTheme, highContrast: false));
+            }
+        }
+    }
+
+    /// <summary>
+    /// F-24: el registro pinta a través de la sobrecarga que conoce el contraste alto, y se repinta él solo al cambiar
+    /// el tema o el contraste. Hasta F-24 solo la ventana principal pedía el repintado.
+    /// </summary>
+    [Fact]
+    public void ActivityLog_HonoursHighContrast_AndRecolorsItself()
+    {
+        string code = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "WingetUSoft", "UI", "ActivityLog.xaml.cs"));
+
+        Assert.Contains("LogPalette.For(kind, IsDark, ContrastMode.IsActive)", code, StringComparison.Ordinal);
+        Assert.Contains("run.ClearValue(TextElement.ForegroundProperty)", code, StringComparison.Ordinal);
+        Assert.Contains("ActualThemeChanged += (_, _) => Recolor();", code, StringComparison.Ordinal);
+        Assert.Contains("ContrastMode.Changed += OnSystemColorsChanged", code, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// F-24: en una app de escritorio, suscribirse a <c>AccessibilitySettings.HighContrastChanged</c> lanza
+    /// <c>0x80070490</c> y tumba la aplicación (lo destapó la prueba en la app real). El aviso de cambio sale de
+    /// <c>ContrastMode</c>, que escucha <c>UISettings.ColorValuesChanged</c>.
+    /// </summary>
+    [Fact]
+    public void NoCode_SubscribesToHighContrastChanged()
+    {
+        string src = Path.Combine(FindRepositoryRoot(), "src", "WingetUSoft");
+        var offenders = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            .Where(f => File.ReadAllText(f).Contains("HighContrastChanged +=", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.True(offenders.Count == 0, "Suscripciones a HighContrastChanged: " + string.Join(", ", offenders));
+        Assert.Contains("Ui.ColorValuesChanged +=",
+            File.ReadAllText(Path.Combine(src, "UI", "ContrastMode.cs")), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ContrastRatio_MatchesTheWcagReferenceValues()
     {

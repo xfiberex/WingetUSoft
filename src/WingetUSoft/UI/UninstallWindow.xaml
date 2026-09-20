@@ -32,32 +32,20 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Header Card -->
-            <Border Grid.Row="0" Style="{StaticResource HeaderCardStyle}"
-                    Margin="0,0,0,12">
-                <StackPanel Spacing="4">
-                    <TextBlock x:Name="txtHeaderTitle" Text="Desinstalar programas instalados"
-                               Style="{StaticResource TitleTextBlockStyle}" />
-                    <TextBlock x:Name="txtSubtitulo"
-                               Text="Selecciona un programa de la lista y pulsa Desinstalar."
-                               Style="{StaticResource BodyTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </Border>
-
-            <!-- Actions + Search Bar -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}"
-                    Margin="0,0,0,12">
-                <StackPanel Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+            <!-- Actions + Search Bar. Botones y buscador comparten línea y el WrapPanel baja el buscador a la siguiente
+                 solo si no cabe (F-17): en dos líneas fijas, a 900×700 la lista se quedaba en nueve filas. Cada par
+                 etiqueta + control va en su StackPanel para saltar de línea junto. -->
+            <Border Grid.Row="1" Style="{StaticResource CompactCardStyle}"
+                    Margin="0,0,0,8">
+                <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                         <Button x:Name="btnRefresh"
                                 Content="Actualizar lista"
                                 Click="BtnRefresh_Click"
-                                MinWidth="160" Height="36" />
+                                Height="32" />
                         <Button x:Name="btnUninstall"
                                 Click="BtnUninstall_Click"
                                 IsEnabled="False"
-                                MinWidth="200" Height="36">
+                                Height="32">
                             <Button.Resources>
                                 <ResourceDictionary>
                                     <ResourceDictionary.MergedDictionaries>
@@ -75,14 +63,13 @@
                                 Content="Cancelar"
                                 Click="BtnCancelar_Click"
                                 IsEnabled="False"
-                                MinWidth="100" Height="36" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                Height="32" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="8,0,0,0">
                         <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBox x:Name="txtBuscar"
                                  PlaceholderText="Nombre o Id..."
-                                 Width="260" Height="32"
+                                 Width="220" Height="32"
                                  VerticalAlignment="Center"
                                  AutomationProperties.LabeledBy="{Binding ElementName=txtBuscarLabel}"
                                  TextChanged="TxtBuscar_TextChanged" />
@@ -91,16 +78,16 @@
                                    Style="{StaticResource CaptionTextBlockStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
-                </StackPanel>
+                </local:WrapPanel>
             </Border>
 
-            <!-- Main Split: List + Log. La lista pesa 3* frente a 1* del log: "Actividad" suele estar
-                 vacía salvo durante una desinstalación, y no debe robar sitio a la lista de programas. -->
+            <!-- Main Split: List + Log. El registro va plegado y su fila es Auto hasta que se despliega (LogExpander,
+                 F-17): "Actividad" suele estar vacía salvo durante una desinstalación; plegado, solo ocupa su cabecera. -->
             <Grid Grid.Row="2" Margin="0,0,0,8">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="3*" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" MinHeight="90" />
+                    <RowDefinition x:Name="rowLog" Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <!-- Installed Packages Card -->
@@ -108,17 +95,11 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock x:Name="txtListHeader" Grid.Row="0"
-                                   Text="Programas instalados"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="4,0,0,8" />
-
                         <!-- Column Headers -->
-                        <Grid Grid.Row="1" Style="{StaticResource TableHeaderStyle}" Height="36"
+                        <Grid Grid.Row="0" Style="{StaticResource TableHeaderStyle}" Height="36"
                               Padding="8,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -137,7 +118,7 @@
                         </Grid>
 
                         <ListView x:Name="lvPackages" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
-                                  Grid.Row="2"
+                                  Grid.Row="1"
                                   SelectionMode="Single"
                                   SelectionChanged="LvPackages_SelectionChanged">
                             <ListView.ItemTemplate>
@@ -167,7 +148,7 @@
                         </ListView>
                         <!-- Estado de la lista: cargando, vacía o con error (F-18). Encima del ListView, no en su lugar. -->
                         <local:ListStatePanel x:Name="panelListState"
-                                              Grid.Row="2"
+                                              Grid.Row="1"
                                               ActionInvoked="PanelListState_ActionInvoked" />
                     </Grid>
                 </Border>
@@ -176,21 +157,17 @@
                 <Border Grid.Row="1" Height="6" Background="Transparent" />
 
                 <!-- Log Card -->
-                <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock x:Name="txtLogHeader" Grid.Row="0"
-                                   Text="Actividad"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="4,0,0,8" />
-                        <local:ActivityLog x:Name="activityLog"
-                                             Grid.Row="1"
-                                             MaxLines="200" />
-                    </Grid>
-                </Border>
+                <!-- Registro plegable (F-17): se abre solo al empezar la operación y ante un error (LogExpander). -->
+                <Expander x:Name="expLog"
+                          Grid.Row="2"
+                          Header="Actividad"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch"
+                          VerticalContentAlignment="Stretch"
+                          Padding="12">
+                    <local:ActivityLog x:Name="activityLog" MaxLines="200" />
+                </Expander>
             </Grid>
 
             <!-- Status Bar -->

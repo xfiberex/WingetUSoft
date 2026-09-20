@@ -32,10 +32,30 @@ public sealed partial class ActivityLog : UserControl
     /// </summary>
     private readonly List<LogLineKind> _kinds = [];
 
-    public ActivityLog() => InitializeComponent();
+    public ActivityLog()
+    {
+        InitializeComponent();
+
+        // El registro se repinta solo (F-24). Hasta entonces lo pedía la ventana a WindowChrome, y solo lo hacía la
+        // principal: Buscar, Desinstalar y Limpieza conservaban los colores del tema anterior. Un tema de contraste
+        // no siempre cambia ActualTheme (el blanco sigue siendo «claro»), así que se escucha también ContrastMode,
+        // solo con el registro en pantalla: el evento es estático y retendría el control.
+        ActualThemeChanged += (_, _) => Recolor();
+        Loaded += (_, _) => ContrastMode.Changed += OnSystemColorsChanged;
+        Unloaded += (_, _) => ContrastMode.Changed -= OnSystemColorsChanged;
+    }
+
+    /// <summary>El aviso llega desde otro hilo: el repintado va al de la interfaz.</summary>
+    private void OnSystemColorsChanged() => DispatcherQueue.TryEnqueue(Recolor);
 
     /// <summary>Líneas que se conservan antes de empezar a tirar las más viejas.</summary>
     public int MaxLines { get; set; } = 400;
+
+    /// <summary>
+    /// Cada línea nueva, con su tipo. Lo escucha <see cref="LogExpander"/> para desplegar el registro ante un
+    /// error: plegado (F-17), un fallo escrito solo aquí pasaría desapercibido.
+    /// </summary>
+    internal event Action<LogLineKind>? LineAppended;
 
     /// <summary>
     /// El tema se lee del propio control y no de <c>Application.Current</c>: el tema se fuerza por
@@ -44,7 +64,17 @@ public sealed partial class ActivityLog : UserControl
     /// </summary>
     private bool IsDark => rtbLog.ActualTheme == ElementTheme.Dark;
 
-    private SolidColorBrush BrushFor(LogLineKind kind) => new(LogPalette.For(kind, IsDark));
+    /// <summary>
+    /// Pinta un tramo según su tipo. Con contraste alto no se le pone color: hereda el del sistema (F-24), y se
+    /// borra el que tuviera por si el registro ya estaba escrito al activarlo.
+    /// </summary>
+    private void Paint(Run run, LogLineKind kind)
+    {
+        if (LogPalette.For(kind, IsDark, ContrastMode.IsActive) is { } color)
+            run.Foreground = new SolidColorBrush(color);
+        else
+            run.ClearValue(TextElement.ForegroundProperty);
+    }
 
     /// <summary>
     /// Nombre accesible del registro. Lo pone la ventana con su encabezado ya traducido.
@@ -65,7 +95,9 @@ public sealed partial class ActivityLog : UserControl
         if (string.IsNullOrWhiteSpace(text)) return;
 
         var paragraph = new Paragraph();
-        paragraph.Inlines.Add(new Run { Text = text, Foreground = BrushFor(kind) });
+        var run = new Run { Text = text };
+        Paint(run, kind);
+        paragraph.Inlines.Add(run);
         rtbLog.Blocks.Add(paragraph);
         _kinds.Add(kind);
 
@@ -76,6 +108,7 @@ public sealed partial class ActivityLog : UserControl
         }
 
         ScrollToEnd();
+        LineAppended?.Invoke(kind);
     }
 
     internal void Clear()
@@ -91,7 +124,7 @@ public sealed partial class ActivityLog : UserControl
         for (int i = 0; i < count; i++)
         {
             if (rtbLog.Blocks[i] is Paragraph { Inlines: [Run run, ..] })
-                run.Foreground = BrushFor(_kinds[i]);
+                Paint(run, _kinds[i]);
         }
     }
 

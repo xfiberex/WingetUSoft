@@ -66,6 +66,7 @@ public sealed partial class SearchWindow : Window
     public SearchWindow(AppSettings settings)
     {
         InitializeComponent();
+        LogExpander.Attach(expLog, rowLog, activityLog, expandedMinHeight: 90);
 
         // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
         // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
@@ -88,15 +89,12 @@ public sealed partial class SearchWindow : Window
     {
         Title = L.T("search.windowTitle");
         txtTitleBar.Text = L.T("search.windowTitle");
-        txtHeaderTitle.Text = L.T("search.header");
-        txtSubtitulo.Text = L.T("search.subtitle");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
         txtBuscarLabel.Text = L.T("search.catalogLabel");
         btnBuscar.Content = L.T("search.search");
         btnInstalar.Content = L.T("search.install");
         btnCancelar.Content = L.T("btn.cancel");
-        txtListHeader.Text = L.T("search.results");
-        txtLogHeader.Text = L.T("log.header");
+        expLog.Header = L.T("log.header");
         activityLog.SetAccessibleName(L.T("log.header"));
         colNombre.Text = L.T("list.colName");
         colId.Text = L.T("list.colId");
@@ -132,6 +130,10 @@ public sealed partial class SearchWindow : Window
 
         var cts = new CancellationTokenSource();
         _cts = cts;
+        // SetBusy desactiva el buscador y su botón, y el foco salta al siguiente control, que desde F-17 es la
+        // cabecera del registro. Se devuelve al buscador al terminar para poder afinar la búsqueda sin el ratón.
+        bool searchBarHadFocus = txtBuscar.FocusState != FocusState.Unfocused
+            || btnBuscar.FocusState != FocusState.Unfocused;
         SetBusy(true);
         _results.Clear();
         txtContador.Text = "";
@@ -173,6 +175,7 @@ public sealed partial class SearchWindow : Window
         finally
         {
             SetBusy(false);
+            if (searchBarHadFocus) txtBuscar.Focus(FocusState.Programmatic);
             cts.Dispose();
             // Solo se borra el campo si sigue apuntando a este CTS: así una operación posterior
             // que ya haya publicado el suyo no se queda sin token de cancelación.
@@ -275,6 +278,7 @@ public sealed partial class SearchWindow : Window
         var cts = new CancellationTokenSource();
         _cts = cts;
         bool reSearch = false;
+        LogExpander.Reveal(expLog);   // la salida de winget se sigue en el registro (F-17)
         SetBusy(true);
         txtEstado.Text = L.T("search.installing", selected.Name);
         AppendLog(L.T("search.logInstalling", selected.Name, selected.Id), LogLineKind.Accent);

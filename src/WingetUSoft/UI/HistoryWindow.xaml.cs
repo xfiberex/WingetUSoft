@@ -65,7 +65,6 @@ public sealed partial class HistoryWindow : Window
     {
         Title = L.T("history.titleBar");
         txtTitleBar.Text = L.T("history.titleBar");
-        txtHeaderTitle.Text = L.T("history.headerTitle");
         txtBuscarLabel.Text = L.T("search.label");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
         txtEstadoLabel.Text = L.T("history.stateLabel");

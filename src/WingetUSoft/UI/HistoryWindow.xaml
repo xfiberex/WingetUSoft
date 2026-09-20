@@ -23,22 +23,11 @@
                        Style="{StaticResource CaptionTextBlockStyle}" />
         </Grid>
 
-        <!-- Header Card -->
-        <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
-                Margin="16,4,16,12">
-            <StackPanel Spacing="4">
-                <TextBlock x:Name="txtHeaderTitle" Text="Historial reciente"
-                           Style="{StaticResource TitleTextBlockStyle}" />
-                <TextBlock x:Name="txtSummary"
-                           Text="Consulta el resultado de las ultimas actualizaciones ejecutadas desde la aplicacion."
-                           Style="{StaticResource BodyTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-        </Border>
-
-        <!-- Search + Filter + Export -->
+        <!-- Search + Filter + Export. El resumen iba en una tarjeta de cabecera con un título que repetía el de la
+             barra de título (F-17); ahora va debajo de los filtros, en la misma tarjeta. -->
         <Border Grid.Row="2" Style="{StaticResource CompactCardStyle}"
-                Margin="16,0,16,12">
+                Margin="16,4,16,8">
+            <StackPanel Spacing="8">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <TextBlock x:Name="txtBuscarLabel" Text="Buscar:" VerticalAlignment="Center"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -67,6 +56,12 @@
                 </DropDownButton>
                 <Button x:Name="btnExportarCsv" Content="Exportar CSV..." Height="32"
                         Click="BtnExportarCsv_Click" />
+            </StackPanel>
+                <TextBlock x:Name="txtSummary"
+                           Text="Consulta el resultado de las ultimas actualizaciones ejecutadas desde la aplicacion."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 

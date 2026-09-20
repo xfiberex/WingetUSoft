@@ -4,8 +4,8 @@
 
     Hasta F-14 el bloque de tarjeta (fondo, borde, grosor, radio y relleno) se repetía 30 veces con cinco rellenos
     distintos, y los radios iban como literales (8 y 4) en lugar de los recursos del sistema. Los rellenos quedan en
-    la rampa de 4 px: 20,16 para la cabecera, 16,12 para las secciones, 12 para las tablas y 16,8 para las barras
-    compactas (antes, 16,10 en unas y 16,8 en otras).
+    la rampa de 4 px: 16,12 para las secciones, 12 para las tablas y 16,8 para las barras compactas (antes, 16,10 en
+    unas y 16,8 en otras). La tarjeta de cabecera (20,16) desapareció con F-17: repetía el título de la ventana.
 
     El botón de peligro no está aquí: no puede ser un Style (ver DangerButtonResources.xaml).
 -->
@@ -23,11 +23,6 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
         <Setter Property="Padding" Value="16,12" />
-    </Style>
-
-    <!-- Cabecera de la ventana: título y subtítulo. -->
-    <Style x:Key="HeaderCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
-        <Setter Property="Padding" Value="20,16" />
     </Style>
 
     <!-- Tabla o registro: el contenido ya trae su propio relleno por fila. -->

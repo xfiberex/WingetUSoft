@@ -46,17 +46,14 @@ public sealed partial class MainWindow
         // rotularía en el idioma de Windows, no en el de la aplicación.
         ctxExcluir.KeyboardAcceleratorTextOverride = L.T("key.delete");
 
-        txtHeaderTitle.Text = L.T("header.title");
-        txtSubtitulo.Text = L.T("header.subtitle");
         btnInstalarUpdate.Content = L.T("btn.installNow");
         lnkVerNovedades.Content = L.T("update.viewNotes");
-        txtAccionesTitle.Text = L.T("actions.title");
         menuConsultarNormal.Text = L.T("btn.checkUpdates");
         menuConsultarDesconocidas.Text = L.T("btn.checkUnknown");
         UpdateCheckVariant();   // rotula el botón principal con la variante activa
-        btnActualizarTodo.Content = L.T("btn.updateAll");
+        CommandLabel.Set(btnActualizarTodo, txtActualizarTodoLabel, L.T("btn.updateAll"));
         // btnActualizarSeleccionados lleva el contador: lo rotula UpdateSelectionSummary(), al final.
-        btnCancelar.Content = L.T("btn.cancel");
+        CommandLabel.Set(btnCancelar, txtCancelarLabel, L.T("btn.cancel"));
         txtFuenteLabel.Text = L.T("filter.sourceLabel");
         cmbFuenteAllItem.Content = L.T("filter.allSources");
         txtExcluidosLabel.Text = L.T("filter.excludedLabel");
@@ -70,7 +67,6 @@ public sealed partial class MainWindow
         txtBuscar.PlaceholderText = L.T("search.placeholder");
         lnkHomepage.Content = L.T("info.homepage");
         lnkNotasVersion.Content = L.T("info.releaseNotes");
-        txtUpdatesHeader.Text = L.T("list.header");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(chkSelectAll, L.T("grid.selectAllAccessible"));
         ToolTipService.SetToolTip(chkSelectAll, L.T("grid.selectAllAccessible"));
         colNombre.Text = L.T("list.colName");
@@ -82,14 +78,14 @@ public sealed partial class MainWindow
         ToolTipService.SetToolTip(colExcl, L.T("list.colExcluded"));
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(colExcl, L.T("list.colExcluded"));
         UpdateSortIndicators();   // relee el nombre accesible de cada cabecera en el idioma nuevo
-        txtLogHeader.Text = L.T("log.header");
+        expLog.Header = L.T("log.header");
         activityLog.SetAccessibleName(L.T("log.header"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
         UpdateSelectionDetails();
         UpdateSelectionSummary();
         UpdateListState();
 
-        btnHerramientas.Content = L.T("menu.tools");
+        CommandLabel.Set(btnHerramientas, txtHerramientasLabel, L.T("menu.tools"));
         menuExportar.Text = L.T("menu.export");
         menuConfiguracion.Text = L.T("menu.settings");
         menuBuscarInstalar.Text = L.T("menu.searchInstall");
@@ -97,7 +93,7 @@ public sealed partial class MainWindow
         menuImportarWinget.Text = L.T("menu.importWinget");
         menuVerHistorial.Text = L.T("menu.history");
         menuDesinstalar.Text = L.T("menu.uninstall");
-        btnAyuda.Content = L.T("menu.help");
+        CommandLabel.Set(btnAyuda, txtAyudaLabel, L.T("menu.help"));
         menuBuscarActualizacion.Text = L.T("menu.checkUpdate");
         menuWhatsNew.Text = L.T("menu.whatsnew");
         menuLicencia.Text = L.T("menu.license");
@@ -311,6 +307,7 @@ public sealed partial class MainWindow
 
         _cancelStopsCurrentProcess = true;
         _cts = new CancellationTokenSource();
+        LogExpander.Reveal(expLog);   // instala paquetes: el progreso se sigue en el registro (F-17)
         SetUIBusy(true);
         ShowIndeterminateProgress();
         txtEstado.Text = L.T("status.importing");

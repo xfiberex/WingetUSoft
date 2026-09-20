@@ -43,8 +43,6 @@ public sealed partial class SettingsWindow : Window
     {
         Title = L.T("settings.title");
         txtTitleBar.Text = L.T("settings.title");
-        txtHeaderTitle.Text = L.T("settings.title");
-        txtHeaderSubtitle.Text = L.T("settings.subtitle");
 
         txtAppearanceTitle.Text = L.T("settings.appearanceTitle");
         cardTheme.Header = L.T("pref.theme");

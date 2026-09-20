@@ -42,6 +42,18 @@ internal static class LogPalette
 
     internal static Color Background(bool darkTheme) => darkTheme ? DarkBackground : LightBackground;
 
+    /// <summary>
+    /// El color de una línea, o <see langword="null"/> con un tema de contraste de Windows activo (F-24).
+    /// </summary>
+    /// <remarks>
+    /// Con contraste alto manda la paleta que eligió el usuario: el texto hereda <c>SystemColorWindowText</c> sobre
+    /// <c>SystemColorWindow</c>, y un RGB fijo (el <c>#1B1B1B</c> de las líneas normales en claro) podía quedar casi
+    /// invisible sobre un fondo negro. El tipo de línea no se pierde, porque no depende del color: los aciertos y los
+    /// fallos llevan su marca (✔, ✖) y el resto lo dice el propio texto («Error: …», «… cancelada»).
+    /// </remarks>
+    internal static Color? For(LogLineKind kind, bool darkTheme, bool highContrast) =>
+        highContrast ? null : For(kind, darkTheme);
+
     /// <summary>Razón de contraste WCAG 2.x entre dos colores opacos (1:1 = idénticos, 21:1 = negro sobre blanco).</summary>
     internal static double ContrastRatio(Color a, Color b)
     {

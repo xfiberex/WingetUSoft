@@ -34,10 +34,6 @@ internal static class WindowChrome
     /// <param name="window">La ventana que se está construyendo.</param>
     /// <param name="titleBar">Elemento del XAML que hace de barra de título (<c>AppTitleBar</c>).</param>
     /// <param name="themeMode">0 = el del sistema, 1 = claro, 2 = oscuro.</param>
-    /// <param name="onThemeChanged">
-    /// Trabajo extra al cambiar el tema, además de recolorear los botones de la barra. La ventana
-    /// principal lo usa para repintar el registro, cuyos colores dependen del tema.
-    /// </param>
     internal static WindowHandles Apply(
         Window window,
         UIElement titleBar,
@@ -45,8 +41,7 @@ internal static class WindowChrome
         int designWidthDip,
         int designHeightDip,
         int minWidthDip,
-        int minHeightDip,
-        Action? onThemeChanged = null)
+        int minHeightDip)
     {
         IntPtr hWnd = WindowNative.GetWindowHandle(window);
         AppWindow appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hWnd));
@@ -64,11 +59,7 @@ internal static class WindowChrome
             // Loaded para el tema inicial (antes de cargar, ActualTheme aún no está resuelto) y
             // ActualThemeChanged para el cambio en caliente, tanto desde Configuración como desde Windows.
             root.Loaded += (_, _) => ApplyTitleBarTheme(appWindow, root);
-            root.ActualThemeChanged += (_, _) =>
-            {
-                ApplyTitleBarTheme(appWindow, root);
-                onThemeChanged?.Invoke();
-            };
+            root.ActualThemeChanged += (_, _) => ApplyTitleBarTheme(appWindow, root);
         }
 
         return new WindowHandles(appWindow, hWnd);
@@ -87,23 +78,51 @@ internal static class WindowChrome
         appWindow.TitleBar.PreferredTheme = root.ActualTheme == ElementTheme.Dark ? TitleBarTheme.Dark : TitleBarTheme.Light;
 
     /// <summary>
-    /// Mica donde el sistema lo admite; el fondo sólido del XAML donde no (F-11).
+    /// Mica donde el sistema lo admite; el fondo sólido del XAML donde no (F-11), y también con un tema de
+    /// contraste de Windows (F-24).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Hasta F-11 se pedía Mica y la raíz de cada ventana lo tapaba entero con
     /// <c>ApplicationPageBackgroundThemeBrush</c>, que es opaco: los márgenes salían <c>#F3F3F3</c> / <c>#202020</c>
     /// planos. El XAML conserva ese pincel como reserva para Windows 10, que no tiene Mica (la app admite 19041);
     /// aquí solo se retira cuando Mica va a verse de verdad. Las tarjetas usan
     /// <c>CardBackgroundFillColorDefaultBrush</c>, que está pensado para ir encima.
+    /// </para>
+    /// <para>
+    /// Con contraste alto, Mica se queda en su color de reserva, un gris que no es el de la paleta del usuario: en
+    /// «Acuático» la ventana salía gris oscuro en lugar de negra. Ahí la página recupera el pincel del sistema, que
+    /// con contraste alto es <c>SystemColorWindowColor</c>, y se vuelve a decidir cada vez que el usuario activa o
+    /// desactiva un tema de contraste.
+    /// </para>
     /// </remarks>
     private static void ApplyBackdrop(Window window)
     {
         if (!MicaController.IsSupported())
             return;
 
-        window.SystemBackdrop = new MicaBackdrop();
-        if (window.Content is Panel page)
-            page.Background = new SolidColorBrush(Colors.Transparent);
+        void Update()
+        {
+            if (window.Content is not Panel page)
+                return;
+
+            if (ContrastMode.IsActive)
+            {
+                window.SystemBackdrop = null;
+                page.Background = (Brush)Application.Current.Resources["ApplicationPageBackgroundThemeBrush"];
+            }
+            else
+            {
+                if (window.SystemBackdrop is not MicaBackdrop) window.SystemBackdrop = new MicaBackdrop();
+                page.Background = new SolidColorBrush(Colors.Transparent);
+            }
+        }
+
+        // El aviso llega desde otro hilo. El evento es estático: sin quitar la suscripción al cerrar, retendría la ventana.
+        Action onChanged = () => window.DispatcherQueue.TryEnqueue(Update);
+        ContrastMode.Changed += onChanged;
+        window.Closed += (_, _) => ContrastMode.Changed -= onChanged;
+        Update();
     }
 
     /// <summary>Ruta del icono de la aplicación, junto al ejecutable.</summary>

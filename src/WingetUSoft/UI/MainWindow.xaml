@@ -73,8 +73,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <!-- Piso de la zona tabla+log: por debajo de esto el ScrollViewer desplaza la
                          página en vez de seguir encogiendo la tabla hasta hacerla inservible. -->
                     <RowDefinition Height="*" MinHeight="300" />
@@ -108,27 +106,16 @@
                     </InfoBar.ActionButton>
                 </InfoBar>
 
-                <!-- Header Card -->
-                <Border Grid.Row="1" Style="{StaticResource HeaderCardStyle}"
-                        Margin="0,0,0,12">
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Name="txtHeaderTitle"
-                                   Text="Actualiza tus programas con winget"
-                                   Style="{StaticResource TitleTextBlockStyle}" />
-                        <TextBlock x:Name="txtSubtitulo"
-                                   Text="Consulta, filtra y actualiza paquetes desde una sola vista."
-                                   Style="{StaticResource BodyTextBlockStyle}"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Actions Bar -->
-                <Border Grid.Row="2" Style="{StaticResource CardStyle}"
-                        Margin="0,0,0,12">
-                    <StackPanel>
-                        <TextBlock x:Name="txtAccionesTitle" Text="Acciones rápidas"
-                                   Style="{StaticResource BodyStrongTextBlockStyle}"
-                                   Margin="0,0,0,8" />
+                <!-- Barra de órdenes: acciones, filtros y detalle del paquete en una sola tarjeta (F-17). Hasta
+                     F-17 eran tres tarjetas, con una cabecera que repetía el título de la ventana y un rótulo
+                     «Acciones rápidas» encima de los botones: las cabeceras de columna empezaban al 59 % del alto a
+                     1180×820 y la tabla enseñaba tres filas. No es una CommandBar: su desbordamiento esconde las
+                     acciones en un menú «…» justo en las ventanas estrechas (snap), el SplitButton tendría que ir
+                     envuelto en un AppBarElementContainer y un AppBarButton no admite el cambio de estilo con el que
+                     se mueve el acento (F-23). Se toma de ella lo que importa: icono y etiqueta en cada orden. -->
+                <Border Grid.Row="1" Style="{StaticResource CompactCardStyle}"
+                        Margin="0,0,0,8">
+                    <StackPanel Spacing="8">
                         <!-- Cada atajo cuelga del control que ejecuta (F-21): así su tooltip sale solo al pasar
                              por ese control y no por toda la ventana, como cuando colgaban de Content. Un
                              acelerador sin Invoked que lo marque Handled ejecuta el Click del botón, y uno sobre
@@ -140,10 +127,13 @@
                                  hermanos para lo mismo, y el de al lado ganaba el mismo peso visual. El botón principal
                                  repite la última variante elegida, que es la que rotula. -->
                             <SplitButton x:Name="btnConsultar"
-                                         Content="Consultar actualizaciones"
                                          Click="BtnConsultar_Click"
                                          AutomationProperties.AcceleratorKey="F5"
-                                         MinWidth="180" Height="36">
+                                         Height="32">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
+                                    <TextBlock x:Name="txtConsultarLabel" Text="Consultar actualizaciones" />
+                                </StackPanel>
                                 <SplitButton.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="F5" Invoked="RefreshAccelerator_Invoked" />
                                 </SplitButton.KeyboardAccelerators>
@@ -162,30 +152,45 @@
                                 </SplitButton.Flyout>
                             </SplitButton>
                             <Button x:Name="btnActualizarSeleccionados"
-                                    Content="Actualizar seleccionados"
                                     Click="BtnActualizarSeleccionados_Click"
-                                    MinWidth="180" Height="36" />
+                                    Height="32">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE73A;" FontSize="14" />
+                                    <TextBlock x:Name="txtActualizarSeleccionadosLabel" Text="Actualizar seleccionados" />
+                                </StackPanel>
+                            </Button>
                             <Button x:Name="btnActualizarTodo"
-                                    Content="Actualizar todo"
                                     Click="BtnActualizarTodo_Click"
-                                    MinWidth="140" Height="36" />
+                                    Height="32">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE896;" FontSize="14" />
+                                    <TextBlock x:Name="txtActualizarTodoLabel" Text="Actualizar todo" />
+                                </StackPanel>
+                            </Button>
                             <!-- Cancelar NO es destructivo: interrumpe un lote, no borra nada. Vestirlo de
                                  rojo (como iba hasta v1.5.0) lo confundía con el peligro real, que en esta
                                  app son Desinstalar y Eliminar (DangerButtonResources.xaml). Es un botón normal. -->
                             <Button x:Name="btnCancelar"
-                                    Content="Cancelar"
                                     Click="BtnCancelar_Click"
                                     IsEnabled="False"
                                     AutomationProperties.AcceleratorKey="Esc"
-                                    MinWidth="120" Height="36">
+                                    Height="32">
                                 <Button.KeyboardAccelerators>
                                     <KeyboardAccelerator Key="Escape" />
                                 </Button.KeyboardAccelerators>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE711;" FontSize="14" />
+                                    <TextBlock x:Name="txtCancelarLabel" Text="Cancelar" />
+                                </StackPanel>
                             </Button>
 
                             <!-- Solo ACCIONES. Las preferencias (modo, tema, idioma) se mudaron a la
                                  ventana de Configuración, donde ya vivía el resto (Tier C #5). -->
-                            <DropDownButton x:Name="btnHerramientas" Content="Herramientas" Height="36" MinWidth="120">
+                            <DropDownButton x:Name="btnHerramientas" Height="32">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE90F;" FontSize="14" />
+                                    <TextBlock x:Name="txtHerramientasLabel" Text="Herramientas" />
+                                </StackPanel>
                                 <DropDownButton.Flyout>
                                     <MenuFlyout>
                                         <MenuFlyoutItem x:Name="menuExportar" Text="Exportar lista..." Click="MenuExportar_Click">
@@ -230,7 +235,11 @@
                             </DropDownButton>
 
                             <!-- Help menu -->
-                            <DropDownButton x:Name="btnAyuda" Content="Ayuda" Height="36" MinWidth="90">
+                            <DropDownButton x:Name="btnAyuda" Height="32">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE897;" FontSize="14" />
+                                    <TextBlock x:Name="txtAyudaLabel" Text="Ayuda" />
+                                </StackPanel>
                                 <DropDownButton.Flyout>
                                     <MenuFlyout>
                                         <MenuFlyoutItem x:Name="menuBuscarActualizacion"
@@ -266,13 +275,7 @@
                                 </DropDownButton.Flyout>
                             </DropDownButton>
                         </local:WrapPanel>
-                    </StackPanel>
-                </Border>
 
-                <!-- Source Filter + Search + Package Info -->
-                <Border Grid.Row="3" Style="{StaticResource CompactCardStyle}"
-                        Margin="0,0,0,8">
-                    <StackPanel Spacing="8">
                         <!-- Filters row. WrapPanel y no StackPanel horizontal: con anchos fijos (200 + 200)
                              la fila pide ~850 px y el mínimo de ventana son 900 DIP, así que a 150 % de DPI o
                              con etiquetas FR/IT el cuadro de búsqueda quedaba recortado y sin scroll con el
@@ -361,32 +364,23 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Main Split: DataGrid + Log -->
-                <Grid Grid.Row="4" Margin="0,0,0,8">
+                <!-- Main Split: DataGrid + Log. La fila del registro es Auto mientras está plegado y pasa a * al
+                     desplegarlo (LogExpander): plegado, la tabla se queda con todo el alto. -->
+                <Grid Grid.Row="2" Margin="0,0,0,8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="2*" MinHeight="160" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" MinHeight="120" />
+                        <RowDefinition x:Name="rowLog" Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Updates DataGrid Card -->
+                    <!-- Tabla. Sin título encima (F-17): «Actualizaciones disponibles» era lo que ya dicen las
+                         columnas, la variante de la consulta la rotula «Consultar» y el recuento, la barra de estado. -->
                     <Border Grid.Row="0" Style="{StaticResource TableCardStyle}">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <TextBlock x:Name="txtUpdatesHeader"
-                                       Grid.Row="0"
-                                       Text="Actualizaciones disponibles"
-                                       Style="{StaticResource BodyStrongTextBlockStyle}"
-                                       Margin="4,0,0,8" />
-
                             <!-- Cabecera + filas comparten scroll horizontal (misma anchura mínima) para
                                  que sigan alineadas cuando la ventana es más angosta que las columnas
                                  fijas del DataGrid; el ListView conserva su propio scroll vertical. -->
-                            <ScrollViewer Grid.Row="1"
-                                          x:Name="DataGridScroller"
+                            <ScrollViewer x:Name="DataGridScroller"
                                           HorizontalScrollBarVisibility="Auto"
                                           HorizontalScrollMode="Auto"
                                           VerticalScrollBarVisibility="Disabled"
@@ -564,22 +558,18 @@
                     <!-- Splitter -->
                     <Border Grid.Row="1" Height="6" Background="Transparent" />
 
-                    <!-- Log Card -->
-                    <Border Grid.Row="2" Style="{StaticResource TableCardStyle}">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <TextBlock x:Name="txtLogHeader" Grid.Row="0"
-                                       Text="Actividad y resultados"
-                                       Style="{StaticResource BodyStrongTextBlockStyle}"
-                                       Margin="4,0,0,8" />
-                            <local:ActivityLog x:Name="activityLog"
-                                                 Grid.Row="1"
-                                                 MaxLines="400" />
-                        </Grid>
-                    </Border>
+                    <!-- Registro plegable (F-17): reservaba un tercio del alto aunque estuviera vacío. Se abre solo al
+                         empezar un lote y ante un error (LogExpander); el usuario puede plegarlo y desplegarlo. -->
+                    <Expander x:Name="expLog"
+                              Grid.Row="2"
+                              Header="Actividad y resultados"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              VerticalContentAlignment="Stretch"
+                              Padding="12">
+                        <local:ActivityLog x:Name="activityLog" MaxLines="400" />
+                    </Expander>
                 </Grid>
             </Grid>
         </ScrollViewer>

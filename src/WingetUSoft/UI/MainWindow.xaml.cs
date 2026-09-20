@@ -91,11 +91,11 @@ public sealed partial class MainWindow : Window
     private MenuFlyoutItem ctxOmitirVersion = null!;
 
     /// <summary>Fila de <c>ContentGrid</c> con la tabla y el registro; las anteriores son las tarjetas superiores.</summary>
-    private const int TableRow = 4;
+    private const int TableRow = 2;
 
     /// <summary>
-    /// El alto mínimo de la página se recalcula cada vez que cambia una tarjeta superior: la de filtros crece al
-    /// estrechar la ventana (los botones pasan a otra línea) y la cabecera, al abrirse el aviso de actualización.
+    /// El alto mínimo de la página se recalcula cada vez que cambia lo que va encima de la tabla: la barra de
+    /// órdenes crece al estrechar la ventana (los botones pasan a otra línea) y el aviso de actualización aparece.
     /// </summary>
     private void TrackContentMinHeight()
     {
@@ -121,6 +121,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         TrackContentMinHeight();
+        LogExpander.Attach(expLog, rowLog, activityLog, expandedMinHeight: 120);
 
         _settings = AppSettings.Load();
 
@@ -160,12 +161,9 @@ public sealed partial class MainWindow : Window
         ctxMenuRow.Items.Add(ctxOmitirVersion);
         ctxMenuRow.Items.Add(ctxExcluir);
 
-        // RecolorLog va como trabajo extra del cambio de tema: los colores del registro son por
-        // tema (ver LogPalette) y esta es la unica ventana que repinta lo ya escrito.
         (_appWindow, _hWnd) = WindowChrome.Apply(
             this, AppTitleBar, _settings.ThemeMode,
-            designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600,
-            onThemeChanged: RecolorLog);
+            designWidthDip: 1180, designHeightDip: 820, minWidthDip: 900, minHeightDip: 600);
 
         // El mismo icono, dentro de la barra de titulo personalizada: al extender el contenido
         // sobre la barra Windows deja de dibujar el icono del sistema, así que hay que pintarlo a
@@ -318,9 +316,9 @@ public sealed partial class MainWindow : Window
     {
         int checkedCount = GetCheckedPackages().Count;
 
-        btnActualizarSeleccionados.Content = checkedCount == 0
+        CommandLabel.Set(btnActualizarSeleccionados, txtActualizarSeleccionadosLabel, checkedCount == 0
             ? L.T("btn.updateSelected")
-            : L.T("btn.updateSelectedCount", checkedCount);
+            : L.T("btn.updateSelectedCount", checkedCount));
 
         // Deshabilitado sin nada marcado: antes se podía pulsar y la única respuesta era un diálogo
         // "no hay programas seleccionados".
@@ -575,10 +573,6 @@ public sealed partial class MainWindow : Window
             ApplySourceFilter();
             LoadPackagesToGrid();
 
-            txtUpdatesHeader.Text = includeUnknown
-                ? L.T("list.headerUnknown")
-                : L.T("list.header");
-
             string sufijo = includeUnknown ? L.T("list.suffixUnknown") : "";
             txtEstado.Text = _packages.Count == 0
                 ? L.T("status.noUpdatesFound", sufijo)
@@ -651,7 +645,8 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void UpdateCheckVariant()
     {
-        btnConsultar.Content = _lastIncludeUnknown ? L.T("btn.checkUnknown") : L.T("btn.checkUpdates");
+        CommandLabel.Set(btnConsultar, txtConsultarLabel,
+            _lastIncludeUnknown ? L.T("btn.checkUnknown") : L.T("btn.checkUpdates"));
         menuConsultarNormal.IsChecked = !_lastIncludeUnknown;
         menuConsultarDesconocidas.IsChecked = _lastIncludeUnknown;
     }

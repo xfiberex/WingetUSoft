@@ -56,6 +56,7 @@ public sealed partial class UninstallWindow : Window
     public UninstallWindow(AppSettings settings)
     {
         InitializeComponent();
+        LogExpander.Attach(expLog, rowLog, activityLog, expandedMinHeight: 90);
 
         // La barra de estado es una región activa: sin esto, un lector de pantalla nunca anuncia
         // el progreso ni el resultado, porque el foco está en el botón, no en la barra (T1-07).
@@ -83,8 +84,6 @@ public sealed partial class UninstallWindow : Window
     {
         Title = L.T("uninstall.windowTitle");
         txtTitleBar.Text = L.T("uninstall.titleBar");
-        txtHeaderTitle.Text = L.T("uninstall.headerTitle");
-        txtSubtitulo.Text = L.T("uninstall.headerSubtitle");
         btnRefresh.Content = L.T("btn.refreshList");
         txtUninstallLabel.Text = L.T("uninstall.uninstallSelected");
         // El contenido es glifo + texto: sin nombre explícito, el lector de pantalla no tendría qué anunciar.
@@ -92,12 +91,11 @@ public sealed partial class UninstallWindow : Window
         btnCancelar.Content = L.T("btn.cancel");
         txtBuscarLabel.Text = L.T("search.label");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
-        txtListHeader.Text = L.T("uninstall.listHeader");
         colNombre.Text = L.T("list.colName");
         colId.Text = L.T("list.colId");
         colVersion.Text = L.T("list.colVersion");
         colFuente.Text = L.T("list.colSource");
-        txtLogHeader.Text = L.T("log.activity");
+        expLog.Header = L.T("log.activity");
         activityLog.SetAccessibleName(L.T("log.activity"));
         if (!progressRing.IsActive) txtEstado.Text = L.T("status.ready");
     }
@@ -219,6 +217,7 @@ public sealed partial class UninstallWindow : Window
         if (!confirmed) return;
 
         _cts = new CancellationTokenSource();
+        LogExpander.Reveal(expLog);   // la salida de winget se sigue en el registro (F-17)
         SetUIBusy(true);
         txtEstado.Text = L.T("uninstall.uninstalling", pkg.Name);
         ClearLog();

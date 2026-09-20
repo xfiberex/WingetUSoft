@@ -78,14 +78,31 @@ public sealed class AccessibilityTests(AppFixture fixture)
     }
 
     /// <summary>T1-07: el registro de actividad tiene nombre accesible propio (su encabezado).</summary>
+    /// <remarks>
+    /// Desde F-17 el registro va en un <c>Expander</c> plegado, y plegado su contenido no está en el árbol de
+    /// automatización: se despliega para comprobarlo y se vuelve a plegar.
+    /// </remarks>
     [Fact]
     public void ActivityLog_HasAnAccessibleName()
     {
-        var log = Window.FindFirstDescendant(cf => cf.ByAutomationId("rtbLog"));
+        var expander = Window.FindFirstDescendant(cf => cf.ByAutomationId("expLog"));
+        Assert.NotNull(expander);
+        var toggle = expander!.Patterns.ExpandCollapse.Pattern;
+        toggle.Expand();
+        try
+        {
+            var log = Retry.WhileNull(() => Window.FindFirstDescendant(cf => cf.ByAutomationId("rtbLog")),
+                timeout: TimeSpan.FromSeconds(5), interval: TimeSpan.FromMilliseconds(200), ignoreException: true).Result;
 
-        Assert.NotNull(log);
-        Assert.False(string.IsNullOrWhiteSpace(log!.Name),
-            "El registro no tiene nombre accesible: al recorrer la ventana se anuncia como un bloque de texto sin identificar.");
+            Assert.NotNull(log);
+            Assert.False(string.IsNullOrWhiteSpace(log!.Name),
+                "El registro no tiene nombre accesible: al recorrer la ventana se anuncia como un bloque de texto sin identificar.");
+        }
+        finally
+        {
+            toggle.Collapse();
+            Thread.Sleep(600);   // la animación de plegado, antes del siguiente test
+        }
     }
 
     /// <summary>

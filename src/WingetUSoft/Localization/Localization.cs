@@ -282,13 +282,10 @@ public static class L
         // ── Tier E: buscar e instalar ───────────────────────────────
         ["menu.searchInstall"]   = ["Buscar e instalar programas...", "Search and install programs...", "Buscar e instalar programas...", "Rechercher et installer des programmes...", "Cerca e installa programmi..."],
         ["search.windowTitle"]   = ["Buscar e instalar", "Search and install", "Buscar e instalar", "Rechercher et installer", "Cerca e installa"],
-        ["search.header"]        = ["Buscar e instalar programas", "Search and install programs", "Buscar e instalar programas", "Rechercher et installer des programmes", "Cerca e installa programmi"],
-        ["search.subtitle"]      = ["Busca en el catálogo de winget e instala lo que necesites.", "Search the winget catalog and install what you need.", "Busque no catálogo do winget e instale o que precisar.", "Cherchez dans le catalogue winget et installez ce dont vous avez besoin.", "Cerca nel catalogo di winget e installa ciò che ti serve."],
         ["search.placeholder"]   = ["Nombre, Id o palabra clave...", "Name, Id or keyword...", "Nome, Id ou palavra-chave...", "Nom, Id ou mot-clé...", "Nome, Id o parola chiave..."],
         ["search.catalogLabel"] = ["Buscar en el catálogo de winget", "Search the winget catalog", "Buscar no catálogo do winget", "Rechercher dans le catalogue winget", "Cerca nel catalogo di winget"],
         ["search.search"]        = ["Buscar", "Search", "Buscar", "Rechercher", "Cerca"],
         ["search.install"]       = ["Instalar seleccionado", "Install selected", "Instalar selecionado", "Installer la sélection", "Installa selezionato"],
-        ["search.results"]       = ["Resultados", "Results", "Resultados", "Résultats", "Risultati"],
         ["search.colState"]      = ["Estado", "State", "Estado", "État", "Stato"],
         ["search.installed"]     = ["Instalado", "Installed", "Instalado", "Installé", "Installato"],
         ["search.rowAccessible"] = ["{0}, versión {1}, origen {2}", "{0}, version {1}, source {2}", "{0}, versão {1}, fonte {2}", "{0}, version {1}, source {2}", "{0}, versione {1}, origine {2}"],
@@ -318,13 +315,10 @@ public static class L
 
         // ── MainWindow ──────────────────────────────────────────────
         ["app.titleBase"]     = ["WingetUSoft", "WingetUSoft", "WingetUSoft", "WingetUSoft", "WingetUSoft"],
-        ["header.title"]      = ["Actualiza tus programas con winget", "Update your programs with winget", "Atualize seus programas com winget", "Mettez à jour vos programmes avec winget", "Aggiorna i tuoi programmi con winget"],
-        ["header.subtitle"]   = ["Consulta, filtra y actualiza paquetes desde una sola vista.", "Check, filter and update packages from a single view.", "Consulte, filtre e atualize pacotes em uma única tela.", "Consultez, filtrez et mettez à jour les paquets depuis une seule vue.", "Consulta, filtra e aggiorna i pacchetti da un'unica schermata."],
         ["header.detailDefault"] = ["Selecciona un programa para ver sus detalles antes de actualizar.", "Select a program to see its details before updating.", "Selecione um programa para ver seus detalhes antes de atualizar.", "Sélectionnez un programme pour voir ses détails avant la mise à jour.", "Seleziona un programma per vedere i dettagli prima di aggiornare."],
         // Rótulo de la tecla Supr en el menú contextual: WinUI lo pondría en el idioma de Windows.
         ["key.delete"]        = ["Supr", "Del", "Del", "Suppr", "Canc"],
         ["btn.installNow"]    = ["Instalar ahora", "Install now", "Instalar agora", "Installer maintenant", "Installa ora"],
-        ["actions.title"]     = ["Acciones rápidas", "Quick actions", "Ações rápidas", "Actions rapides", "Azioni rapide"],
         // Sale del estado de error o cancelado del panel de la tabla (F-18).
         ["btn.retry"]         = ["Reintentar", "Retry", "Tentar novamente", "Réessayer", "Riprova"],
         ["btn.checkUpdates"]  = ["Consultar actualizaciones", "Check for updates", "Consultar atualizações", "Rechercher des mises à jour", "Cerca aggiornamenti"],
@@ -342,7 +336,6 @@ public static class L
         ["search.placeholder"] = ["Nombre o Id...", "Name or Id...", "Nome ou Id...", "Nom ou Id...", "Nome o Id..."],
         ["info.homepage"]     = ["Página web", "Homepage", "Página web", "Site web", "Sito web"],
         ["info.releaseNotes"] = ["Notas de versión", "Release notes", "Notas de versão", "Notes de version", "Note di rilascio"],
-        ["list.header"]       = ["Actualizaciones disponibles", "Available updates", "Atualizações disponíveis", "Mises à jour disponibles", "Aggiornamenti disponibili"],
         ["list.colSelect"]    = ["Sel.", "Sel.", "Sel.", "Sél.", "Sel."],
         ["list.colName"]      = ["Nombre", "Name", "Nome", "Nom", "Nome"],
         ["list.colId"]        = ["Id", "Id", "Id", "Id", "Id"],
@@ -493,7 +486,6 @@ public static class L
 
         ["status.queryingUpdates"] = ["Consultando actualizaciones disponibles...", "Checking for available updates...", "Consultando atualizações disponíveis...", "Recherche des mises à jour disponibles...", "Verifica degli aggiornamenti disponibili..."],
         ["status.queryingUpdatesUnknown"] = ["Consultando actualizaciones (incluidas desconocidas)...", "Checking for updates (including unknown)...", "Consultando atualizações (incluindo desconhecidas)...", "Recherche des mises à jour (y compris inconnues)...", "Verifica degli aggiornamenti (incluse sconosciute)..."],
-        ["list.headerUnknown"] = ["Actualizaciones disponibles (incluidas desconocidas)", "Available updates (including unknown)", "Atualizações disponíveis (incluindo desconhecidas)", "Mises à jour disponibles (y compris inconnues)", "Aggiornamenti disponibili (incluse sconosciute)"],
         ["list.suffixUnknown"] = [" (incluidas desconocidas)", " (including unknown)", " (incluindo desconhecidas)", " (y compris inconnues)", " (incluse sconosciute)"],
         ["status.noUpdatesFound"] = ["No se encontraron actualizaciones disponibles{0}.", "No available updates were found{0}.", "Nenhuma atualização disponível encontrada{0}.", "Aucune mise à jour disponible trouvée{0}.", "Nessun aggiornamento disponibile trovato{0}."],
         ["status.updatesFound.one"] = ["Se encontró {0} actualización disponible{1}.", "{0} available update was found{1}.", "{0} atualização disponível encontrada{1}.", "{0} mise à jour disponible trouvée{1}.", "Trovato {0} aggiornamento disponibile{1}."],
@@ -505,7 +497,6 @@ public static class L
 
         // ── SettingsWindow ──────────────────────────────────────────
         ["settings.title"]        = ["Configuración", "Settings", "Configurações", "Paramètres", "Impostazioni"],
-        ["settings.subtitle"]     = ["Ajusta las opciones generales de la aplicación.", "Adjust the app's general options.", "Ajuste as opções gerais do aplicativo.", "Ajustez les options générales de l'application.", "Regola le opzioni generali dell'app."],
         ["settings.appearanceTitle"] = ["Apariencia", "Appearance", "Aparência", "Apparence", "Aspetto"],
         ["settings.updatesTitle"]   = ["Actualizaciones", "Updates", "Atualizações", "Mises à jour", "Aggiornamenti"],
         ["settings.logTitle"]       = ["Registro de actividad", "Activity log", "Registro de atividade", "Journal d'activité", "Registro attività"],
@@ -549,11 +540,8 @@ public static class L
         // ── UninstallWindow ─────────────────────────────────────────
         ["uninstall.windowTitle"] = ["WingetUSoft - Desinstalar programas", "WingetUSoft - Uninstall programs", "WingetUSoft - Desinstalar programas", "WingetUSoft - Désinstaller des programmes", "WingetUSoft - Disinstalla programmi"],
         ["uninstall.titleBar"]    = ["Desinstalar programas", "Uninstall programs", "Desinstalar programas", "Désinstaller des programmes", "Disinstalla programmi"],
-        ["uninstall.headerTitle"] = ["Desinstalar programas instalados", "Uninstall installed programs", "Desinstalar programas instalados", "Désinstaller les programmes installés", "Disinstalla i programmi installati"],
-        ["uninstall.headerSubtitle"] = ["Selecciona un programa de la lista y pulsa Desinstalar.", "Select a program from the list and click Uninstall.", "Selecione um programa da lista e clique em Desinstalar.", "Sélectionnez un programme dans la liste et cliquez sur Désinstaller.", "Seleziona un programma dall'elenco e premi Disinstalla."],
         ["btn.refreshList"]       = ["Actualizar lista", "Refresh list", "Atualizar lista", "Actualiser la liste", "Aggiorna elenco"],
         ["uninstall.uninstallSelected"] = ["Desinstalar seleccionado", "Uninstall selected", "Desinstalar selecionado", "Désinstaller la sélection", "Disinstalla selezionato"],
-        ["uninstall.listHeader"]  = ["Programas instalados", "Installed programs", "Programas instalados", "Programmes installés", "Programmi installati"],
         ["log.activity"]          = ["Actividad", "Activity", "Atividade", "Activité", "Attività"],
         ["uninstall.loadingList"] = ["Cargando lista de programas instalados...", "Loading list of installed programs...", "Carregando lista de programas instalados...", "Chargement de la liste des programmes installés...", "Caricamento elenco programmi installati..."],
         ["uninstall.foundCount.one"] = ["Se encontró {0} programa instalado.", "{0} installed program was found.", "{0} programa instalado encontrado.", "{0} programme installé trouvé.", "Trovato {0} programma installato."],
@@ -583,7 +571,6 @@ public static class L
         // ── CleanupWindow ───────────────────────────────────────────
         ["cleanup.windowTitle"]  = ["WingetUSoft - Limpieza de residuos", "WingetUSoft - Leftover cleanup", "WingetUSoft - Limpeza de resíduos", "WingetUSoft - Nettoyage des résidus", "WingetUSoft - Pulizia dei residui"],
         ["cleanup.titleBar"]     = ["Limpieza de residuos", "Leftover cleanup", "Limpeza de resíduos", "Nettoyage des résidus", "Pulizia dei residui"],
-        ["cleanup.headerTitle"]  = ["Limpieza de residuos tras la desinstalación", "Cleanup of leftovers after uninstalling", "Limpeza de resíduos após a desinstalação", "Nettoyage des résidus après la désinstallation", "Pulizia dei residui dopo la disinstallazione"],
         ["cleanup.scanning"]     = ["Buscando residuos...", "Searching for leftovers...", "Procurando resíduos...", "Recherche de résidus...", "Ricerca dei residui..."],
         ["cleanup.warning"]      = ["⚠ Verifica cuidadosamente cada elemento antes de eliminar. Esta acción no se puede deshacer.", "⚠ Carefully check each item before deleting. This action cannot be undone.", "⚠ Verifique cuidadosamente cada item antes de excluir. Esta ação não pode ser desfeita.", "⚠ Vérifiez soigneusement chaque élément avant de supprimer. Cette action est irréversible.", "⚠ Verifica attentamente ogni elemento prima di eliminare. Questa azione non può essere annullata."],
         ["btn.rescan"]           = ["Volver a escanear", "Scan again", "Escanear novamente", "Analyser à nouveau", "Ripeti scansione"],
@@ -591,7 +578,6 @@ public static class L
         ["btn.selectAll"]        = ["Seleccionar todo", "Select all", "Selecionar tudo", "Tout sélectionner", "Seleziona tutto"],
         ["btn.deselectAll"]      = ["Deseleccionar todo", "Deselect all", "Desmarcar tudo", "Tout désélectionner", "Deseleziona tutto"],
         ["cleanup.confirmPrimary"] = ["Eliminar", "Delete", "Excluir", "Supprimer", "Elimina"],
-        ["cleanup.listHeader"]   = ["Residuos encontrados", "Leftovers found", "Resíduos encontrados", "Résidus trouvés", "Residui trovati"],
         ["cleanup.colPath"]      = ["Ruta", "Path", "Caminho", "Chemin", "Percorso"],
         ["cleanup.colType"]      = ["Tipo", "Type", "Tipo", "Type", "Tipo"],
         ["cleanup.colSize"]      = ["Tamaño", "Size", "Tamanho", "Taille", "Dimensione"],
@@ -620,7 +606,6 @@ public static class L
 
         // ── HistoryWindow ───────────────────────────────────────────
         ["history.titleBar"]     = ["Historial de actualizaciones", "Update history", "Histórico de atualizações", "Historique des mises à jour", "Cronologia aggiornamenti"],
-        ["history.headerTitle"]  = ["Historial reciente", "Recent history", "Histórico recente", "Historique récent", "Cronologia recente"],
         ["history.noEntriesYet"] = ["Aún no se ha registrado ninguna actualización desde la aplicación.", "No updates have been recorded from the app yet.", "Ainda não foi registrada nenhuma atualização pelo aplicativo.", "Aucune mise à jour n'a encore été enregistrée depuis l'application.", "Nessun aggiornamento ancora registrato dall'app."],
         ["history.noEntriesRow"] = ["No hay entradas en el historial.", "There are no entries in the history.", "Não há entradas no histórico.", "Aucune entrée dans l'historique.", "Nessuna voce nella cronologia."],
         ["history.summaryAll.one"] = ["{0} registro cargado. Éxito: {1}. Fallidos: {2}.", "{0} record loaded. Success: {1}. Failed: {2}.", "{0} registro carregado. Sucesso: {1}. Falharam: {2}.", "{0} enregistrement chargé. Réussites : {1}. Échecs : {2}.", "{0} record caricato. Riusciti: {1}. Falliti: {2}."],

@@ -73,9 +73,6 @@ public sealed partial class MainWindow
         AppendLogFile(text);
     }
 
-    /// <summary>Repinta el registro cuando cambia el tema (lo engancha WindowChrome).</summary>
-    private void RecolorLog() => activityLog.Recolor();
-
     private static string FormatBytes(long bytes)
     {
         if (bytes >= 1_073_741_824L) return $"{bytes / 1_073_741_824.0:F1} GB";

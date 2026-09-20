@@ -70,7 +70,7 @@ src/WingetUSoft/
 │  ├─ AboutDialog · LegalTextDialog · WhatsNewDialog
 │  ├─ ActivityLog · ListStatePanel · SettingsCard   Controles propios que comparten las ventanas
 │  ├─ Styles.xaml · DangerButtonResources.xaml      Estilos y colores compartidos
-│  └─ WindowSizer · WrapPanel · Notifier · TaskbarProgress · Converters · helpers
+│  └─ WindowSizer · WrapPanel · LogExpander · CommandLabel · ContrastMode · Notifier · TaskbarProgress · helpers
 │
 └─ installer/                Inno Setup (installer.iss) + build-installer.ps1 → Output/ (gitignored)
 
@@ -199,6 +199,27 @@ consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app
   la rama y el del tag. **Ya está resuelto de raíz:** `release.ps1` y `verify.ps1` envuelven cada
   llamada nativa en `Invoke-Native`, así que ya se pueden invocar redirigiendo la salida. Si se añade
   una llamada a `git`, `gh` o `dotnet` a cualquiera de los dos, tiene que ir dentro del envoltorio.
+- **Seis ventanas, no una con `NavigationView` (F-26, evaluado el 2026-09-18).** Lo que esa migración iba a
+  resolver ya lo resolvieron F-08 (una instancia por ventana), F-17 (sin cabeceras repetidas) y F-14 (estilos
+  compartidos); queda solo un botón por ventana en la barra de tareas. A cambio, las ventanas tienen ciclo de vida
+  propio que la navegación obligaría a rehacer: Configuración devuelve `SavedChanges` al cerrarse, Buscar avisa de
+  que la lista pudo quedar obsoleta, Desinstalar abre Limpieza, y un lote sigue corriendo mientras se usa otra
+  ventana; además, los UI tests de Configuración, Buscar y parte de los de accesibilidad abren ventanas
+  secundarias. Si los botones de la barra de tareas llegan a molestar, la salida barata es darles la principal
+  como **propietaria** (sin botón propio, se minimizan con ella). Se reabre si aparecen secciones nuevas de
+  primer nivel.
+- **Contraste alto: colores del sistema, sin Mica y sin placas (F-24).** Ningún color propio se aplica con un
+  tema de contraste activo (`LogPalette` devuelve `null`; el botón de peligro tiene su diccionario
+  `HighContrast`), Mica se retira porque su color de reserva no es el del usuario, y `App` apaga las placas
+  de texto de WinUI **por código** (en `App.xaml` no se aplica). Para saber si hay contraste o enterarse de un
+  cambio, `UI/ContrastMode`: ⚠️ suscribirse a `AccessibilitySettings.HighContrastChanged` **tumba la app** en
+  escritorio (`0x80070490`), y un test lo prohíbe.
+- **Probar con contraste alto sin estropear el equipo del usuario:** activarlo abriendo
+  `C:\Windows\resources\Ease of Access Themes\hcblack.theme` o `hcwhite.theme` (con `SystemParametersInfo`
+  Windows aplica siempre el negro, pida el esquema que se pida) y desactivarlo con `SystemParametersInfo`,
+  que devuelve el tema anterior. Windows recuerda el último esquema en
+  `HKCU\Control Panel\Accessibility\HighContrast` y en `LastHighContrastTheme`: se guardan antes y se reponen
+  después.
 
 ---
 
@@ -264,6 +285,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-20 | **1.12.0** | **Tier F cerrado (F-17, F-24 y F-26)** — sin cabeceras que repitan el título, una barra de órdenes con icono y texto, registro plegable, y los temas de contraste de Windows por fin respetados |
 | 2026-09-18 | **1.11.0** | **Tier F · F-19 y arreglo urgente** — los lotes sin elevación volvían a romperse tras el primer paquete desde la 1.8.8 (`ConfigureAwait(false)` en el bucle); estado por fila durante el lote y tabla en modo lectura en vez de deshabilitada |
 | 2026-09-17 | **1.10.0** | **Tier F · bloque F·3 (5 de 7)** — atajos en su propio control y `Ctrl+F`, «Consultar» como `SplitButton` con el acento en la acción del momento, aviso de versión nueva breve, estados de lista accionables en las cuatro ventanas y textos con plurales reales |
 | 2026-09-17 | **1.9.0** | **Tier F · bloque F·2 completo** — Mica visible, diálogos y barra de título modernos, estilos compartidos, etiquetas reales en búsquedas y filtros, y Configuración rehecha con un único patrón de fila |
@@ -283,6 +305,36 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-20 — Tier F cerrado: densidad y contraste alto (F-17, F-24, F-26, release v1.12.0)
+
+**26 de 27** del Tier F. Build 0/0, **427/427 unitarios**, **65/65 UI tests**. Queda F-27, que salió de la
+propia verificación de F-24 (ver ROADMAP).
+
+**1. La tabla, primero (F-17).** Cada ventana repetía en grande el título que ya dice su barra de título, la
+principal rotulaba «Acciones rápidas» encima de sus botones y el registro reservaba un tercio del alto aunque
+estuviera vacío: a 1180×820 las cabeceras de columna empezaban al **49 %** del alto y se veían tres filas. Ahora
+las seis ventanas van sin tarjeta de cabecera, la principal tiene una sola barra de órdenes (acciones, filtros y
+detalle) con icono y texto en cada una, y el registro vive en un `Expander` plegado que se abre solo al empezar
+una operación que cambia el equipo o ante un error. Medido en la app: **25,6 %** y las seis filas; Desinstalar
+pasa de 5 a 10 filas enteras a 900×700. **No es una `CommandBar`**: su desbordamiento escondería las acciones
+justo en las ventanas estrechas, y un `AppBarButton` no admite el cambio de estilo con el que se mueve el acento.
+
+**2. Contraste alto de verdad (F-24).** Se probó activando «Acuático» y «Desierto» en el equipo, no leyendo el
+código. El registro deja de forzar sus RGB (el tipo de línea ya lo dicen ✔, ✖ y el propio texto), y se repinta
+solo: hasta ahora únicamente la principal lo hacía. La prueba destapó dos cosas que no se veían en el código:
+**Mica** se queda en un gris de reserva que tapa la paleta del usuario, y WinUI pinta **placas** del color de la
+ventana detrás de cada texto —en «Actualizar todo», icono y texto salían en un recuadro oscuro sobre el cian del
+acento—. Ambas se retiran con contraste alto; la de las placas, por código, porque el atributo en `App.xaml` no
+llega a aplicarse. Y un intento previo tumbaba la app: suscribirse a `AccessibilitySettings.HighContrastChanged`
+lanza `0x80070490` sin `CoreWindow`; ahora `UI/ContrastMode` escucha `UISettings.ColorValuesChanged`.
+
+**3. Ventana única con `NavigationView` (F-26): evaluada y descartada**, por la segunda salida de su criterio.
+El razonamiento está en §4; en resumen, lo que iba a resolver ya lo resolvieron F-08, F-14 y F-17.
+
+**Capturas del README** regeneradas en los dos temas.
 
 ---
 

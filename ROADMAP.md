@@ -1497,16 +1497,17 @@ hasta dónde llega la evidencia:
 | **F·1** — Defectos verificados | Scroll de la tabla, accesibilidad, tema de diálogos, confirmaciones, contraste, ventanas duplicadas, bandeja | **10** | 8 | 2 | 0 |
 | **F·2** — Alineación con Fluent / WinUI 3 | Mica, diálogos XAML, barra de título, estilos compartidos, etiquetas, Configuración | **6** | 4 | 2 | 0 |
 | **F·3** — Experiencia de uso | Densidad, estados vacíos, feedback de lotes, textos, atajos | **7** | 3 | 4 | 0 |
-| **F·4** — Verificación pendiente y QA | Contraste alto, respaldo de ajustes en los UI tests | **2** | 1 | 1 | 0 |
+| **F·4** — Verificación pendiente y QA | Contraste alto, respaldo de ajustes en los UI tests, selectores elevados | **3** | 2 | 1 | 0 |
 | **F·5** — Opcional / estructural | Ventana única con `NavigationView` | **1** | 0 | 0 | 1 |
-| | **Total** | **26** | **16** | **9** | **1** |
+| | **Total** | **27** | **17** | **9** | **1** |
 
 **Orden de ejecución recomendado:** **F-25 primero** (los UI tests que validarán este tier no deben
 tocar el `settings.json` real) → los *quick wins* de F·1 (F-02, F-03, F-04, F-06, F-07, F-08, F-09 y
 F-10: esfuerzo bajo y sin dependencias) → F-01 y F-05 → F·2 → F·3 → F-24 → F-26 solo con decisión
 explícita.
 
-**Progreso (2026-09-18): 23 de 26.** ✅ F-01 a F-16, F-18 a F-23 y F-25 (F·1 y F·2 completos).
+**Progreso (2026-09-18): 26 de 27.** ✅ F-01 a F-26 (F-26 evaluada y descartada). Pendiente: F-27, encontrada al
+verificar F-24.
 
 ---
 
@@ -1953,7 +1954,7 @@ explícita.
 
 ## 🟡 F·3 — Experiencia de uso
 
-- [ ] **[F-17] Más espacio para los datos: cabecera compacta, `CommandBar` y registro plegable**
+- [x] **[F-17] Más espacio para los datos: cabecera compacta, `CommandBar` y registro plegable**
   - **Área:** UX / densidad
   - **Ubicación:** `src/WingetUSoft/UI/MainWindow.xaml:78-245` y `:549-568`; tarjetas de cabecera de Buscar, Desinstalar, Limpieza, Historial y Configuración
   - **Qué hacer:** cada ventana repite su título en una tarjeta de 28 px, cuando ya lo dice la barra de
@@ -1965,6 +1966,39 @@ explícita.
     `LayoutTests` y `SnapLayoutTests` en verde; capturas del README regeneradas.
   - **Evidencia (2026-09-14):** las cabeceras de columna de la principal empiezan al **49 %** del alto
     (1180×820); Desinstalar muestra **4 de 113** programas a 900×700.
+  - **Al implementarlo:**
+    - **Sin tarjetas de cabecera** en las seis ventanas: repetían el título de la barra de título con una frase
+      genérica debajo. Lo que tenían de contenido se queda, en la barra de su ventana: el resumen del escaneo y el
+      aviso de Limpieza, y el resumen de Historial. Fuera también los títulos encima de las tablas
+      («Actualizaciones disponibles», «Resultados», «Programas instalados», «Residuos encontrados»): lo dicen las
+      columnas, y el recuento está en la barra de estado. Sale `HeaderCardStyle` y 15 claves de idioma.
+    - **Una sola barra de órdenes** en la principal: acciones, filtros y detalle del paquete en la misma tarjeta, sin
+      el rótulo «Acciones rápidas», y cada orden con **icono y etiqueta** a 32 px de alto, el estándar de WinUI.
+      **No es una `CommandBar`**: su desbordamiento esconde las órdenes en un «…» justo en las ventanas estrechas
+      (snap), el `SplitButton` tendría que ir en un `AppBarElementContainer` y un `AppBarButton` no admite el cambio
+      de estilo con el que se mueve el acento (F-23). Con el contenido compuesto WinUI ya no deduce el nombre
+      accesible, así que `UI/CommandLabel.cs` pone siempre texto y nombre juntos.
+    - **Registro plegable** en las cuatro ventanas que lo tienen: un `Expander` plegado, con su fila en `Auto` hasta
+      que se despliega (`UI/LogExpander.cs`). Se abre solo al empezar una operación que cambia el equipo (lote,
+      importar, instalar, desinstalar, borrar residuos) y cuando se escribe un error (`ActivityLog.LineAppended`).
+      Una consulta no lo abre: su resultado está en la tabla.
+    - En Desinstalar, botones y buscador comparten línea en un `WrapPanel`: en dos líneas fijas la lista se quedaba
+      en nueve filas.
+  - **Defecto encontrado en la prueba en la app:** en Buscar, `SetBusy` desactiva el buscador y su botón, y el foco
+    saltaba al siguiente control, que ahora es la cabecera del registro: la captura del README salía con su marco de
+    foco. Al terminar la búsqueda, el foco vuelve al buscador si estaba allí.
+  - **Verificado (2026-09-18)** en la app real, con `settings.json` idéntico al terminar:
+    - Principal a 1180×820: cabeceras de columna del **49 % al 25,6 %** del alto (del 59,5 % al 25,6 % con el aviso
+      de versión nueva abierto); la tabla pasa de 3 filas a mostrar las 6 actualizaciones.
+    - Desinstalar a 900×700: de 5 a **10 filas enteras** (de 115 programas).
+    - Capturas del README regeneradas en los dos temas.
+    - Tests: `DensityTests` (17; 13 fallan al reponer el XAML anterior, y las 4 restantes son del código de
+      despliegue, que no se repuso) y `DensityUiTests` (7: el 30 % medido, el registro que arranca plegado y cede
+      sitio al desplegarse, y el nombre accesible de las órdenes). `AccessibilityTests.ActivityLog_HasAnAccessibleName`
+      despliega el registro antes de buscarlo: plegado, su contenido no está en el árbol de automatización.
+  - **Sin verificar en la app real:** que el registro se despliegue solo al empezar un lote o ante un error (haría
+    falta una actualización o un fallo reales; lo fijan `DensityTests`), y la ventana de Limpieza, que solo se abre
+    tras desinstalar algo.
   - **Esfuerzo:** medio
   - **Depende de:** F-01, F-14
 
@@ -2197,7 +2231,7 @@ explícita.
 
 ## 🔵 F·4 — Verificación pendiente y QA
 
-- [ ] **[F-24] Probar y corregir en contraste alto**
+- [x] **[F-24] Probar y corregir en contraste alto**
   - **Área:** Accesibilidad (temas de contraste de Windows)
   - **Ubicación:** `src/WingetUSoft/Core/LogPalette.cs:27-41` y `src/WingetUSoft/UI/ActivityLog.xaml.cs:45-47`; diccionarios de F-05; barra de título de F-13
   - **Qué hacer:** el registro pinta RGB fijos de claro u oscuro según `ActualTheme`, sin mirar
@@ -2209,6 +2243,34 @@ explícita.
   - **Evidencia (2026-09-14):** **no verificado en ejecución**, porque activar un tema de contraste cambia
     la configuración del sistema del usuario. El riesgo sale del código: colores fijos (texto `#1B1B1B` en
     claro) sobre un fondo que en contraste alto puede ser negro.
+  - **Al implementarlo:**
+    - `LogPalette.For(kind, darkTheme, highContrast)` devuelve `null` con contraste alto y el tramo hereda el
+      color del sistema (`Run.ClearValue`, por si el registro ya estaba escrito al activarlo). El tipo de línea no
+      se pierde: los aciertos y fallos llevan su marca (✔, ✖) y el resto lo dice el texto («Error: …»).
+    - El registro se repinta **solo** al cambiar el tema o el contraste. Hasta ahora lo pedía la ventana a
+      `WindowChrome` y solo lo hacía la principal: Buscar, Desinstalar y Limpieza conservaban los colores del
+      tema anterior. Sale el parámetro `onThemeChanged` de `WindowChrome.Apply`.
+  - **Defectos encontrados en la prueba en la app** (con «Acuático» y «Desierto» activados de verdad):
+    - **Mica tapaba la paleta del usuario:** con contraste alto se queda en su color de reserva. `WindowChrome`
+      lo retira y devuelve a la página su pincel del sistema, y lo decide otra vez cuando el contraste cambia.
+      (En «Acuático» el fondo resultó ser `#202020`, que es el color de ventana del propio tema.)
+    - **Placas detrás del texto:** WinUI pinta por defecto un recuadro del color de la ventana detrás de cada
+      texto; en «Actualizar todo», icono y texto salían en un recuadro oscuro sobre el cian del acento. Se apaga con
+      `HighContrastAdjustment = None` en `App`, **por código**: el mismo atributo en `App.xaml` se compilaba pero
+      no llegaba a aplicarse.
+    - **La primera versión tumbaba la app:** suscribirse a `AccessibilitySettings.HighContrastChanged` lanza
+      `0x80070490` en una app de escritorio (sin `CoreWindow`). `UI/ContrastMode.cs` escucha en su lugar
+      `UISettings.ColorValuesChanged`, y un test impide volver a suscribirse al otro evento.
+  - **Verificado (2026-09-18)** en la app real, con los temas activados por el propio Windows (`hcblack.theme`,
+    `hcwhite.theme`) y el sistema restaurado al terminar (tema, contraste y los valores de registro que Windows
+    recuerda), con `settings.json` y su `.bak` idénticos:
+    - «Acuático» y «Desierto», y «Desierto» con la app forzada a oscuro: registro con dos líneas reales
+      (exportar paquetes) en el color de texto del sistema, **0 píxeles de color** en su zona; botón de peligro
+      con los colores del sistema en reposo y con el ratón encima; barra de título legible en los tres casos.
+    - En caliente: con la app abierta, activar «Acuático» no la cierra y la ventana adopta la paleta.
+    - Tests: `LogPaletteTests` (+3: la paleta con contraste, el repintado y la prohibición de `HighContrastChanged`)
+      y `HighContrastTests` (2: placa y Mica); 3 de los 4 fallan al reponer el código anterior. 427/427
+      unitarios · 65/65 UI tests.
   - **Esfuerzo:** medio
   - **Depende de:** F-05, F-13
 
@@ -2234,13 +2296,33 @@ explícita.
   - **Esfuerzo:** bajo
   - **Depende de:** ninguna
 
+- [ ] **[F-27] Los selectores de archivos fallan con la app elevada**
+  - **Área:** Defecto / robustez
+  - **Ubicación:** `src/WingetUSoft/UI/MainWindow.Menus.cs` (`PickSaveFileAsync` en Exportar lista y Exportar
+    paquetes, `PickSingleFileAsync` en Importar paquetes) y `src/WingetUSoft/UI/HistoryWindow.xaml.cs`
+    (Exportar CSV)
+  - **Qué hacer:** los cuatro usan `Windows.Storage.Pickers`, que en un proceso **elevado** lanza `COMException
+    0x80004005` (`E_FAIL`). La excepción no es de las que `CrashLog.IsRecoverable` perdona: queda en `crash.log` y
+    no se exporta ni importa nada. Pasa en cuanto el usuario abre WingetUSoft «como administrador», algo habitual
+    en un gestor de actualizaciones. El arreglo natural son los selectores de Windows App SDK 1.8
+    (`Microsoft.Windows.Storage.Pickers`), que admiten procesos elevados y devuelven una ruta en vez de un
+    `StorageFile`; como mínimo, capturar el fallo y explicarlo en un diálogo.
+  - **Criterio de aceptación:** con la app elevada, Exportar lista, Exportar paquetes, Importar paquetes y
+    Exportar CSV abren el selector y completan la operación (prueba en la app real); un test impide volver a
+    `Windows.Storage.Pickers`.
+  - **Evidencia (2026-09-18):** encontrado al verificar F-24 con VS Code elevado: tres entradas en `crash.log` con
+    `COMException (0x80004005)` en `MenuExportarWinget_Click`, en la línea de `PickSaveFileAsync`. Lanzada sin
+    elevar (a través de `explorer.exe`), la misma exportación funciona.
+  - **Esfuerzo:** bajo
+  - **Depende de:** ninguna
+
 ---
 
 ## ⚪ F·5 — Opcional / estructural
 
 > Como en el T4: no se aborda sin una decisión explícita.
 
-- [ ] **[F-26] Evaluar una ventana única con `NavigationView`**
+- [x] **[F-26] Evaluar una ventana única con `NavigationView`** — *evaluada y descartada*
   - **Área:** Arquitectura de UI
   - **Ubicación:** las seis ventanas de `src/WingetUSoft/UI/`, `WindowChrome.cs` y `MainWindow.Menus.cs`
   - **Qué hacer:** hoy son seis ventanas de primer nivel sin ventana propietaria, cada una con su botón en
@@ -2250,6 +2332,23 @@ explícita.
     cabeceras de F-17 y buena parte de F-14.
   - **Criterio de aceptación:** una rama de prueba que compile, pase los UI tests adaptados y tenga
     capturas; o una entrada en `CONTEXT.md` §4 que explique por qué se descarta (la misma salida que T4-01).
+  - **Resultado (2026-09-18): se descarta por ahora**, con la segunda salida del criterio (`CONTEXT.md` §4):
+    - **Lo que iba a resolver ya está resuelto:** las ventanas duplicadas (F-08, `OpenSingleInstanceAsync`), las
+      cabeceras repetidas (F-17) y los estilos sueltos (F-14). Lo que queda es un botón por ventana en la barra de
+      tareas.
+    - **Lo que cuesta:** las ventanas no son solo vistas. La principal son 2 455 líneas en ocho parciales con ciclo
+      de vida propio (bandeja, temporizador de consulta, lote, aviso de versión); Configuración devuelve
+      `SavedChanges` al cerrarse y la principal reaplica tema e idioma; Buscar avisa al cerrarse de que la lista
+      pudo quedar obsoleta; Desinstalar abre Limpieza tras desinstalar. Todo eso pasaría a depender de la
+      navegación (guardar o descartar al salir de Configuración, qué pasa con un lote en curso al cambiar de
+      sección), y hoy un lote puede seguir mientras se busca en otra ventana. Además, los UI tests de Configuración,
+      Buscar y parte de los de accesibilidad abren ventanas secundarias y habría que rehacerlos, y cada ventana tiene
+      su tamaño de diseño (1180×820 frente a 760×560).
+    - **Alternativa barata si los botones de la barra de tareas llegan a molestar:** hacer las secundarias
+      ventanas *con propietario* (la principal): no tienen botón propio y se minimizan con ella, sin tocar su
+      código.
+    - **Se reabre** si la app gana secciones nuevas de primer nivel (por ejemplo, un gestor completo de
+      instalados) o si se pide explícitamente.
   - **Esfuerzo:** alto
   - **Depende de:** F-08, F-13, F-14
 
@@ -2267,10 +2366,10 @@ explícita.
 |---|---:|---:|---:|---:|
 | F·1 — Defectos verificados | 10 | 10 | 0 | 100 % |
 | F·2 — Fluent / WinUI 3 | 6 | 6 | 0 | 100 % |
-| F·3 — Experiencia de uso | 7 | 6 | 1 | 86 % |
-| F·4 — Verificación y QA | 2 | 1 | 1 | 50 % |
-| F·5 — Opcional | 1 | 0 | 1 | 0 % |
-| **Total** | **26** | **23** | **3** | **88 %** |
+| F·3 — Experiencia de uso | 7 | 7 | 0 | 100 % |
+| F·4 — Verificación y QA | 3 | 2 | 1 | 67 % |
+| F·5 — Opcional | 1 | 1 | 0 | 100 % |
+| **Total** | **27** | **26** | **1** | **96 %** |
 
 ### Registro de tareas completadas
 
@@ -2299,6 +2398,9 @@ explícita.
 | 2026-09-17 | F-18 | Estados vacíos accionables y un único mensaje de arranque | 4 listas con el mismo panel · instrucción de 3 veces a 1 · 6 guards fallan al revertir · 361/361 unitarios · 58/58 UI tests | `f0445da` | 1.10.0 |
 | 2026-09-17 | F-20 | Pulido de textos: plurales, tratamiento, abreviaturas y truncados | 12 claves con plural real · tuteo en español · «Unknown» traducido · 395/395 unitarios · 58/58 UI tests | `b80212d` | 1.10.0 |
 | 2026-09-18 | F-19 | Tabla usable durante los lotes, con estado por fila | lote real de 2 paquetes · el lote sigue tras un fallo · 405/405 unitarios · 58/58 UI tests | `1121ded` | 1.11.0 |
+| 2026-09-18 | F-17 | Más espacio para los datos | cabeceras de columna del 49 % al 25,6 % · Desinstalar de 5 a 10 filas · 13 guards fallan al revertir · 422/422 unitarios · 65/65 UI tests | — | 1.12.0 |
+| 2026-09-18 | F-24 | Probar y corregir en contraste alto | «Acuático» y «Desierto» reales, también en caliente · 0 px de color en el registro · 3 guards fallan al revertir · 427/427 unitarios · 65/65 UI tests | — | 1.12.0 |
+| 2026-09-18 | F-26 | Evaluar una ventana única con `NavigationView` | evaluada y descartada, con la alternativa barata anotada (`CONTEXT.md` §4) | — | 1.12.0 |
 
 ### Línea base del Tier F (2026-09-14, v1.8.8)
 
