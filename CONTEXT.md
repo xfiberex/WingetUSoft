@@ -11,10 +11,10 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.8.7** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.8.7), sin firmar) |
+| **Versión publicada** | **1.13.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.13.0), sin firmar) |
 | **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-08-23 |
+| **Última actualización** | 2026-09-20 |
 
 ---
 
@@ -88,10 +88,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **292/292** |
-| **UI tests (FlaUI)** | **37/37** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D y E **completados**. En curso: el plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **70 de 70 — completo** |
-| **Publicado** | hasta la **v1.8.7**. `main` y el último tag coinciden |
+| **Tests unitarios** | **438/438** |
+| **UI tests (FlaUI)** | **65/65** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
+| **Tiers** | A, B, C, D, E y **F** completados. El plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **70 de 70**; el Tier F: **27 de 27** |
+| **Publicado** | hasta la **v1.13.0**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
 
@@ -102,6 +102,7 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **C** | Auditoría UI/UX: flujo y feedback, modelo de selección, datos que mentían, color, preferencias unificadas, accesibilidad de la tabla | 1.5.0/1.6.0 |
 | **D** | Cara pública: licencia y avisos de terceros **in-app**, README de usuario con capturas, script de capturas | 1.7.0 |
 | **E** | ⚠️ **Cambio de alcance**: buscar e instalar software, exportar/importar paquetes, omitir versión | 1.8.0 |
+| **F** | Defectos vistos en la app real, alineación con Fluent, experiencia de uso, densidad y temas de contraste | 1.8.9 → 1.12.1 |
 
 **Los UI tests** necesitan **sesión de escritorio interactiva y desatendida** (no vale sesión bloqueada ni
 consola sin escritorio: ahí, `-SkipUiTests`), pero **no** elevación — la app corre `asInvoker`.
@@ -289,6 +290,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-09-20 | **1.13.0** | **Apoyar el proyecto** — un enlace de donación voluntaria en *Ayuda → Acerca de*, y el README reducido a la mitad |
 | 2026-09-20 | **1.12.1** | **Tier F completo (F-27)** — exportar e importar volvían a fallar en silencio si la aplicación se abría como administrador: los selectores de archivo pasan a los de Windows App SDK |
 | 2026-09-20 | **1.12.0** | **Tier F cerrado (F-17, F-24 y F-26)** — sin cabeceras que repitan el título, una barra de órdenes con icono y texto, registro plegable, y los temas de contraste de Windows por fin respetados |
 | 2026-09-18 | **1.11.0** | **Tier F · F-19 y arreglo urgente** — los lotes sin elevación volvían a romperse tras el primer paquete desde la 1.8.8 (`ConfigureAwait(false)` en el bucle); estado por fila durante el lote y tabla en modo lectura en vez de deshabilitada |
@@ -310,6 +312,30 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-09-20 — Apoyar el proyecto, y un README que se pueda leer (release v1.13.0)
+
+Build 0/0, **438/438 unitarios**, **65/65 UI tests**.
+
+*Acerca de* gana un tercer botón, **Apoyar el proyecto**, que abre la página de PayPal del autor; es el
+mismo montaje que en FormatDiskPro, con el mismo enlace. Apoyar es **voluntario y no desbloquea nada**:
+por eso el botón vive en *Acerca de* y no en ningún flujo de la aplicación, y por eso el acento y el Intro
+siguen en **Cerrar** (F-12) en vez de irse al botón nuevo. «Ver en GitHub» baja a secundario y los dos
+enlaces comparten un único `OpenAsync`. Si `DonateUrl` queda vacío, el botón no se muestra.
+
+El `README.md` pasa de **344 a 186 líneas**. Había crecido hasta repetir lo que ya estaba en
+`CONTRIBUTING.md` (compilar, verificar, el hook) y en este documento (el porqué de cada decisión), así que
+lo repetido se sustituye por un enlace y las características se agrupan en cuatro bloques en vez de siete
+secciones. El árbol de archivos completo, que había que tocar en cada release, deja paso a una tabla de
+seis filas por capa. De paso, `CONTRIBUTING.md` tenía un `.\verify.ps1` con un **tabulador vertical**
+incrustado (`0x0B`, un `\v` de un script de edición viejo) que se leía `.erify.ps1`.
+
+Probar el clic no entra: abriría el navegador del usuario en PayPal. Lo que sí se comprueba en la app real
+es que el diálogo sale con los tres botones y que el acento sigue en Cerrar (medido: `#F46762`, saturación
+0,6, frente a los dos grises), y en los tests, que el botón está, que el enlace es HTTPS y que la etiqueta
+está en los cinco idiomas.
 
 ---
 

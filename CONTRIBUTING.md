@@ -52,7 +52,7 @@ Cada push a `main` y cada pull request pasan por GitHub Actions (`.github/workfl
 vulnerables. CodeQL analiza además el C# en busca de problemas de seguridad.
 
 Lo que el CI **no** puede correr son los UI tests, que conducen la app real y necesitan un escritorio
-interactivo. Si tu cambio toca la interfaz, ejecuta `.erify.ps1 -Full` en tu equipo y dilo en el pull
+interactivo. Si tu cambio toca la interfaz, ejecuta `.\verify.ps1 -Full` en tu equipo y dilo en el pull
 request: un CI en verde no basta para esos cambios.
 
 ## Convenciones que el repositorio comprueba

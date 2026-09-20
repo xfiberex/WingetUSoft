@@ -25,295 +25,90 @@ equipo — sin tocar la línea de comandos.
 
 </details>
 
+## Qué hace
+
+**Actualizar**
+- Lista los paquetes con versión disponible; un solo botón **Consultar**, con la variante que incluye las
+  **versiones desconocidas** (`<`) en su desplegable, y recuerda la última que elegiste.
+- **Actualización selectiva**: marca con la casilla (o todos con `Ctrl+A`) y actualiza. La selección
+  sobrevive a buscar, ordenar y filtrar, y el botón dice cuántos hay marcados.
+- **Estado por fila durante el lote** — en cola, actualizándose, actualizado o fallido con el motivo al
+  pasar el ratón —, progreso que avanza también *dentro* de cada paquete, y un **único resumen de fallos**
+  al terminar en vez de un modal por cada uno.
+- Modo **silencioso o interactivo**, y lotes elevados por un worker interno con named pipe, sin scripts
+  temporales en disco.
+
+**Instalar, desinstalar y mover tu lista**
+- **Buscar e instalar** desde el catálogo de winget, con progreso y registro en vivo; lo que ya tienes sale
+  marcado como instalado.
+- **Desinstalar** cualquier programa, con confirmación. Al terminar se abre la **limpieza de residuos**:
+  propone las carpetas que el desinstalador dejó atrás, **nada viene marcado** y el borrado es recursivo,
+  no pasa por la papelera y no se puede deshacer.
+- **Exportar** al formato JSON nativo de winget (con las versiones exactas si quieres) e **importar** en
+  otro equipo: lo ya instalado se actualiza y lo que ya no está en el catálogo se salta sin abortar.
+
+**Encontrar lo que buscas**
+- Búsqueda en vivo por nombre o Id, columnas ordenables (las versiones, **numéricamente**: `1.9.0` antes
+  que `1.10.0`) y un panel con la descripción del paquete y sus enlaces, en cualquier idioma de Windows.
+- Las cuatro listas dicen siempre en qué punto están —consultando, sin datos, todo al día, sin
+  coincidencias, cancelada o fallida— y traen el botón que toca: *Consultar* o *Reintentar*.
+- La tabla manda: acciones, filtros y detalle van en una sola barra, y el registro de actividad está
+  plegado hasta que empieza una operación o algo falla.
+
+**Configuración**
+Todas las preferencias viven en la ventana **Configuración**; **Herramientas** solo tiene acciones.
+
+- **Omitir una versión** concreta de un paquete (reaparece cuando salga otra) o **excluirlo** para siempre.
+- **Historial** de cada actualización e instalación (máx. 500 entradas) con filtros y exportación a CSV;
+  exportación de la lista a CSV/TSV con neutralización de fórmulas, segura para Excel.
+- Tema claro/oscuro, cinco idiomas (ES/EN/PT/FR/IT) con plurales reales, auto-comprobación periódica,
+  aviso al terminar un lote, bandeja del sistema y log diario opcional.
+
+**Accesibilidad**
+- Manejable **solo con teclado**, incluidas las cabeceras de la tabla y el menú contextual de la fila
+  (Shift+F10). Atajos: `F5` consultar, `Ctrl+F` buscar, `Ctrl+A` marcar todo, `Supr` excluir, `Esc` cancelar.
+- Las filas se anuncian como "*programa*, versión instalada X, disponible Y", y los colores del registro
+  cumplen **WCAG AA** en claro y oscuro, comprobado por tests en las cuatro ventanas con registro.
+- Con un **tema de contraste** de Windows la app usa tus colores: el registro deja de colorear (✔ y ✖
+  siguen marcando el resultado) y el fondo translúcido se sustituye por el color de ventana del tema.
+
+> 📋 Lo implementado y lo que viene, en la **[hoja de ruta](ROADMAP.md)**. El porqué de cada decisión, en
+> **[CONTEXT.md](CONTEXT.md)**.
+
 ## Instalación
 
-Descarga el instalador más reciente desde la página de **[Releases](https://github.com/xfiberex/WingetUSoft/releases)**
-(`WingetUSoft-Setup-x.y.z.exe`) y ejecútalo.
+Descarga `WingetUSoft-Setup-x.y.z.exe` de **[Releases](https://github.com/xfiberex/WingetUSoft/releases)**
+y ejecútalo. Comprueba las dependencias y **descarga solo lo que falte** (VC++ Redist y .NET 10 Desktop
+Runtime); en un Windows al día no descarga nada.
 
-El instalador comprueba las dependencias y **descarga solo lo que falte** en tu equipo (VC++ Redist y
-.NET 10 Desktop Runtime); en un Windows al día no descarga nada. La app se instala **sin privilegios de
-administrador para su uso normal**: eleva puntualmente, y solo si lo pides, para las actualizaciones que
-lo necesiten.
-
-> **SmartScreen:** el instalador **no está firmado** todavía (no hay certificado de código), así que
-> Windows puede mostrar "editor desconocido". Puedes verificar la descarga con el archivo `.sha256` que
-> acompaña a cada release.
-
-## Actualizaciones de la propia app
-
-WingetUSoft comprueba si hay una versión más reciente en GitHub Releases **al iniciarse** y bajo demanda
-desde *Ayuda → Buscar actualización*. El aviso muestra el **changelog** de la nueva versión antes de
-descargar e instalar, y tras actualizar aparece una sola vez el diálogo de **Novedades**.
-
-> **Modelo de confianza:** la descarga va por **HTTPS** desde GitHub Releases y, antes de ejecutar nada,
-> el instalador **se verifica**: primero por **firma Authenticode** si la tiene y, si no, contra el
-> **hash SHA-256** publicado como asset del release (`...exe.sha256`). Si no cuadra ninguna de las dos,
-> el archivo se borra y la actualización se aborta. **Alcance honesto:** el hash y el `.exe` salen del
-> mismo release, así que esto detecta manipulación o corrupción en tránsito, pero no protegería frente
-> a un compromiso de la cuenta de GitHub del proyecto — para eso hace falta la firma Authenticode.
-
-### Volver a una versión anterior
-
-No hay botón de «deshacer»: si una actualización te deja la app inservible, la vuelta atrás es manual,
-pero es sencilla y **no pierdes tu configuración**.
-
-1. Abre **[Releases](https://github.com/xfiberex/WingetUSoft/releases)** y busca la versión a la que
-   quieres volver (todas siguen publicadas).
-2. Descarga su `WingetUSoft-Setup-x.y.z.exe` y ejecútalo **encima de la instalación actual**. No
-   desinstales antes.
-3. Al terminar, la app arranca en la versión antigua.
-
-Funciona porque todos los instaladores comparten el mismo `AppId` y reutilizan el directorio de la
-instalación previa (`UsePreviousAppDir=yes`), así que instalar una versión anterior **sustituye** la
-actual en el mismo sitio en vez de dejar dos copias.
-
-Tus datos viven fuera del directorio de instalación, en `%LocalAppData%\WingetUSoft\`, y el instalador no
-los toca: preferencias, historial y exclusiones siguen ahí después de volver atrás.
-
-> **Qué esperar después:** al arrancar, la app comprueba GitHub, verá la versión más nueva y mostrará el
-> aviso de actualización. Es una barra informativa que **se cierra con su aspa y no vuelve a molestar en
-> esa sesión**: no es un diálogo modal ni se instala nada sin que lo pidas. Aun así, si vuelves atrás,
-> vuelve a aparecer en cada arranque hasta que publique la siguiente versión — hoy no hay forma de
-> silenciar el aviso de la propia app (*«Omitir esta versión»* solo existe para los paquetes de winget).
->
-> Y cuéntame qué falló, en un [issue](https://github.com/xfiberex/WingetUSoft/issues): volver atrás te
-> desatasca a ti, pero el fallo sigue ahí para todos los demás. Si la app ni siquiera abre, adjunta
-> `%LocalAppData%\WingetUSoft\crash.log`.
-
-## Características
-
-### Instalar software nuevo
-- **Buscar en el catálogo de winget** — *Herramientas → Buscar e instalar programas*: busca por nombre, Id o palabra clave e instala desde una lista de resultados, con progreso y registro en vivo.
-- **Sabe lo que ya tienes** — los resultados que ya están instalados se marcan como tal y no se pueden "instalar" otra vez (para eso está la actualización).
-
-### Exportar e importar tu lista de paquetes
-- **Exportar** — guarda tus programas en el **formato JSON nativo de winget**, opcionalmente con las versiones exactas.
-- **Importar** — reinstala esa lista en otro equipo (o tras formatear). Los paquetes que ya tengas se **actualizan** si hay versión más reciente; los que ya no estén en el catálogo se saltan sin abortar el resto.
-
-### Actualizaciones
-- **Consulta de actualizaciones** — lista todos los paquetes con versión disponible. Un solo botón «Consultar», con la variante que incluye las **versiones desconocidas** (`<`) en su desplegable; el botón recuerda y rotula la última que elegiste.
-- **Actualización selectiva** — marca los paquetes con su casilla (o todos de golpe con la casilla de la cabecera / `Ctrl+A`) y actualízalos. El botón muestra cuántos hay marcados y se deshabilita si no hay ninguno. La selección **sobrevive a buscar, ordenar y filtrar**.
-- **Modo silencioso / interactivo** — compatible con las flags `--silent` e `--interactive` de winget.
-- **Elevación de permisos** — ejecuta lotes elevados mediante un worker interno con comunicación por named pipe, sin scripts temporales en disco. Incluye reporte de progreso de descarga en tiempo real durante la instalación elevada.
-- **Progreso siempre visible** — la barra de estado está anclada al pie de la ventana (fuera de la página desplazable) e incluye una barra de progreso que avanza también *dentro* de cada paquete, según lo descargado.
-- **La tabla, primero** — sin cabeceras que repitan el título de la ventana: acciones, filtros y detalle del paquete van en una sola barra, con icono y texto en cada orden. El registro de actividad va plegado y se abre solo cuando empieza una actualización, instalación o desinstalación, o cuando algo falla.
-- **Estado por fila durante el lote** — cada paquete dice si está en cola, actualizándose, actualizado o si falló (con el motivo al pasar el ratón). La tabla se puede recorrer, ordenar y filtrar mientras tanto; lo que no se puede es cambiar la selección del lote en marcha. Tras la recarga, los que fallaron siguen marcados.
-- **Resumen único de fallos** — si varios paquetes fallan, se informa en un solo diálogo al terminar el lote, en vez de interrumpirlo con un modal por cada fallo.
-
-### Exploración y filtrado
-- **Búsqueda en tiempo real** — filtra la lista de paquetes por nombre o ID mientras escribes.
-- **Columnas ordenables** — ordena por nombre, ID, versión instalada, versión disponible o fuente haciendo clic en el encabezado. Las versiones se ordenan **numéricamente** (`1.9.0` antes que `1.10.0`), no como texto.
-- **Estados de la tabla** — las cuatro listas (principal, Buscar, Desinstalar y Limpieza) dicen siempre en qué punto están: consultando, sin datos todavía, todo al día, sin coincidencias con los filtros, o consulta cancelada/fallida. Cuando hay algo que hacer, el propio estado trae el botón: «Consultar actualizaciones» al empezar y «Reintentar» tras un fallo o una cancelación.
-- **Panel de información** — al seleccionar un paquete muestra su descripción, un enlace a la página oficial y otro a las notas de versión. Funciona **en cualquier idioma de Windows** (winget traduce las etiquetas de su salida).
-- **Ver en winget.run** — abre la página del paquete en [winget.run](https://winget.run) desde el menú contextual.
-
-### Desinstalación
-- **Ventana de desinstalación** — lista todos los programas instalados con búsqueda y filtrado, y permite desinstalar cualquier paquete con confirmación previa.
-- **Limpieza de residuos** — cuando una desinstalación termina bien, se abre automáticamente una segunda
-  ventana que busca lo que el desinstalador haya dejado atrás y **propone borrarlo**. Conviene saber tres
-  cosas antes de usarla:
-  - **Qué busca.** Solo rutas concretas derivadas del nombre y el Id del paquete, dentro de
-    `%AppData%`, `%LocalAppData%`, `%LocalAppData%\Programs`, `%ProgramData%`, `Archivos de programa` y
-    `Archivos de programa (x86)`. **No** rastrea el disco ni recorre carpetas del sistema en busca de
-    coincidencias.
-  - **Nada viene marcado.** La lista es una propuesta: sale con todas las casillas vacías y no se borra
-    nada hasta que tú marcas y confirmas. Cerrar la ventana no borra nada.
-  - **El borrado no se puede deshacer.** Las carpetas se eliminan de forma **recursiva** y **no pasan por
-    la papelera**. Revisa las rutas antes de confirmar: es la operación más destructiva de la app.
-
-### Gestión y configuración
-Todas las preferencias viven en un solo sitio, la ventana **Configuración**; el menú **Herramientas**
-solo tiene acciones (buscar e instalar, exportar/importar, historial, desinstalar).
-
-- **Omitir una versión** — descarta *una versión concreta* de un paquete (menú contextual de la fila): la fila se atenúa y los lotes la saltan, pero **el paquete reaparece solo cuando salga una versión nueva**. Winget no sabe hacer esto: sus anclajes (`pin`) congelan el paquete también para las versiones futuras, así que se resuelve en la app.
-- **Lista de exclusiones** — excluye paquetes permanentemente de las actualizaciones automáticas (distinto de omitir: esto es para siempre y para todo el paquete).
-- **Historial** — registra cada actualización **y cada instalación** con fecha, versiones y resultado (máx. 500 entradas), con búsqueda, filtros y exportación a CSV.
-- **Exportación** — exporta la lista a CSV o TSV con neutralización de fórmulas (seguro para Excel/Calc).
-- **Tema claro / oscuro** — integrado con el sistema de temas de Windows y configurable manualmente.
-- **Idioma** — español, inglés, portugués, francés e italiano, aplicados en caliente y con plurales reales en cada uno («1 programa» / «113 programas», nunca «programa(s)»).
-- **Modo de actualización** — silenciosa o interactiva, y opción de ejecutar como administrador.
-- **Auto-comprobación** — comprueba actualizaciones de forma periódica configurable (30 / 60 / 120 min).
-- **Aviso al terminar** — sonido + parpadeo de la barra de tareas al acabar un lote largo, y progreso en el icono de la barra de tareas.
-- **Bandeja del sistema** — opcionalmente, cerrar la ventana la deja en el área de notificación: un clic en el icono la devuelve, y su menú ofrece abrir, consultar actualizaciones y salir.
-- **Log de archivo** — logging opcional por día en `%LocalAppData%\WingetUSoft\logs\`, con purga automática de los de más de 30 días y un botón en Configuración para abrir la carpeta.
-
-### Accesibilidad
-- **Manejable solo con teclado** — incluidas las cabeceras de la tabla (botones enfocables que anuncian
-  por qué columna y en qué dirección está ordenada) y el **menú contextual de la fila**, que se abre con
-  Shift+F10 o la tecla Menú, no solo con el ratón. Atajos en la ventana principal: `F5` consultar, `Ctrl+F`
-  buscar, `Ctrl+A` marcar todo, `Supr` excluir y `Esc` cancelar; cada uno aparece en el tooltip o el menú de su
-  acción.
-- **Filas con nombre accesible** — un lector de pantalla anuncia "*programa*, versión instalada X,
-  disponible Y", no el nombre interno del objeto.
-- **Contraste verificado** — los colores del registro de actividad cumplen WCAG AA (4.5:1) en tema
-  claro y oscuro, comprobado por tests. La verificación cubre **las cuatro ventanas con registro**
-  (principal, buscar e instalar, desinstalar y limpieza): además de medir el contraste de cada tono,
-  un test comprueba que ninguna ventana cablee sus propios colores por su cuenta.
-- **Temas de contraste de Windows** — con «Acuático», «Desierto» o cualquier otro tema de contraste, la app usa
-  los colores que elegiste: el registro deja de colorear las líneas (aciertos y fallos siguen marcados con ✔ y
-  ✖) y el fondo translúcido se sustituye por el color de ventana del tema. Comprobado en la app real.
-
-> 📋 Consulta la **[hoja de ruta](ROADMAP.md)** para ver las características implementadas y las próximas
-> (organizadas por *tiers*).
->
-> 🔐 ¿Has encontrado un fallo de seguridad? No abras un issue público: hay un canal privado en
-> **[SECURITY.md](SECURITY.md)**. Para compilar, verificar o proponer un cambio,
-> **[CONTRIBUTING.md](CONTRIBUTING.md)**.
-
-## Requisitos
-
-| Componente | Versión mínima |
+| Requisito | |
 |---|---|
-| Windows | 10 (build 19041) o superior |
-| .NET | 10 — *solo para compilar desde código; el instalador lo descarga si falta* |
-| Windows App SDK | 1.8 — *viaja dentro de la app, no hay que instalarlo* |
-| winget (App Installer) | Cualquier versión reciente desde Microsoft Store |
+| Sistema | Windows 10 (build 19041) u 11 |
+| Permisos | **Sin administrador** para el uso normal; eleva puntualmente, y solo si lo pides |
+| winget | App Installer, cualquier versión reciente desde Microsoft Store |
 
-## Compilar desde el código
+El instalador **no está firmado** (no hay certificado de código), así que SmartScreen dirá «editor
+desconocido». Puedes verificar la descarga con el `.sha256` que acompaña a cada release.
 
-```bash
-# Compilar
-dotnet build WingetUSoft.slnx
+La app busca versiones nuevas **al arrancar** y en *Ayuda → Buscar actualización*, y muestra el changelog
+antes de instalar nada.
 
-# Ejecutar
-dotnet run --project src/WingetUSoft/WingetUSoft.csproj
+> **Cómo se verifica una actualización.** La descarga va por **HTTPS** desde GitHub Releases y, antes de
+> ejecutar nada, el instalador se verifica: primero por **firma Authenticode** si la tiene y, si no,
+> contra el **SHA-256** publicado como asset del release. Si no cuadra ninguna de las dos, el archivo se
+> borra y la actualización se aborta. Esto detecta manipulación o corrupción en tránsito, **no** un
+> compromiso de la cuenta de GitHub: el hash y el `.exe` salen del mismo release.
 
-# Ejecutar tests unitarios (xUnit)
-dotnet test tests/WingetUSoft.Tests/WingetUSoft.Tests.csproj
+**Volver a una versión anterior.** No hay botón de «deshacer», pero la vuelta atrás es manual y sencilla:
+descarga el instalador de la versión que quieras (todas siguen publicadas) y ejecútalo **encima** de la
+instalación actual, sin desinstalar. Todos comparten `AppId` y reutilizan el directorio previo
+(`UsePreviousAppDir=yes`), así que sustituye en vez de duplicar, y tus datos —en
+`%LocalAppData%\WingetUSoft\`— no se tocan. Al arrancar verás el aviso de la versión más nueva: es una
+barra informativa que se cierra con su aspa, aunque volverá en cada arranque hasta la siguiente versión.
+Y cuéntame qué falló en un [issue](https://github.com/xfiberex/WingetUSoft/issues); si la app ni abre,
+adjunta `%LocalAppData%\WingetUSoft\crash.log`.
 
-# Ejecutar tests de UI (FlaUI — lanzan la app real; requieren sesión de escritorio
-# interactiva, pero NO elevación: la app corre asInvoker)
-dotnet test tests/WingetUSoft.UiTests/WingetUSoft.UiTests.csproj
-```
-
-### Generar el instalador
-
-Requiere [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`):
-
-```powershell
-src\WingetUSoft\installer\build-installer.ps1
-```
-
-Publica la app (framework-dependent, win-x64), compila el instalador en `installer\Output\` y genera su
-`.sha256`. Con certificado, `-CertThumbprint <huella>` firma además el ejecutable y el instalador; el
-`.sha256` se calcula **después** de firmar. Desde un `.pfx`, `-CertFile cert.pfx -CertPassword (Read-Host -AsSecureString)`:
-el certificado se importa al almacén del usuario y se firma por huella, para que la contraseña no pase
-por la línea de comandos de `signtool` —legible por cualquier usuario de la máquina mientras firma—.
-
-### Publicar una versión
-
-`release.ps1` (raíz del repo) corta una versión completa en un paso: valida, ejecuta las pruebas
-(**unitarias y de UI**: un release no sale si la app real no pasa), actualiza `<Version>`, compila el
-instalador, hace commit + tag, lo sube y crea el **GitHub Release** con el instalador y su `.sha256`.
-
-```powershell
-.\release.ps1 -Version 1.7.0           # release completo
-.\release.ps1 -Version 1.7.0 -DryRun   # muestra el plan sin modificar nada
-```
-
-Flags: `-DryRun`, `-SkipTests`, `-SkipUiTests` (para sesiones sin escritorio interactivo), `-AllowDirty`,
-`-NotesFile <archivo.md>` y los de firma.
-
-### Qué comprueba GitHub en cada cambio
-
-Los dos distintivos de arriba enlazan a estos workflows, que se ejecutan en `main` y en cada pull request:
-
-| Workflow | Cuándo | Qué hace | Dónde se ven los resultados |
-|---|---|---|---|
-| **CI** (`.github/workflows/ci.yml`) | Cada push a `main`, cada PR y a mano | Ejecuta **el mismo `verify.ps1`** que se lanza en local: compila con las advertencias como error, comprueba el estilo contra el `.editorconfig`, pasa las pruebas unitarias y busca dependencias con vulnerabilidades conocidas | Pestaña **Actions** |
-| **CodeQL** (`.github/workflows/codeql.yml`) | Cada push a `main`, cada PR, los lunes y a mano | Análisis estático de seguridad del C# con la consulta `security-extended` | **Security → Code scanning** |
-
-Dos decisiones que explican por qué están así:
-
-- **Los tests de UI no corren en GitHub.** Conducen la aplicación real y necesitan una sesión de escritorio
-  interactiva, que un runner hospedado no tiene. Siguen siendo obligatorios en local: `release.ps1` no corta
-  una versión si no pasan.
-- **CodeQL compila de verdad** (`build-mode: manual`) en lugar de analizar solo el código fuente: el código que
-  genera el compilador XAML de WinUI solo existe después de compilar, y sin él CodeQL no vería los manejadores
-  enlazados desde el XAML.
-
-**Dependabot** (`.github/dependabot.yml`) revisa las dependencias cada lunes. Para las **acciones de GitHub**
-funciona bien; para **NuGet** apenas propone nada, porque las resuelve en Linux y este proyecto tiene como
-objetivo `net10.0-windows`. La señal fiable de paquetes desactualizados es la que `verify.ps1` deja en el log
-de CI. Además, un PR en verde **no basta** para subir Windows App SDK o H.NotifyIcon: esos cambian lo que se
-ve, y eso solo lo verifican los tests de UI en local.
-
-### Regenerar las capturas del README
-
-```powershell
-.\tools\capture-screenshots.ps1                    # tema claro y oscuro
-.\tools\capture-screenshots.ps1 -Theme dark -Language en
-```
-
-Lanza la app real, la conduce por UI Automation (consulta winget, abre Configuración) y guarda los PNG en
-`docs/screenshots/`. Respalda y restaura tu `settings.json` real, así que no altera tu instalación.
-
-## Estructura del proyecto
-
-```
-WingetUSoft/
-├── src/WingetUSoft/             # Proyecto de aplicación (WinUI 3)
-│   ├── Program.cs              # Entry point
-│   │
-│   ├── Core/                   # Lógica de negocio pura (sin UI ni efectos externos)
-│   │   ├── ReleaseNotes.cs        # Notas de versión (Markdown → texto plano)
-│   │   ├── Throughput.cs          # ETA de descargas/operaciones largas
-│   │   ├── VersionOrder.cs        # Orden semántico de versiones (1.9 < 1.10, "< x", "Unknown")
-│   │   ├── SkippedVersions.cs     # "Omitir esta versión" (caduca sola al salir una nueva)
-│   │   ├── WingetTable.cs         # Parseo de las tablas de winget (agnóstico al idioma)
-│   │   ├── WingetSearchParser.cs  # Resultados de `winget search`
-│   │   ├── LogPalette.cs          # Colores del registro por tema (contraste WCAG AA verificado)
-│   │   ├── WindowSizing.cs        # Dimensionado/centrado por DPI (puro, testeable)
-│   │   ├── LegalText.cs           # Licencia MIT y avisos de terceros embebidos en el .exe
-│   │   ├── DelimitedTextExporter.cs # Exportación CSV/TSV segura
-│   │   └── Models/                # WingetPackage, WingetSearchResult, WingetProgressInfo, ...
-│   │
-│   ├── Services/               # Operaciones con efectos externos (procesos, red, disco)
-│   │   ├── WingetService.cs       # winget: upgrade, search, install, export, import, elevación
-│   │   ├── WingetShowLabels.cs    # Etiquetas de `winget show` en los 10 idiomas que winget traduce
-│   │   ├── GitHubUpdateService.cs # Auto-actualización (verificación Authenticode / SHA-256)
-│   │   └── CleanupScanner.cs      # Detección de residuos post-desinstalación
-│   │
-│   ├── Settings/               # Persistencia y configuración (AppSettings, HistoryEntry, HistoryFilter)
-│   ├── Localization/           # Cadenas ES/EN/PT/FR/IT (patrón L.T("clave"))
-│   │
-│   ├── UI/                     # Capa de presentación (WinUI 3)
-│   │   ├── MainWindow.xaml/.cs      # Ventana principal (actualizaciones)
-│   │   ├── SearchWindow.xaml/.cs    # Buscar e instalar programas del catálogo
-│   │   ├── SettingsWindow.xaml/.cs  # Configuración (único hogar de las preferencias)
-│   │   ├── HistoryWindow.xaml/.cs   # Historial con filtros y exportación
-│   │   ├── UninstallWindow.xaml/.cs # Desinstalación
-│   │   ├── CleanupWindow.xaml/.cs   # Limpieza de residuos
-│   │   ├── AboutDialog.xaml/.cs     # Acerca de
-│   │   ├── LegalTextDialog.xaml/.cs # Licencia / Avisos de terceros
-│   │   ├── WhatsNewDialog.xaml/.cs  # Novedades de la versión
-│   │   ├── ActivityLog, ListStatePanel, SettingsCard  # Controles propios compartidos
-│   │   ├── Styles.xaml, DangerButtonResources.xaml    # Estilos y colores compartidos
-│   │   └── WrapPanel.cs, LogExpander.cs, CommandLabel.cs, ContrastMode.cs, ...
-│   │
-│   └── installer/             # Inno Setup (installer.iss) + build-installer.ps1
-│
-├── tests/WingetUSoft.Tests/    # Tests unitarios (xUnit)
-├── tests/WingetUSoft.UiTests/  # Tests de UI end-to-end (FlaUI + UIA3, xUnit)
-├── tools/                      # capture-screenshots.ps1 (capturas del README)
-├── docs/screenshots/           # Capturas usadas en este README
-├── .github/workflows/          # CI (verify.ps1) y CodeQL; .github/dependabot.yml para las dependencias
-├── .githooks/pre-push          # Lanza verify.ps1 antes de cada push
-├── verify.ps1                  # Verificación completa en local (build + tests + dependencias)
-├── release.ps1                 # Corta una versión de principio a fin (delega en verify.ps1)
-│
-├── SECURITY.md                 # Cómo reportar una vulnerabilidad (canal privado) y qué está en alcance
-├── CONTRIBUTING.md             # Compilar, verificar y las convenciones que el repo comprueba
-└── CHANGELOG.md                # Dónde vive el registro de cambios (Releases + CONTEXT.md)
-```
-
-> **Al clonar el repositorio**, para activar el hook de pre-push:
-> `git config core.hooksPath .githooks`
->
-> Verificación a mano: `.\verify.ps1` (rápida) o `.\verify.ps1 -Full` (añade los UI tests de FlaUI, que
-> conducen la app real y necesitan una sesión de escritorio interactiva).
-
-## Datos de usuario
+## Tus datos
 
 | Artefacto | Ruta |
 |---|---|
@@ -321,24 +116,70 @@ WingetUSoft/
 | Logs diarios | `%LocalAppData%\WingetUSoft\logs\YYYY-MM-DD.log` (se conservan **30 días**) |
 | Registro de fallos | `%LocalAppData%\WingetUSoft\crash.log` |
 
-Si `settings.json` se corrompe, se crea una copia de seguridad automática con timestamp y se restauran
-los valores por defecto.
+Los registros se purgan al arrancar; los archivos que la app no escribió, no se tocan. Si `settings.json`
+se corrompe, se guarda una copia con timestamp y se restauran los valores por defecto.
 
-Los registros diarios se purgan al arrancar: se borran los de más de 30 días, para que la carpeta no
-crezca sin límite. Los archivos que la app no haya escrito ella misma no se tocan.
+## Desarrollo
 
-## Licencia
+Requiere el .NET SDK 10 (e [Inno Setup 6](https://jrsoftware.org/isinfo.php) para el instalador).
+[CONTRIBUTING.md](CONTRIBUTING.md) explica qué se espera de un cambio.
 
-Software libre distribuido bajo la **[MIT License](LICENSE)**: puedes usarlo, modificarlo y
-redistribuirlo libremente, incluso en proyectos privativos, conservando el aviso de copyright.
-Se ofrece **SIN NINGUNA GARANTÍA**.
+```powershell
+dotnet build WingetUSoft.slnx
+dotnet run --project src/WingetUSoft/WingetUSoft.csproj
 
-Las atribuciones de componentes de terceros están en
-[THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). Ambos textos se pueden consultar **dentro de la app**
-en *Ayuda → Licencia* y *Ayuda → Avisos de terceros*.
+.\verify.ps1          # compilación (warnings como error), estilo, unitarias y dependencias
+.\verify.ps1 -Full    # además los UI tests de FlaUI, que conducen la app real
+git config core.hooksPath .githooks   # lanza la verificación rápida antes de cada push
+```
 
-## Privacidad
+Los **UI tests** (FlaUI + UIA3) necesitan una sesión de escritorio interactiva y desatendida, pero **no**
+elevación: la app corre `asInvoker`.
 
-La aplicación **no recopila datos personales ni telemetría**. Se conecta a Internet únicamente
-para consultar/instalar paquetes vía winget y para comprobar actualizaciones de la propia app en
-GitHub Releases (HTTPS).
+| Tarea | Comando |
+|---|---|
+| Instalador + `.sha256` (en `installer\Output\`) | `src\WingetUSoft\installer\build-installer.ps1` |
+| Firmar (opcional) | `… -CertThumbprint <huella>` o `… -CertFile cert.pfx -CertPassword (Read-Host -AsSecureString)` |
+| Cortar una versión | `.\release.ps1 -Version X.Y.Z` (`-DryRun` para ver el plan) |
+| Regenerar las capturas | `.\tools\capture-screenshots.ps1 [-Theme dark -Language en]` |
+
+`release.ps1` valida, ejecuta las pruebas **unitarias y de UI**, actualiza `<Version>`, compila el
+instalador, etiqueta, sube y crea el GitHub Release con el `.exe` y su `.sha256`. Con `.pfx`, el
+certificado se importa al almacén del usuario y se firma por huella, para que la contraseña no pase por la
+línea de comandos de `signtool`. Las capturas se toman conduciendo la app real, respaldando y restaurando
+tu `settings.json`.
+
+### Integración continua
+
+| Workflow | Cuándo | Qué hace |
+|---|---|---|
+| [**CI**](.github/workflows/ci.yml) | push a `main`, cada PR, manual | El mismo `verify.ps1` del local, sin `-Full` |
+| [**CodeQL**](.github/workflows/codeql.yml) | igual, más cada lunes | Seguridad del C# (`security-extended`), compilando de verdad: el código que genera el compilador XAML solo existe tras compilar |
+| [**Dependabot**](.github/dependabot.yml) | cada lunes | Acciones de GitHub. Con NuGet apenas propone nada: las resuelve en Linux y esto es `net10.0-windows` |
+
+Los UI tests **no corren en GitHub**: un runner hospedado no tiene escritorio interactivo. Por eso la
+puerta de publicación sigue siendo local, y un PR en verde no basta para subir Windows App SDK o
+H.NotifyIcon, que cambian lo que se ve.
+
+### Arquitectura
+
+| Capa | Contenido |
+|---|---|
+| `src/WingetUSoft/Core/` | Lógica pura y testeable: parseo de winget, orden de versiones, paleta del registro, exportación |
+| `src/WingetUSoft/Services/` | Efectos: winget, GitHub (auto-actualización verificada), rastreo de residuos |
+| `src/WingetUSoft/Settings/` · `Localization/` | Persistencia · las cadenas en los cinco idiomas (`L.T("clave")`) |
+| `src/WingetUSoft/UI/` | WinUI 3: las siete ventanas, los diálogos y los controles compartidos |
+| `src/WingetUSoft/installer/` | Inno Setup (`installer.iss`) + `build-installer.ps1` |
+| `tests/` | Unitarias (`WingetUSoft.Tests`) y de UI (`WingetUSoft.UiTests`, FlaUI) |
+
+## Licencia, privacidad y contacto
+
+- **[MIT](LICENSE)**: úsalo, modifícalo y redistribúyelo, incluso en proyectos privativos, conservando el
+  aviso de copyright. Sin garantía. Atribuciones en
+  [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt); ambos textos, también en *Ayuda*.
+- **Privacidad**: sin telemetría ni datos personales. Solo se conecta a Internet para consultar o instalar
+  paquetes vía winget y para comprobar actualizaciones de la app en GitHub Releases (HTTPS).
+- **Errores y sugerencias**: en los [issues](https://github.com/xfiberex/WingetUSoft/issues).
+  **Vulnerabilidades**: en privado, según [SECURITY.md](SECURITY.md).
+- **Apoyar el proyecto**: donación voluntaria (PayPal) desde *Ayuda → Acerca de*. Ninguna función es de
+  pago.

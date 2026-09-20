@@ -4,11 +4,17 @@ namespace WingetUSoft;
 
 /// <summary>
 /// Diálogo "Acerca de": descripción, versión, copyright/licencia (MIT) y aviso de privacidad.
-/// Incluye un acceso directo al repositorio en GitHub.
+/// Incluye accesos al repositorio en GitHub y a la página de donaciones.
 /// </summary>
 public sealed partial class AboutDialog : ContentDialog
 {
     private const string RepoUrl = "https://github.com/xfiberex/WingetUSoft";
+
+    /// <summary>
+    /// Enlace de donación (PayPal). Apoyar el proyecto es <b>voluntario</b>: no desbloquea nada ni cambia lo
+    /// que hace la aplicación. Si queda vacío, el botón no se muestra.
+    /// </summary>
+    private const string DonateUrl = "https://www.paypal.me/RJimenez1820";
 
     public AboutDialog()
     {
@@ -24,17 +30,22 @@ public sealed partial class AboutDialog : ContentDialog
         PrivacyHeader.Text = L.T("about.privacyHeader");
         PrivacyText.Text   = L.T("about.privacy");
 
-        PrimaryButtonText = L.T("about.github");
-        CloseButtonText   = L.T("btn.close");
-        // «Ver en GitHub» no es la acción principal de Acerca de: el acento (y el Intro) van a Cerrar (F-12).
-        DefaultButton     = ContentDialogButton.Close;
+        if (!string.IsNullOrEmpty(DonateUrl))
+            PrimaryButtonText = L.T("about.donate");
+        SecondaryButtonText = L.T("about.github");
+        CloseButtonText     = L.T("btn.close");
+        // Ni apoyar el proyecto ni ver el repositorio son la acción principal de Acerca de: el acento (y el
+        // Intro) van a Cerrar (F-12).
+        DefaultButton       = ContentDialogButton.Close;
 
-        // Abrir el repositorio sin cerrar el diálogo.
-        PrimaryButtonClick += async (_, args) =>
-        {
-            args.Cancel = true;
-            if (Uri.TryCreate(RepoUrl, UriKind.Absolute, out var uri))
-                await Windows.System.Launcher.LaunchUriAsync(uri);
-        };
+        // Abrir los enlaces sin cerrar el diálogo.
+        PrimaryButtonClick   += async (_, args) => { args.Cancel = true; await OpenAsync(DonateUrl); };
+        SecondaryButtonClick += async (_, args) => { args.Cancel = true; await OpenAsync(RepoUrl); };
+    }
+
+    private static async Task OpenAsync(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            await Windows.System.Launcher.LaunchUriAsync(uri);
     }
 }
