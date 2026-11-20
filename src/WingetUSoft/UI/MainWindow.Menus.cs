@@ -73,9 +73,7 @@ public sealed partial class MainWindow
         colVersion.Text = L.T("list.colVersion");
         colDisponible.Text = L.T("list.colAvailable");
         colFuente.Text = L.T("list.colSource");
-        // La cabecera es un icono: su descripción va en el tooltip y en el árbol de automatización (F-20).
-        ToolTipService.SetToolTip(colExcl, L.T("list.colExcluded"));
-        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(colExcl, L.T("list.colExcluded"));
+        colEstado.Text = L.T("list.colStatus");
         UpdateSortIndicators();   // relee el nombre accesible de cada cabecera en el idioma nuevo
         expLog.Header = L.T("log.header");
         activityLog.SetAccessibleName(L.T("log.header"));

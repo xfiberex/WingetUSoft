@@ -316,7 +316,7 @@ public static class L
 
         // ── MainWindow ──────────────────────────────────────────────
         ["app.titleBase"]     = ["WingetUSoft", "WingetUSoft", "WingetUSoft", "WingetUSoft", "WingetUSoft"],
-        ["header.detailDefault"] = ["Selecciona un programa para ver sus detalles antes de actualizar.", "Select a program to see its details before updating.", "Selecione um programa para ver seus detalhes antes de atualizar.", "Sélectionnez un programme pour voir ses détails avant la mise à jour.", "Seleziona un programma per vedere i dettagli prima di aggiornare."],
+        ["header.detailDefault"] = ["Selecciona un programa para ver sus detalles. En «⋯» puedes omitir esta versión o excluirlo.", "Select a program to see its details. Use «⋯» to skip this version or exclude it.", "Selecione um programa para ver seus detalhes. Em «⋯» você pode ignorar esta versão ou excluí-lo.", "Sélectionnez un programme pour voir ses détails. Avec «⋯», ignorez cette version ou excluez-le.", "Seleziona un programma per vederne i dettagli. Con «⋯» puoi ignorare questa versione o escluderlo."],
         // Rótulo de la tecla Supr en el menú contextual: WinUI lo pondría en el idioma de Windows.
         ["key.delete"]        = ["Supr", "Del", "Del", "Suppr", "Canc"],
         ["btn.installNow"]    = ["Instalar ahora", "Install now", "Instalar agora", "Installer maintenant", "Installa ora"],
@@ -344,7 +344,7 @@ public static class L
         ["list.colAvailable"] = ["Disponible", "Available", "Disponível", "Disponible", "Disponibile"],
         ["list.colSource"]    = ["Fuente", "Source", "Fonte", "Source", "Fonte"],
         // Cabecera de la columna de estado: ya no se abrevia, porque ahora es un icono y esto es su tooltip (F-20).
-        ["list.colExcluded"]  = ["Excluido u omitido", "Excluded or skipped", "Excluído ou ignorado", "Exclu ou ignoré", "Escluso o ignorato"],
+        ["list.colStatus"]    = ["Estado", "Status", "Estado", "État", "Stato"],
         // winget escribe «Unknown» en su salida, en inglés, sea cual sea el idioma del sistema.
         ["version.unknown"]   = ["Desconocida", "Unknown", "Desconhecida", "Inconnue", "Sconosciuta"],
         // Nombre accesible de las cabeceras ordenables (Tier C #6). Un lector de pantalla anuncia el
@@ -360,6 +360,7 @@ public static class L
         ["grid.opSucceeded"] = ["Actualizado", "Updated", "Atualizado", "Mis à jour", "Aggiornato"],
         ["grid.opFailed"]    = ["Falló: {0}", "Failed: {0}", "Falhou: {0}", "Échec : {0}", "Non riuscito: {0}"],
         ["grid.selectAccessible"]   = ["Marcar {0} para actualizar", "Select {0} for update", "Marcar {0} para atualizar", "Sélectionner {0} pour la mise à jour", "Seleziona {0} per l'aggiornamento"],
+        ["grid.moreActions"] = ["Más acciones para {0}", "More actions for {0}", "Mais ações para {0}", "Plus d'actions pour {0}", "Altre azioni per {0}"],
         ["grid.selectAllAccessible"] = ["Marcar o desmarcar todos los programas visibles", "Select or clear all visible programs", "Marcar ou desmarcar todos os programas visíveis", "Sélectionner ou désélectionner tous les programmes visibles", "Seleziona o deseleziona tutti i programmi visibili"],
         ["btn.updateSelectedCount"] = ["Actualizar seleccionados ({0})", "Update selected ({0})", "Atualizar selecionados ({0})", "Mettre à jour la sélection ({0})", "Aggiorna selezionati ({0})"],
 
@@ -541,7 +542,7 @@ public static class L
         // ── UninstallWindow ─────────────────────────────────────────
         ["uninstall.windowTitle"] = ["WingetUSoft - Desinstalar programas", "WingetUSoft - Uninstall programs", "WingetUSoft - Desinstalar programas", "WingetUSoft - Désinstaller des programmes", "WingetUSoft - Disinstalla programmi"],
         ["uninstall.titleBar"]    = ["Desinstalar programas", "Uninstall programs", "Desinstalar programas", "Désinstaller des programmes", "Disinstalla programmi"],
-        ["btn.refreshList"]       = ["Actualizar lista", "Refresh list", "Atualizar lista", "Actualiser la liste", "Aggiorna elenco"],
+        ["btn.refreshList"]       = ["Recargar lista", "Reload list", "Recarregar lista", "Recharger la liste", "Ricarica elenco"],
         ["uninstall.uninstallSelected"] = ["Desinstalar seleccionado", "Uninstall selected", "Desinstalar selecionado", "Désinstaller la sélection", "Disinstalla selezionato"],
         ["log.activity"]          = ["Actividad", "Activity", "Atividade", "Activité", "Attività"],
         ["uninstall.loadingList"] = ["Cargando lista de programas instalados...", "Loading list of installed programs...", "Carregando lista de programas instalados...", "Chargement de la liste des programmes installés...", "Caricamento elenco programmi installati..."],
@@ -607,8 +608,8 @@ public static class L
 
         // ── HistoryWindow ───────────────────────────────────────────
         ["history.titleBar"]     = ["Historial de actualizaciones", "Update history", "Histórico de atualizações", "Historique des mises à jour", "Cronologia aggiornamenti"],
-        ["history.noEntriesYet"] = ["Aún no se ha registrado ninguna actualización desde la aplicación.", "No updates have been recorded from the app yet.", "Ainda não foi registrada nenhuma atualização pelo aplicativo.", "Aucune mise à jour n'a encore été enregistrée depuis l'application.", "Nessun aggiornamento ancora registrato dall'app."],
         ["history.noEntriesRow"] = ["No hay entradas en el historial.", "There are no entries in the history.", "Não há entradas no histórico.", "Aucune entrée dans l'historique.", "Nessuna voce nella cronologia."],
+        ["history.emptyBody"] = ["Cada actualización que hagas desde la aplicación quedará aquí, con sus versiones y su resultado.", "Every update you run from the app will appear here, with its versions and result.", "Cada atualização feita pelo aplicativo aparecerá aqui, com as versões e o resultado.", "Chaque mise à jour lancée depuis l'application apparaîtra ici, avec ses versions et son résultat.", "Ogni aggiornamento eseguito dall'app comparirà qui, con le versioni e l'esito."],
         ["history.summaryAll.one"] = ["{0} registro cargado. Éxito: {1}. Fallidos: {2}.", "{0} record loaded. Success: {1}. Failed: {2}.", "{0} registro carregado. Sucesso: {1}. Falharam: {2}.", "{0} enregistrement chargé. Réussites : {1}. Échecs : {2}.", "{0} record caricato. Riusciti: {1}. Falliti: {2}."],
         ["history.summaryAll.other"] = ["{0} registros cargados. Éxito: {1}. Fallidos: {2}.", "{0} records loaded. Success: {1}. Failed: {2}.", "{0} registros carregados. Sucesso: {1}. Falharam: {2}.", "{0} enregistrements chargés. Réussites : {1}. Échecs : {2}.", "{0} record caricati. Riusciti: {1}. Falliti: {2}."],
         ["history.summaryFiltered.one"] = ["{0} de {1} registro. Éxito: {2}. Fallidos: {3}.", "{0} of {1} record. Success: {2}. Failed: {3}.", "{0} de {1} registro. Sucesso: {2}. Falharam: {3}.", "{0} sur {1} enregistrement. Réussites : {2}. Échecs : {3}.", "{0} di {1} record. Riusciti: {2}. Falliti: {3}."],

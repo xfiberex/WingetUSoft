@@ -128,17 +128,37 @@ public sealed class TextPolishTests
         }
     }
 
-    /// <summary>La columna de estado ya no se abrevia: es un icono con su nombre completo.</summary>
+    /// <summary>
+    /// La columna de estado se rotula con texto, sin abreviar. Fue «Excl.» (no se entendía) y luego solo un icono
+    /// con el nombre en el tooltip (F-20), que no se descubría sin pasar el ratón (crítica de diseño, 2026-11-20).
+    /// </summary>
     [Fact]
-    public void StatusColumnHeader_IsAnIcon_NotAnAbbreviation()
+    public void StatusColumnHeader_IsText_NotAnIconOrAbbreviation()
     {
         var doc = XDocument.Load(Path.Combine(UiDirectory(), "MainWindow.xaml"));
 
-        var header = doc.Descendants(Presentation + "FontIcon")
-            .SingleOrDefault(e => (string?)e.Attribute(Xaml + "Name") == "colExcl");
+        var header = doc.Descendants(Presentation + "TextBlock")
+            .SingleOrDefault(e => (string?)e.Attribute(Xaml + "Name") == "colEstado");
 
-        Assert.True(header is not null, "colExcl debería ser un FontIcon.");
-        Assert.DoesNotContain("Excl.", L.Map["list.colExcluded"]);
+        Assert.True(header is not null, "colEstado debería ser un TextBlock con el nombre de la columna.");
+        Assert.All(L.Map["list.colStatus"], text => Assert.DoesNotContain(".", text));
+    }
+
+    /// <summary>
+    /// Cada fila lleva un botón «⋯» con nombre accesible que abre su menú: omitir esta versión y excluir eran
+    /// inalcanzables para quien no conocía el clic derecho (crítica de diseño, 2026-11-20).
+    /// </summary>
+    [Fact]
+    public void EveryRow_HasAVisibleMoreActionsButton()
+    {
+        var doc = XDocument.Load(Path.Combine(UiDirectory(), "MainWindow.xaml"));
+
+        var button = doc.Descendants(Presentation + "Button")
+            .SingleOrDefault(e => (string?)e.Attribute("Click") == "RowMore_Click");
+
+        Assert.True(button is not null, "La plantilla de fila debería tener el botón «⋯» (RowMore_Click).");
+        Assert.Equal("{Binding MoreActionsLabel}", (string?)button!.Attribute("AutomationProperties.Name"));
+        Assert.Contains(button.Ancestors(Presentation + "DataTemplate"), _ => true);
     }
 
     private static string UiDirectory()

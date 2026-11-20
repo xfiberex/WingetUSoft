@@ -192,6 +192,10 @@ public sealed partial class UninstallWindow : Window
         foreach (var pkg in filtered)
             _packageViewModels.Add(new InstalledPackageViewModel(pkg));
 
+        // El recuento solo se ve al filtrar («12 de 115»): sin filtro repetía lo que ya dice la barra de estado
+        // («Se encontraron 115 programas instalados»), dos veces en la misma ventana (crítica de diseño, 2026-11-20).
+        bool isFiltered = _packageViewModels.Count != _allPackages.Count;
+        txtContador.Visibility = isFiltered ? Visibility.Visible : Visibility.Collapsed;
         txtContador.Text = _packageViewModels.Count == _allPackages.Count
             ? L.P("uninstall.countAll", _allPackages.Count, _allPackages.Count)
             : L.T("uninstall.countFiltered", _packageViewModels.Count, _allPackages.Count);

@@ -99,11 +99,21 @@ public sealed partial class HistoryWindow : Window
         // Sin historial todavia: estado vacio real (icono + mensaje centrado), nunca una fila falsa.
         // Hasta v1.8.0 el "sin datos" era una fila con Date=MinValue y Success=false, que se leia como
         // una actualización "Fallido" del 01/01/0001.
+        //
+        // Un solo mensaje, en el centro, y los controles quietos (crítica de diseño, 2026-11-20): hasta entonces la
+        // cabecera decía «Aún no se ha registrado ninguna actualización…» y el centro «No hay entradas…», lo mismo
+        // dos veces, mientras Buscar, Estado y Exportar CSV seguían activos sin nada que buscar ni exportar.
+        bool hasHistory = totalCount > 0;
+        txtBuscar.IsEnabled = hasHistory;
+        btnFiltroEstado.IsEnabled = hasHistory;
+        btnExportarCsv.IsEnabled = hasHistory;
+        txtSummary.Visibility = hasHistory ? Visibility.Visible : Visibility.Collapsed;
+
         if (totalCount == 0)
         {
-            txtSummary.Text = L.T("history.noEntriesYet");
+            txtSummary.Text = "";
             lvHistory.ItemsSource = null;
-            SetEmptyState("", L.T("history.noEntriesRow"));
+            SetEmptyState("", L.T("history.noEntriesRow"), L.T("history.emptyBody"));
             return;
         }
 

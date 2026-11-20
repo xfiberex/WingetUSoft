@@ -295,7 +295,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock x:Name="txtExcluidosLabel" Text="Excluidos:" VerticalAlignment="Center"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130"
+                                <DropDownButton x:Name="btnFiltroExcluidos" Content="Todos" Height="32" MinWidth="130" HorizontalContentAlignment="Left"
                                                 AutomationProperties.LabeledBy="{Binding ElementName=txtExcluidosLabel}">
                                     <DropDownButton.Flyout>
                                         <MenuFlyout>
@@ -405,7 +405,8 @@
                                             <ColumnDefinition Width="100" />
                                             <ColumnDefinition Width="100" />
                                             <ColumnDefinition Width="75" />
-                                            <ColumnDefinition Width="55" />
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="40" />
                                         </Grid.ColumnDefinitions>
                                         <!-- Marcar/desmarcar todas las filas visibles. Es tri-estado solo para
                                              poder MOSTRAR una selección parcial; el clic del usuario nunca deja
@@ -468,12 +469,13 @@
                                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                             </StackPanel>
                                         </Button>
-                                        <!-- La columna es de iconos, así que su cabecera también: «Excl.» no se entendía
-                                             y no cabía completo. El nombre entero va en el tooltip y en el árbol de
-                                             automatización (F-20). -->
-                                        <FontIcon x:Name="colExcl" Grid.Column="6" Glyph="&#xE8D8;" FontSize="14"
-                                                  VerticalAlignment="Center" Margin="8,0,0,0"
-                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <!-- Cabecera con texto (crítica de diseño, 2026-11-20). Era solo un icono, con el nombre en
+                                             el tooltip (F-20), y quien no pasaba el ratón por encima no sabía qué marcaba
+                                             la columna. Además ya no es solo «excluido u omitido»: desde F-19 también
+                                             enseña el estado de cada paquete durante el lote. -->
+                                        <TextBlock x:Name="colEstado" Grid.Column="6" Text="Estado" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"
+                                                   TextTrimming="CharacterEllipsis" />
                                     </Grid>
 
                                     <ListView x:Name="lvPackages" ItemContainerStyle="{StaticResource TableRowContainerStyle}"
@@ -498,7 +500,8 @@
                                                         <ColumnDefinition Width="100" />
                                                         <ColumnDefinition Width="100" />
                                                         <ColumnDefinition Width="75" />
-                                                        <ColumnDefinition Width="55" />
+                                                        <ColumnDefinition Width="80" />
+                                                        <ColumnDefinition Width="40" />
                                                     </Grid.ColumnDefinitions>
                                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                               IsEnabled="{Binding IsSelectable}"
@@ -542,6 +545,17 @@
                                                                   AutomationProperties.Name="{Binding StatusLabel}"
                                                                   ToolTipService.ToolTip="{Binding StatusLabel}"
                                                                   Visibility="{Binding IsOperationRunning, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                    <!-- Acciones de la fila a la vista (crítica de diseño, 2026-11-20): omitir esta versión,
+                                                         excluir, copiar… solo se alcanzaban con clic derecho o Mayús+F10, y quien no
+                                                         conocía el menú contextual no las encontraba. Abre el mismo menú. -->
+                                                    <Button Grid.Column="7"
+                                                            Style="{StaticResource RowMoreButtonStyle}"
+                                                            Click="RowMore_Click"
+                                                            IsEnabled="{Binding CanShowRowMenu}"
+                                                            AutomationProperties.Name="{Binding MoreActionsLabel}"
+                                                            ToolTipService.ToolTip="{Binding MoreActionsLabel}">
+                                                        <FontIcon Glyph="&#xE712;" FontSize="14" />
+                                                    </Button>
                                                 </Grid>
                                             </DataTemplate>
                                         </ListView.ItemTemplate>

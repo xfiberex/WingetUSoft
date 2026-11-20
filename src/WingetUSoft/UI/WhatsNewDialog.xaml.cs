@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 
 namespace WingetUSoft;
 
@@ -26,13 +27,38 @@ public sealed partial class WhatsNewDialog : ContentDialog
         CloseButtonText   = L.T("btn.close");
         DefaultButton     = ContentDialogButton.Close;
 
-        string plain = ReleaseNotes.ToPlainText(notesMarkdown);
-        NotesText.Text = string.IsNullOrWhiteSpace(plain) ? L.T("whatsnew.empty") : plain;
+        var blocks = ReleaseNotes.ToBlocks(notesMarkdown, version);
+        if (blocks.Count == 0) NotesText.Text = L.T("whatsnew.empty");
+        else ShowBlocks(blocks);
 
         PrimaryButtonClick += async (_, _) =>
         {
             if (Uri.TryCreate(_url, UriKind.Absolute, out var uri))
                 await Windows.System.Launcher.LaunchUriAsync(uri);
         };
+    }
+
+    /// <summary>
+    /// Pinta las notas con los encabezados en seminegrita y separados de lo anterior por una línea en blanco
+    /// (crítica de diseño, 2026-11-20): en texto plano, «Corregido» o «También» se leían como una frase más.
+    /// </summary>
+    private void ShowBlocks(IReadOnlyList<ReleaseNoteBlock> blocks)
+    {
+        var inlines = NotesText.Inlines;
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (i > 0)
+            {
+                inlines.Add(new LineBreak());
+                // Un encabezado pegado al párrafo anterior recibe su línea en blanco de separación.
+                if (block.IsHeading && blocks[i - 1].Text.Length > 0) inlines.Add(new LineBreak());
+            }
+
+            if (block.Text.Length == 0) continue;
+            inlines.Add(block.IsHeading
+                ? new Run { Text = block.Text, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold }
+                : new Run { Text = block.Text });
+        }
     }
 }

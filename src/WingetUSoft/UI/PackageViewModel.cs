@@ -56,6 +56,7 @@ public sealed class PackageViewModel : INotifyPropertyChanged
             _isLocked = value;
             Notify(nameof(IsLocked));
             Notify(nameof(IsSelectable));
+            Notify(nameof(CanShowRowMenu));
         }
     }
 
@@ -112,6 +113,12 @@ public sealed class PackageViewModel : INotifyPropertyChanged
             ? L.T("grid.excludedAccessible")
             : IsVersionSkipped ? L.T("grid.skippedAccessible", AvailableText) : ""
     };
+
+    /// <summary>El botón «⋯» abre el menú de la fila, que en modo lectura no existe (F-19).</summary>
+    public bool CanShowRowMenu => !IsLocked;
+
+    /// <summary>Nombre accesible y tooltip del botón «⋯»: dice de qué fila son las acciones.</summary>
+    public string MoreActionsLabel => L.T("grid.moreActions", Name);
 
     /// <summary>Etiqueta accesible de la casilla de la fila: sin ella se anuncia solo como "casilla".</summary>
     public string SelectLabel => L.T("grid.selectAccessible", Name);

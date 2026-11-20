@@ -39,7 +39,7 @@
                     Margin="0,0,0,8">
                 <local:WrapPanel HorizontalSpacing="8" VerticalSpacing="8">
                         <Button x:Name="btnRefresh"
-                                Content="Actualizar lista"
+                                Content="Recargar lista"
                                 Click="BtnRefresh_Click"
                                 Height="32" />
                         <Button x:Name="btnUninstall"

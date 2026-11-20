@@ -41,7 +41,7 @@
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <!-- Nombre accesible desde la etiqueta visible: sin LabeledBy, el buscador se anunciaba con su
                      placeholder y el filtro con el valor elegido («Todos») (F-15). -->
-                <DropDownButton x:Name="btnFiltroEstado" Content="Todos" Height="32" MinWidth="130"
+                <DropDownButton x:Name="btnFiltroEstado" Content="Todos" Height="32" MinWidth="130" HorizontalContentAlignment="Left"
                                 AutomationProperties.LabeledBy="{Binding ElementName=txtEstadoLabel}">
                     <DropDownButton.Flyout>
                         <MenuFlyout>

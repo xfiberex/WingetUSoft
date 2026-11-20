@@ -39,6 +39,25 @@ public sealed class DangerButtonTests
     }
 
     /// <summary>
+    /// En reposo el botón es un contorno, no un relleno: su fondo casi no se separa de la tarjeta. Un rojo relleno
+    /// coincidía con el botón de acento cuando el acento de Windows es rojo, y «Guardar» parecía «Desinstalar».
+    /// </summary>
+    /// <remarks>Las tarjetas son <c>#FBFBFB</c> en claro y <c>#2B2B2B</c> en oscuro (medidas en la app real, F-12).</remarks>
+    [Theory]
+    [InlineData("Light", "#FFFBFBFB")]
+    [InlineData("Dark", "#FF2B2B2B")]
+    public void RestState_IsAnOutline_NotAFill(string theme, string card)
+    {
+        var brushes = ThemeBrushes(theme);
+
+        double fill = LogPalette.ContrastRatio(brushes["ButtonBackground"], ParseColor(card));
+        double border = LogPalette.ContrastRatio(brushes["ButtonBorderBrush"], ParseColor(card));
+
+        Assert.True(fill < 1.2, $"{theme}: el fondo se separa {fill:F2}:1 de la tarjeta; se leería como relleno.");
+        Assert.True(border >= 3.0, $"{theme}: el borde solo llega a {border:F2}:1 contra la tarjeta (WCAG 1.4.11).");
+    }
+
+    /// <summary>
     /// En alto contraste el botón usa los colores del sistema y no un rojo fijo, que ignoraría la paleta del usuario.
     /// </summary>
     [Fact]

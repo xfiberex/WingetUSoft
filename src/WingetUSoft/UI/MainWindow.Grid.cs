@@ -200,6 +200,28 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Con ratón hay posición de puntero; con teclado no, y el menú se ancla al contenedor de la fila.
+        if (element is not null && e.TryGetPosition(element, out var position))
+            ShowRowMenu(row, element, position);
+        else
+            ShowRowMenu(row, (lvPackages.ContainerFromItem(row) as FrameworkElement) ?? lvPackages, null);
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Botón «⋯» de la fila: abre el mismo menú que el clic derecho, anclado al botón. Hace visibles acciones
+    /// que solo se alcanzaban con el menú contextual (crítica de diseño, 2026-11-20).
+    /// </summary>
+    private void RowMore_Click(object sender, RoutedEventArgs e)
+    {
+        if (_listLocked) return;
+        if (sender is FrameworkElement { DataContext: PackageViewModel row } button)
+            ShowRowMenu(row, button, null);
+    }
+
+    private void ShowRowMenu(PackageViewModel row, FrameworkElement anchor, Windows.Foundation.Point? position)
+    {
         lvPackages.SelectedItem = row;
 
         // Omitir/Excluir son interruptores: el ítem debe decir lo que hará al pulsarlo, no el nombre
@@ -212,13 +234,10 @@ public sealed partial class MainWindow
         // Un paquete excluido ya no se actualiza nunca: omitir una versión suya no significaría nada.
         ctxOmitirVersion.IsEnabled = !row.IsExcluded;
 
-        // Con ratón hay posición de puntero; con teclado no, y el menú se ancla al contenedor de la fila.
-        if (element is not null && e.TryGetPosition(element, out var position))
-            ctxMenuRow.ShowAt(element, position);
+        if (position is { } point)
+            ctxMenuRow.ShowAt(anchor, point);
         else
-            ctxMenuRow.ShowAt((lvPackages.ContainerFromItem(row) as FrameworkElement) ?? lvPackages);
-
-        e.Handled = true;
+            ctxMenuRow.ShowAt(anchor);
     }
 
     // --- Context Menu ---
