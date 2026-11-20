@@ -35,10 +35,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # La versión sale de global.json. Sin él, `dotnet` usa el SDK más alto instalado, y la imagen
+      # windows-2025-vs2026 trae el de .NET 11 desde la 20261116: su analizador CsWinRT rompía el build
+      # (CsWinRT1032) con un código que el SDK de .NET 10 compila sin avisos.
       - name: .NET 10
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       - name: Caché de NuGet
         uses: actions/cache@v6
