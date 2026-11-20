@@ -90,10 +90,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
 | **Tests unitarios** | **438/438** |
 | **UI tests (FlaUI)** | **65/65** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
-| **Tiers** | A, B, C, D, E y **F** completados. El plan de auditoría de [`ROADMAP.md`](ROADMAP.md) (Parte II, T0-T4): **70 de 70**; el Tier F: **27 de 27** |
+| **Tiers** | A, B, C, D, E y **F** completados. El plan de auditoría de [`History.md`](History.md) (Parte II, T0-T4): **70 de 70**; el Tier F: **27 de 27** |
 | **Publicado** | hasta la **v1.13.0**. `main` y el último tag coinciden |
 
-**Tiers, de un vistazo** (detalle en [`ROADMAP.md`](ROADMAP.md); el porqué, en el Registro de cambios):
+**Tiers, de un vistazo** (detalle en [`History.md`](History.md); el porqué, en el Registro de cambios):
 
 | Tier | Qué trajo | Versión |
 |---|---|---|
@@ -255,7 +255,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ## 6. Pendientes / ideas
 
-- **Plan de auditoría de [`ROADMAP.md`](ROADMAP.md) Parte II: 70 de 70, cerrado.** No queda nada
+- **Plan de auditoría de [`History.md`](History.md) Parte II: 70 de 70, cerrado.** No queda nada
   pendiente del plan. Lo próximo que se aborde vendrá de uso real o de reportes, no de la auditoría.
   Recordar en cada corte: el release sube **dos assets** (`.exe` + `.sha256`); sin el `.sha256`, la app
   no puede verificar un instalador sin firmar y **rechaza la actualización**. Recordar en cada corte:

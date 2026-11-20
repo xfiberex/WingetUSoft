@@ -18,7 +18,7 @@ Cada release publica dos archivos: el instalador y su `.sha256`. Cómo verificar
 con fecha, y debajo una sección por corte con el **razonamiento**: qué problema había, qué alternativas se
 descartaron y por qué. Es el registro para quien toca el código.
 
-👉 **[ROADMAP.md § Progreso](ROADMAP.md#-progreso)** — el registro por tarea. Cada una con su ID, el commit
+👉 **[History.md § Progreso](History.md#-progreso)** — el registro por tarea. Cada una con su ID, el commit
 que la cerró y la versión en que salió, de forma que se puede ir de una línea del plan al cambio concreto.
 
 ## Comparar dos versiones

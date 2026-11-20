@@ -25,7 +25,7 @@ internal static class DpiAwareness
 }
 
 /// <summary>
-/// Regresión de layout para Tier B (ver ROADMAP.md #1-#3): la app no se adaptaba a todos los tipos de
+/// Regresión de layout para Tier B (ver History.md #1-#3): la app no se adaptaba a todos los tipos de
 /// pantalla (botón "Cancelar" recortado contra el borde de la ventana). Estos tests cubren, contra la
 /// app real, los dos arreglos que motivaron la tier: dimensionado por DPI/WorkArea (#1, <c>Core/
 /// WindowSizing.cs</c> + <c>UI/WindowSizer.cs</c>) y el WrapPanel responsivo de "Acciones rápidas"

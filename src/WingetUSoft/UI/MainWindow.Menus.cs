@@ -26,7 +26,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Aplica el idioma actual (<see cref="L"/>) a los textos del menú principal. El resto de la UI
-    /// se extrae por completo en el Tier A #7 (ver ROADMAP.md); por ahora solo cubre este menú.
+    /// se extrae por completo en el Tier A #7 (ver History.md); por ahora solo cubre este menú.
     /// </summary>
     private void ApplyLocalizedStrings()
     {

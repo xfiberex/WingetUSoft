@@ -72,7 +72,7 @@ Todas las preferencias viven en la ventana **Configuración**; **Herramientas** 
 - Con un **tema de contraste** de Windows la app usa tus colores: el registro deja de colorear (✔ y ✖
   siguen marcando el resultado) y el fondo translúcido se sustituye por el color de ventana del tema.
 
-> 📋 Lo implementado y lo que viene, en la **[hoja de ruta](ROADMAP.md)**. El porqué de cada decisión, en
+> 📋 Lo que viene, en la **[hoja de ruta](ROADMAP.md)**; lo implementado, en el **[historial](History.md)**. El porqué de cada decisión, en
 > **[CONTEXT.md](CONTEXT.md)**.
 
 ## Instalación

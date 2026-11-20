@@ -368,7 +368,7 @@ finally {
     # lanzara después desde la misma consola.
     #
     # Solo se limpia si lo puso este script: un GH_TOKEN que ya estuviera en el entorno es del usuario,
-    # se puso a propósito y no es de este script borrarlo (ver ROADMAP.md, T2-18).
+    # se puso a propósito y no es de este script borrarlo (ver History.md, T2-18).
     if ($ghTokenSetByThisScript) {
         Remove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue
         Write-Host "[OK] GH_TOKEN limpiado del entorno." -ForegroundColor Green

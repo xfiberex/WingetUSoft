@@ -6,7 +6,7 @@ namespace WingetUSoft.UiTests;
 /// P/Invoke de Win32 compartido para consultar el área de trabajo (<c>WorkArea</c>) del monitor bajo
 /// una ventana, en píxeles físicos. Extraído de <see cref="LayoutTests"/> (que ya lo usaba para
 /// <c>MainWindow_FitsWithinMonitorWorkArea</c>) para que <c>SnapLayoutTests</c> -- la regresión de
-/// snap layouts de Windows 11, ROADMAP.md Tier B #7 -- lo reutilice sin duplicar el P/Invoke.
+/// snap layouts de Windows 11, History.md Tier B #7 -- lo reutilice sin duplicar el P/Invoke.
 ///
 /// Requiere que el proceso de test sea PerMonitorV2 DPI-aware (ver <see cref="DpiAwareness"/>, en
 /// <c>LayoutTests.cs</c>) para que estas coordenadas físicas casen con el <c>BoundingRectangle</c> que

@@ -21,7 +21,7 @@
     NOTA sobre el formateo: se comprueban las categorías 'style' y 'analyzers', NO 'whitespace'.
     El repositorio alinea deliberadamente en columnas (constantes, campos de structs interop, el
     diccionario de traducciones) y 'dotnet format whitespace' quiere colapsar esa alineación: son
-    290 avisos en 14 archivos que no arreglan nada y destruyen legibilidad. Ver ROADMAP.md, T3-09.
+    290 avisos en 14 archivos que no arreglan nada y destruyen legibilidad. Ver History.md, T3-09.
 
 .PARAMETER Full
     Añade los UI tests de FlaUI. Necesitan una sesión de escritorio interactiva y desatendida:
@@ -173,7 +173,7 @@ if ($Full) {
 # invitaría a escribir tests que tocan líneas sin comprobar nada, que es peor que no tenerlos.
 #
 # Sin servicio externo al que subir nada (decisión del proyecto, ver T2-12): el HTML se queda en
-# coverage\report, que .gitignore ya excluye. La cifra base se anota a mano en ROADMAP.md.
+# coverage\report, que .gitignore ya excluye. La cifra base se anota a mano en History.md.
 if ($collectCoverage) {
     $cobertura = Get-ChildItem -Path $coverageDir -Filter "coverage.cobertura.xml" -Recurse -ErrorAction SilentlyContinue |
                  Select-Object -First 1

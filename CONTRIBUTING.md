@@ -18,7 +18,7 @@ activado (Configuración), hay más contexto en `%LocalAppData%\WingetUSoft\logs
 
 ## Proponer una idea
 
-Mira antes el [ROADMAP.md](ROADMAP.md): puede que ya esté, con su razonamiento y su prioridad. Ahí también
+Mira antes el [ROADMAP.md](ROADMAP.md) y el [History.md](History.md): puede que ya esté, con su razonamiento. En el ROADMAP también
 verás lo que se **descartó** y por qué, que suele ser la parte más útil.
 
 ## Compilar y verificar

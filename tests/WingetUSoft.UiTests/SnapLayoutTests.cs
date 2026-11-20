@@ -4,7 +4,7 @@ using FlaUI.Core.Tools;
 namespace WingetUSoft.UiTests;
 
 /// <summary>
-/// Regresión de snap layouts de Windows 11 contra la app real (ROADMAP.md Tier B #7). Al arrastrar la
+/// Regresión de snap layouts de Windows 11 contra la app real (History.md Tier B #7). Al arrastrar la
 /// ventana a una celda de snap, Windows la redimensiona a media pantalla (<c>work.Width/2 x work.Height</c>)
 /// o a un cuarto (<c>work.Width/2 x work.Height/2</c>). Dos cosas tenían que arreglarse para que la app
 /// sobreviviera a eso, y cada una tiene aquí su test:

@@ -171,7 +171,7 @@ public static class L
     /// <summary>
     /// Diccionario de traducciones. Orden de cada arreglo: <c>[Es, En, Pt, Fr, It]</c>.
     /// En esta fase (Tier A #1) solo cubre el menú principal; la extracción completa del resto
-    /// de la UI se hace en el Tier A #7 (ver ROADMAP.md).
+    /// de la UI se hace en el Tier A #7 (ver History.md).
     /// </summary>
     internal static readonly Dictionary<string, string[]> Map = new()
     {
