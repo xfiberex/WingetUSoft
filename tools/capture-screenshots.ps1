@@ -72,6 +72,13 @@ public static class Win32Capture
 # (en un monitor al 125/150 % la captura saldría desplazada y recortada).
 [void][Win32Capture]::SetProcessDPIAware()
 
+# -Width y -Height son píxeles físicos: a otra escala la ventana mide menos DIP que los de diseño y la barra de
+# acciones salta de fila, algo que la app no hace a su tamaño real. Las capturas publicadas se hacen al 100 %.
+$screenDpi = (Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI -ErrorAction SilentlyContinue).AppliedDPI
+if ($screenDpi -and $screenDpi -ne 96) {
+    Write-Warning "La pantalla está al $([math]::Round($screenDpi / 96 * 100)) %: las capturas no representarán el tamaño real de la app. Usa el 100 %."
+}
+
 function Resolve-Exe {
     if ($Exe) {
         if (-not (Test-Path $Exe)) { throw "No existe el ejecutable: $Exe" }

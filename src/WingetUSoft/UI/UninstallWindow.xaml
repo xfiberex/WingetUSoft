@@ -102,18 +102,24 @@
                         <Grid Grid.Row="0" Style="{StaticResource TableHeaderStyle}" Height="36"
                               Padding="8,0">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="44" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="220" />
                                 <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="colNombre" Grid.Column="0" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0"
+                            <!-- Marca o desmarca las filas visibles. Tri-estado solo para MOSTRAR una selección parcial,
+                                 como en la ventana principal; el clic nunca lo deja indeterminado. -->
+                            <CheckBox x:Name="chkSelectAll" Grid.Column="0" MinWidth="0" IsThreeState="True"
+                                      IsEnabled="False" VerticalAlignment="Center"
+                                      Click="ChkSelectAll_Click" />
+                            <TextBlock x:Name="colNombre" Grid.Column="1" Text="Nombre" VerticalAlignment="Center" FontWeight="SemiBold" Margin="4,0,0,0"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="colId" Grid.Column="1" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                            <TextBlock x:Name="colId" Grid.Column="2" Text="Id" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="colVersion" Grid.Column="2" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                            <TextBlock x:Name="colVersion" Grid.Column="3" Text="Versión" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="colFuente" Grid.Column="3" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
+                            <TextBlock x:Name="colFuente" Grid.Column="4" Text="Fuente" VerticalAlignment="Center" FontWeight="SemiBold" Margin="8,0,0,0"
                                        TextTrimming="CharacterEllipsis" />
                         </Grid>
 
@@ -126,20 +132,24 @@
                                     <Grid Height="36" Padding="8,0"
                                           AutomationProperties.Name="{Binding RowLabel}">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="44" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="220" />
                                             <ColumnDefinition Width="110" />
                                             <ColumnDefinition Width="80" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsMarked, Mode=TwoWay}"
+                                                  VerticalAlignment="Center" MinWidth="0"
+                                                  AutomationProperties.Name="{Binding SelectLabel}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center"
                                                    ToolTipService.ToolTip="{Binding Name}"
                                                    TextTrimming="CharacterEllipsis" Margin="4,0,0,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding Id}" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="2" Text="{Binding Id}" VerticalAlignment="Center"
                                                    ToolTipService.ToolTip="{Binding Id}"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="2" Text="{Binding VersionText}" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="3" Text="{Binding VersionText}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0" />
-                                        <TextBlock Grid.Column="3" Text="{Binding Source}" VerticalAlignment="Center"
+                                        <TextBlock Grid.Column="4" Text="{Binding Source}" VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis" Margin="8,0,0,0"
                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </Grid>

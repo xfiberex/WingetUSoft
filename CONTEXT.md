@@ -316,6 +316,24 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
+### 2026-11-21 — Desinstalar varios programas, y `--exact` (sin publicar)
+
+Build 0/0, **459/459 unitarios**, **65/65 UI tests** con la pantalla al 125 %.
+
+- **Selección múltiple en Desinstalar.** Casillas por fila y tri-estado en la cabecera; las marcas sobreviven a
+  la búsqueda y la confirmación nombra también las que estén ocultas. `UninstallBatch` sigue tras un fallo, se
+  detiene al cancelar y abre **una sola** ventana de limpieza con lo desinstalado. Sin marcas, sigue actuando
+  sobre la fila resaltada.
+- **`winget uninstall` ahora lleva `--exact`.** Sin él, `--id` busca por subcadena: `Microsoft.Edge` coincidía
+  también con `Microsoft.Edge.GameAssist` (comprobado con `winget list`).
+- **`DensityUiTests` mide en DIP**, y `capture-screenshots.ps1` avisa si la pantalla no está al 100 %.
+
+**Sin probar de extremo a extremo:** una desinstalación real en lote. Se probó con un doble y, en la app real,
+hasta el diálogo de confirmación, sin confirmarlo. Tampoco se ha comprobado qué hace winget con dos versiones
+instaladas bajo el mismo Id (p. ej. CrystalDiskMark 8 y 9): si no puede elegir, debería contar como fallo.
+
+---
+
 ### 2026-11-20 — Crítica de diseño: peligro, notas, acciones de fila y un CI que vuelve a compilar (release v1.14.0)
 
 Build 0/0, **449/449 unitarios**, **65/65 UI tests**.
@@ -355,9 +373,10 @@ de residuos; merece tarea propia).
 **Los UI tests dependen de la escala de la pantalla.** La primera pasada dio 64/65 con la pantalla a
 1920×1080 al **125 %** (1536×864 efectivos): `DensityUiTests.ColumnHeaders_StartAboveThirtyPercentOfTheWindow`
 midió las cabeceras al 38 % del alto. La v1.13.0 falla igual en esa escala (comprobado en un worktree), así
-que no es una regresión; al **100 %**, 65/65. Pero apunta a algo real: en 1080p al 125 %, una configuración
-muy común, la barra de acciones salta a dos filas con la ventana a su tamaño por defecto. Candidato a tarea
-(que la barra quepa en una fila a 125 %, o que el test fije una ventana que quepa a cualquier escala).
+que no es una regresión; al **100 %**, 65/65. *Corregido el 2026-11-21:* aquí se daba por hecho que la barra
+de acciones saltaba de fila en 1080p al 125 %, y **no es cierto**. El test redimensionaba a 1180×820 píxeles
+físicos, que al 125 % son 944×656 DIP. Medida a su tamaño real (1475×1000 px), la barra cabe en una fila y las
+cabeceras empiezan al 26,2 %. El fallo era del test, que ya trabaja en DIP.
 
 ---
 

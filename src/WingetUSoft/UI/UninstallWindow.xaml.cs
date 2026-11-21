@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -19,8 +20,27 @@ namespace WingetUSoft;
 /// <c>ListViewItem</c> heredaba su <c>ToString()</c> y un lector de pantalla anunciaba
 /// «WingetUSoft.WingetPackage» (comprobado en la app real).
 /// </remarks>
-public sealed class InstalledPackageViewModel(WingetPackage package)
+public sealed class InstalledPackageViewModel(WingetPackage package, bool isMarked = false) : INotifyPropertyChanged
 {
+    private bool _isMarked = isMarked;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Casilla de la fila: los programas marcados son los que se desinstalan en lote.</summary>
+    public bool IsMarked
+    {
+        get => _isMarked;
+        set
+        {
+            if (_isMarked == value) return;
+            _isMarked = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsMarked)));
+        }
+    }
+
+    /// <summary>Nombre accesible de la casilla: sin él se anunciaría solo como «casilla».</summary>
+    public string SelectLabel => L.T("uninstall.selectAccessible", Name);
+
     public WingetPackage Package { get; } = package;
     public string Name => Package.Name;
     public string Id => Package.Id;
@@ -42,6 +62,9 @@ public sealed partial class UninstallWindow : Window
     private readonly AppSettings _settings;
     private readonly ObservableCollection<InstalledPackageViewModel> _packageViewModels = [];
     private List<WingetPackage> _allPackages = [];
+
+    /// <summary>Programas marcados. Vive fuera de las filas porque estas se recrean al filtrar: buscar no desmarca.</summary>
+    private readonly HashSet<WingetPackage> _marked = [];
     private string _searchFilter = "";
     private CancellationTokenSource? _cts;
 
@@ -85,9 +108,9 @@ public sealed partial class UninstallWindow : Window
         Title = L.T("uninstall.windowTitle");
         txtTitleBar.Text = L.T("uninstall.titleBar");
         btnRefresh.Content = L.T("btn.refreshList");
-        txtUninstallLabel.Text = L.T("uninstall.uninstallSelected");
-        // El contenido es glifo + texto: sin nombre explícito, el lector de pantalla no tendría qué anunciar.
-        AutomationProperties.SetName(btnUninstall, txtUninstallLabel.Text);
+        UpdateUninstallLabel();
+        AutomationProperties.SetName(chkSelectAll, L.T("grid.selectAllAccessible"));
+        ToolTipService.SetToolTip(chkSelectAll, L.T("grid.selectAllAccessible"));
         btnCancelar.Content = L.T("btn.cancel");
         txtBuscarLabel.Text = L.T("search.label");
         txtBuscar.PlaceholderText = L.T("search.placeholder");
@@ -114,6 +137,8 @@ public sealed partial class UninstallWindow : Window
         try
         {
             _allPackages = await WingetService.GetInstalledPackagesAsync(_cts.Token);
+            // Una lista nueva empieza sin marcar: una casilla no debe sobrevivir a lo que ya no se ve igual.
+            _marked.Clear();
             _listState = ListState.Ready;
             ApplyFilter();
             txtEstado.Text = L.P("uninstall.foundCount", _allPackages.Count, _allPackages.Count);
@@ -190,7 +215,12 @@ public sealed partial class UninstallWindow : Window
                 p.Id.Contains(search, StringComparison.OrdinalIgnoreCase));
 
         foreach (var pkg in filtered)
-            _packageViewModels.Add(new InstalledPackageViewModel(pkg));
+        {
+            var row = new InstalledPackageViewModel(pkg, _marked.Contains(pkg));
+            row.PropertyChanged += Row_PropertyChanged;
+            _packageViewModels.Add(row);
+        }
+        UpdateSelectionUi();
 
         // El recuento solo se ve al filtrar («12 de 115»): sin filtro repetía lo que ya dice la barra de estado
         // («Se encontraron 115 programas instalados»), dos veces en la misma ventana (crítica de diseño, 2026-11-20).
@@ -206,58 +236,70 @@ public sealed partial class UninstallWindow : Window
 
     // --- Uninstall ---
 
-    private async Task UninstallSelectedAsync()
+    /// <summary>Lo marcado con las casillas; sin marcas, la fila resaltada, como hasta ahora.</summary>
+    private List<WingetPackage> GetUninstallTargets()
     {
-        if (lvPackages.SelectedItem is not InstalledPackageViewModel { Package: var pkg }) return;
+        if (_marked.Count > 0) return _allPackages.Where(_marked.Contains).ToList();
 
-        // Irreversible: Cancelar es el botón por defecto, así que Intro no desinstala (F-04).
-        bool confirmed = await WindowDialogHelper.ShowConfirmDialogAsync(
+        var targets = new List<WingetPackage>();
+        if (lvPackages.SelectedItem is InstalledPackageViewModel { Package: var pkg }) targets.Add(pkg);
+        return targets;
+    }
+
+    /// <summary>
+    /// Irreversible: Cancelar es el botón por defecto, así que Intro no desinstala (F-04). En lote nombra los
+    /// programas, también los marcados que la búsqueda tenga ocultos en ese momento.
+    /// </summary>
+    private Task<bool> ConfirmUninstallAsync(List<WingetPackage> targets)
+    {
+        string body;
+        if (targets.Count == 1)
+        {
+            body = L.T("uninstall.confirmBody", targets[0].Name, targets[0].Id);
+        }
+        else
+        {
+            string list = string.Join("\n  • ", targets.Take(10).Select(p => p.Name));
+            if (targets.Count > 10) list += L.T("list.andMore", targets.Count - 10);
+            body = L.T("uninstall.confirmBatchBody", targets.Count, list);
+        }
+
+        return WindowDialogHelper.ShowConfirmDialogAsync(
             Content.XamlRoot,
             L.T("uninstall.confirmTitle"),
-            L.T("uninstall.confirmBody", pkg.Name, pkg.Id),
+            body,
             L.T("uninstall.confirmPrimary"),
             destructive: true);
+    }
 
-        if (!confirmed) return;
+    private async Task UninstallSelectedAsync()
+    {
+        var targets = GetUninstallTargets();
+        if (targets.Count == 0 || !await ConfirmUninstallAsync(targets)) return;
 
         _cts = new CancellationTokenSource();
         LogExpander.Reveal(expLog);   // la salida de winget se sigue en el registro (F-17)
         SetUIBusy(true);
-        txtEstado.Text = L.T("uninstall.uninstalling", pkg.Name);
         ClearLog();
-        AppendLog(L.T("uninstall.startingLog", pkg.Name, pkg.Id));
         var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
-        bool cancelled = false;
+        UninstallBatchResult? result = null;
         TaskbarProgress.SetIndeterminate(_hWnd);
 
         try
         {
-            var result = await WingetService.UninstallPackageAsync(pkg.Id, _settings.SilentMode, _cts.Token);
-
-            if (result.Success)
-            {
-                AppendLog(L.T("uninstall.successLog", pkg.Name), LogLineKind.Success);
-                txtEstado.Text = L.T("uninstall.successStatus", pkg.Name);
-
-                var cleanupWin = new CleanupWindow(_settings, [pkg]);
-                cleanupWin.Activate();
-
-                await LoadPackagesAsync();
-            }
-            else
-            {
-                string reason = result.GetFailureReason();
-                AppendLog(L.T("uninstall.errorLog", pkg.Name, reason), LogLineKind.Error);
-                txtEstado.Text = L.T("uninstall.errorStatus");
-                await ShowDialogAsync(L.T("uninstall.errorTitle"),
-                    L.T("uninstall.errorBody", pkg.Name, reason));
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            cancelled = true;
-            AppendLog(L.T("uninstall.cancelledLog"), LogLineKind.Warning);
-            txtEstado.Text = L.T("status.cancelled");
+            result = await UninstallBatch.RunAsync(
+                targets,
+                (pkg, ct) => WingetService.UninstallPackageAsync(pkg.Id, _settings.SilentMode, ct),
+                onStarting: (pkg, position) =>
+                {
+                    txtEstado.Text = targets.Count == 1
+                        ? L.T("uninstall.uninstalling", pkg.Name)
+                        : L.T("uninstall.batchProgress", position, targets.Count, pkg.Name);
+                    AppendLog(L.T("uninstall.startingLog", pkg.Name, pkg.Id));
+                },
+                onSucceeded: pkg => AppendLog(L.T("uninstall.successLog", pkg.Name), LogLineKind.Success),
+                onFailed: failure => AppendLog(L.T("uninstall.errorLog", failure.Package.Name, failure.Reason), LogLineKind.Error),
+                cancellationToken: _cts.Token);
         }
         catch (Exception ex)
         {
@@ -273,8 +315,87 @@ public sealed partial class UninstallWindow : Window
             SetUIBusy(false);
         }
 
-        if (Notifier.ShouldNotify(opStopwatch.Elapsed, _settings.ShowNotifications, cancelled, TimeSpan.FromSeconds(10)))
+        if (result is not null) await FinishUninstallAsync(targets.Count, result);
+
+        if (Notifier.ShouldNotify(opStopwatch.Elapsed, _settings.ShowNotifications, result?.Cancelled == true, TimeSpan.FromSeconds(10)))
             Notifier.OperationFinished(_hWnd);
+    }
+
+    /// <summary>
+    /// Cierra el lote: una sola ventana de limpieza con todo lo desinstalado, la lista releída y un único resumen
+    /// de los fallos, en vez de un diálogo por programa que interrumpiría el lote.
+    /// </summary>
+    private async Task FinishUninstallAsync(int total, UninstallBatchResult result)
+    {
+        if (result.Cancelled) AppendLog(L.T("uninstall.cancelledLog"), LogLineKind.Warning);
+
+        if (result.Succeeded.Count > 0)
+        {
+            var cleanupWin = new CleanupWindow(_settings, result.Succeeded);
+            cleanupWin.Activate();
+        }
+
+        // Al cancelar, el programa en curso pudo quedar desinstalado: solo la lista real lo dice.
+        if (result.Succeeded.Count > 0 || result.Cancelled) await LoadPackagesAsync();
+
+        txtEstado.Text = (result.Cancelled, total) switch
+        {
+            (true, 1) => L.T("status.cancelled"),
+            (true, _) => L.T("uninstall.batchCancelled", result.Succeeded.Count, result.Failed.Count, result.NotCompleted),
+            (false, 1) when result.Succeeded.Count == 1 => L.T("uninstall.successStatus", result.Succeeded[0].Name),
+            (false, 1) => L.T("uninstall.errorStatus"),
+            _ => L.T("uninstall.batchSummary", result.Succeeded.Count, result.Failed.Count)
+        };
+
+        if (result.Failed.Count == 1)
+        {
+            var failure = result.Failed[0];
+            await ShowDialogAsync(L.T("uninstall.errorTitle"),
+                L.T("uninstall.errorBody", failure.Package.Name, failure.Reason));
+        }
+        else if (result.Failed.Count > 1)
+        {
+            string list = string.Join("\n  • ", result.Failed.Take(10).Select(f => $"{f.Package.Name}: {f.Reason}"));
+            if (result.Failed.Count > 10) list += L.T("list.andMore", result.Failed.Count - 10);
+            await ShowDialogAsync(L.T("uninstall.errorTitle"), L.T("uninstall.batchErrorBody", list));
+        }
+    }
+
+    // --- Selection ---
+
+    private void Row_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(InstalledPackageViewModel.IsMarked) || sender is not InstalledPackageViewModel row)
+            return;
+
+        if (row.IsMarked) _marked.Add(row.Package);
+        else _marked.Remove(row.Package);
+        UpdateSelectionUi();
+    }
+
+    /// <summary>Con alguna fila visible sin marcar, las marca todas; si ya lo estaban, las desmarca.</summary>
+    private void ChkSelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        bool mark = _packageViewModels.Any(r => !r.IsMarked);
+        foreach (var row in _packageViewModels) row.IsMarked = mark;
+        UpdateSelectionUi();
+    }
+
+    private void UpdateUninstallLabel() =>
+        CommandLabel.Set(btnUninstall, txtUninstallLabel, _marked.Count > 1
+            ? L.T("uninstall.uninstallCount", _marked.Count)
+            : L.T("uninstall.uninstallSelected"));
+
+    private void UpdateSelectionUi()
+    {
+        UpdateUninstallLabel();
+        btnUninstall.IsEnabled = _cts is null && (_marked.Count > 0 || lvPackages.SelectedItem is not null);
+        chkSelectAll.IsEnabled = _cts is null && _packageViewModels.Count > 0;
+
+        int visibleMarked = _packageViewModels.Count(r => r.IsMarked);
+        chkSelectAll.IsChecked = visibleMarked == 0
+            ? false
+            : visibleMarked == _packageViewModels.Count ? true : null;
     }
 
     // --- UI Helpers ---
@@ -282,10 +403,10 @@ public sealed partial class UninstallWindow : Window
     private void SetUIBusy(bool busy)
     {
         btnRefresh.IsEnabled = !busy;
-        btnUninstall.IsEnabled = !busy && lvPackages.SelectedItem is not null;
         btnCancelar.IsEnabled = busy;
         lvPackages.IsEnabled = !busy;
         progressRing.IsActive = busy;
+        UpdateSelectionUi();
     }
 
     // --- Event Handlers ---
@@ -305,7 +426,7 @@ public sealed partial class UninstallWindow : Window
 
     private void LvPackages_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        btnUninstall.IsEnabled = lvPackages.SelectedItem is not null && _cts is null;
+        UpdateSelectionUi();
     }
 
     private void TxtBuscar_TextChanged(object sender, TextChangedEventArgs e)

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Tools;
@@ -80,10 +81,31 @@ public sealed class DensityUiTests(AppFixture fixture)
         return result.Result!;
     }
 
-    private void InSize(int width, int height, Action asserts)
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
+
+    /// <summary>Ejecuta las comprobaciones con la ventana al tamaño de diseño indicado, en DIP.</summary>
+    /// <remarks>
+    /// UI Automation redimensiona en píxeles físicos. Pasarle 1180×820 tal cual dejaba, con la pantalla al 125 %,
+    /// una ventana de 944×656 DIP que la app nunca abre: la barra saltaba de fila y el test fallaba sin que la app
+    /// tuviera nada mal (a su tamaño real, las cabeceras están al 26 %). Se acota al área de trabajo como la app.
+    /// </remarks>
+    private void InSize(int widthDip, int heightDip, Action asserts)
     {
         var transform = fixture.MainWindow.Patterns.Transform.Pattern;
         var original = fixture.MainWindow.BoundingRectangle;
+
+        double scale = GetDpiForWindow(fixture.MainWindow.Properties.NativeWindowHandle.Value) / 96.0;
+        var work = MonitorInfoHelper.GetWorkArea(new MonitorInfoHelper.RECT
+        {
+            Left = original.Left,
+            Top = original.Top,
+            Right = original.Right,
+            Bottom = original.Bottom
+        });
+        int width = Math.Min((int)Math.Round(widthDip * scale), work.Right - work.Left);
+        int height = Math.Min((int)Math.Round(heightDip * scale), work.Bottom - work.Top);
+
         try
         {
             transform.Resize(width, height);
@@ -94,7 +116,7 @@ public sealed class DensityUiTests(AppFixture fixture)
         }
         finally
         {
-            transform.Resize(Math.Max(original.Width, 1180), Math.Max(original.Height, 820));
+            transform.Resize(original.Width, original.Height);
             Thread.Sleep(300);
         }
     }

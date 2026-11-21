@@ -220,19 +220,31 @@ public static class WingetService
         return RunWingetStreamingAsync(arguments, progress, cancellationToken, logProgress);
     }
 
-    public static async Task<UpgradeResult> UninstallPackageAsync(
-        string packageId,
-        bool silent,
-        CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Argumentos de <c>winget uninstall</c>. Con <c>--exact</c>: sin él, <c>--id</c> busca por subcadena y
+    /// <c>Microsoft.Edge</c> coincide también con <c>Microsoft.Edge.GameAssist</c> (comprobado con
+    /// <c>winget list</c>). Al desinstalar, el Id tiene que señalar ese programa y ningún otro.
+    /// </summary>
+    internal static List<string> BuildUninstallArguments(string packageId, bool silent)
     {
         var arguments = new List<string>
         {
             "uninstall",
             "--id",
             packageId,
+            "--exact",
             "--accept-source-agreements"
         };
         if (silent) arguments.Add("--silent");
+        return arguments;
+    }
+
+    public static async Task<UpgradeResult> UninstallPackageAsync(
+        string packageId,
+        bool silent,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = BuildUninstallArguments(packageId, silent);
 
         var result = await RunWingetAsync(arguments, cancellationToken).ConfigureAwait(false);
         return new UpgradeResult
