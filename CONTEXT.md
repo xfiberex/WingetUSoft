@@ -11,10 +11,10 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.13.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.13.0), sin firmar) |
+| **Versión publicada** | **1.14.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.14.0), sin firmar) |
 | **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-09-20 |
+| **Última actualización** | 2026-11-20 |
 
 ---
 
@@ -88,10 +88,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **438/438** |
+| **Tests unitarios** | **449/449** |
 | **UI tests (FlaUI)** | **65/65** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
 | **Tiers** | A, B, C, D, E y **F** completados. El plan de auditoría de [`History.md`](History.md) (Parte II, T0-T4): **70 de 70**; el Tier F: **27 de 27** |
-| **Publicado** | hasta la **v1.13.0**. `main` y el último tag coinciden |
+| **Publicado** | hasta la **v1.14.0**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`History.md`](History.md); el porqué, en el Registro de cambios):
 
@@ -290,6 +290,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-11-20 | **1.14.0** | **Crítica de diseño** — botón de peligro en contorno (ya no se confunde con un acento rojo), Novedades con párrafos completos, acciones de cada fila a la vista con «⋯», Historial vacío con un solo mensaje; CI con el SDK fijado en `global.json` |
 | 2026-09-20 | **1.13.0** | **Apoyar el proyecto** — un enlace de donación voluntaria en *Ayuda → Acerca de*, y el README reducido a la mitad |
 | 2026-09-20 | **1.12.1** | **Tier F completo (F-27)** — exportar e importar volvían a fallar en silencio si la aplicación se abría como administrador: los selectores de archivo pasan a los de Windows App SDK |
 | 2026-09-20 | **1.12.0** | **Tier F cerrado (F-17, F-24 y F-26)** — sin cabeceras que repitan el título, una barra de órdenes con icono y texto, registro plegable, y los temas de contraste de Windows por fin respetados |
@@ -312,6 +313,51 @@ Lo comparten el hook de pre-push y `release.ps1`.
 | 2026-07-11 | **1.4.1** | Snap layouts (Tier B #7) + 3 bugs del flujo instalar/actualizar |
 | 2026-07-10 | **1.4.0** | **Tier B** — layout adaptable, accesibilidad y UI tests con FlaUI |
 | 2026-07-09 | **1.3.0** | **Tier A** completado — paridad con FormatDiskPro + pipeline de release |
+
+---
+
+### 2026-11-20 — Crítica de diseño: peligro, notas, acciones de fila y un CI que vuelve a compilar (release v1.14.0)
+
+Build 0/0, **449/449 unitarios**, **65/65 UI tests**.
+
+Sale de una crítica de diseño (Impeccable, heurísticas de Nielsen) sobre todas las ventanas: **27/40**,
+con dos problemas mayores y tres menores. Se atendieron los cinco:
+
+- **Peligro en contorno.** El botón de Desinstalar y Eliminar era un relleno rojo (F-05) y coincidía con el
+  botón de acento cuando el acento de Windows es rojo, naranja o rosa: «Guardar» o «Actualizar todo» se
+  leían igual que «Desinstalar». Pasa a texto y borde rojos sobre un fondo casi neutro, con la papelera.
+  Todos los estados superan 6:1, y un test exige que en reposo no se separe de la tarjeta (< 1,2:1).
+- **Novedades legible.** `ReleaseNotes` conservaba los saltos de línea del Markdown, que se escribe partido
+  a ~110 columnas: en un diálogo de 380 px salían frases cortadas a la mitad y sangrías sueltas. Ahora une
+  párrafos y viñetas, quita la cursiva y el encabezado que repite la versión, y `ToBlocks` deja al diálogo
+  pintar los encabezados en seminegrita.
+- **Acciones de fila a la vista.** Omitir esta versión y excluir solo se alcanzaban con clic derecho o
+  Mayús+F10. Cada fila lleva un botón «⋯» que abre el mismo menú; la columna de estado se rotula «Estado»
+  con texto (era un icono, F-20, que no se descubría sin pasar el ratón), y la pista indica dónde está.
+- **Historial vacío** con un solo mensaje (decía lo mismo arriba y en el centro) y los controles quietos.
+- **Coherencia:** «Actualizar lista» pasa a «Recargar lista» (en una app de actualizaciones, «actualizar»
+  ya significa otra cosa), el recuento de Desinstalar solo aparece al filtrar y los desplegables de filtro
+  alinean el texto a la izquierda.
+
+Una corrección a la propia crítica: decía que el botón destacado debía seguir a la selección, y ya lo hacía
+desde F-23. La captura con la que se revisó no tenía nada marcado.
+
+**El CI llevaba roto desde el 16-nov sin culpa del código.** La imagen `windows-2025-vs2026` empezó a traer
+el SDK de .NET 11.0.100 y, sin `global.json`, `dotnet` usa el SDK más alto instalado aunque `setup-dotnet`
+instale el 10.0.x. El analizador CsWinRT de .NET 11 añade `CsWinRT1032` y `-warnaserror` lo convirtió en 38
+errores. Se descartó primero el SDK 10.0.404 (instalado aparte, compila limpio) y se confirmó con la lista
+de software de la imagen. `global.json` fija .NET 10 (10.0.400 o superior, sin preview) y los dos workflows
+toman la versión de ahí.
+
+Queda fuera, a propósito: selección múltiple en Desinstalar (cada desinstalación abre después la limpieza
+de residuos; merece tarea propia).
+
+**Los UI tests dependen de la escala de la pantalla.** La primera pasada dio 64/65 con la pantalla a
+1920×1080 al **125 %** (1536×864 efectivos): `DensityUiTests.ColumnHeaders_StartAboveThirtyPercentOfTheWindow`
+midió las cabeceras al 38 % del alto. La v1.13.0 falla igual en esa escala (comprobado en un worktree), así
+que no es una regresión; al **100 %**, 65/65. Pero apunta a algo real: en 1080p al 125 %, una configuración
+muy común, la barra de acciones salta a dos filas con la ventana a su tamaño por defecto. Candidato a tarea
+(que la barra quepa en una fila a 125 %, o que el test fije una ventana que quepa a cualquier escala).
 
 ---
 
