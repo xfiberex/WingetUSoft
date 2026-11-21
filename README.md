@@ -41,7 +41,7 @@ equipo — sin tocar la línea de comandos.
 **Instalar, desinstalar y mover tu lista**
 - **Buscar e instalar** desde el catálogo de winget, con progreso y registro en vivo; lo que ya tienes sale
   marcado como instalado.
-- **Desinstalar** cualquier programa, con confirmación. Al terminar se abre la **limpieza de residuos**:
+- **Desinstalar** uno o varios programas, con confirmación. Al terminar se abre la **limpieza de residuos**:
   propone las carpetas que el desinstalador dejó atrás, **nada viene marcado** y el borrado es recursivo,
   no pasa por la papelera y no se puede deshacer.
 - **Exportar** al formato JSON nativo de winget (con las versiones exactas si quieres) e **importar** en

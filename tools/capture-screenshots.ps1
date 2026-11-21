@@ -62,6 +62,7 @@ public static class Win32Capture
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
     [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out RECT value, int size);
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
@@ -71,13 +72,6 @@ public static class Win32Capture
 # El proceso de PowerShell debe ser DPI-aware o las coordenadas de pantalla vendrían virtualizadas
 # (en un monitor al 125/150 % la captura saldría desplazada y recortada).
 [void][Win32Capture]::SetProcessDPIAware()
-
-# -Width y -Height son píxeles físicos: a otra escala la ventana mide menos DIP que los de diseño y la barra de
-# acciones salta de fila, algo que la app no hace a su tamaño real. Las capturas publicadas se hacen al 100 %.
-$screenDpi = (Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI -ErrorAction SilentlyContinue).AppliedDPI
-if ($screenDpi -and $screenDpi -ne 96) {
-    Write-Warning "La pantalla está al $([math]::Round($screenDpi / 96 * 100)) %: las capturas no representarán el tamaño real de la app. Usa el 100 %."
-}
 
 function Resolve-Exe {
     if ($Exe) {
@@ -300,6 +294,14 @@ function Capture-Theme([string]$exePath, [string]$themeName) {
     try {
         $window = Find-MainWindow $proc.Id
         $hwnd = [IntPtr]$window.Current.NativeWindowHandle
+
+        # -Width y -Height son píxeles físicos: a otra escala la ventana mide menos DIP que los de diseño y la barra
+        # de acciones salta de fila, algo que la app no hace a su tamaño real. Las capturas publicadas van al 100 %.
+        # Se pregunta a la ventana: AppliedDPI, en el registro, no cambia hasta cerrar sesión.
+        $windowDpi = [Win32Capture]::GetDpiForWindow($hwnd)
+        if ($windowDpi -ne 96) {
+            Write-Warning "La ventana está al $([math]::Round($windowDpi / 96 * 100)) %: las capturas no representarán el tamaño real de la app. Usa el 100 %."
+        }
 
         [void][Win32Capture]::ShowWindow($hwnd, 9)      # SW_RESTORE
         [void][Win32Capture]::MoveWindow($hwnd, 60, 40, $Width, $Height, $true)

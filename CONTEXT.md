@@ -11,10 +11,10 @@
 | | |
 |---|---|
 | **Repositorio** | https://github.com/xfiberex/WingetUSoft |
-| **Versión publicada** | **1.14.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.14.0), sin firmar) |
+| **Versión publicada** | **1.15.0** ([release](https://github.com/xfiberex/WingetUSoft/releases/tag/v1.15.0), sin firmar) |
 | **En `main`, sin publicar** | nada — `main` y el último tag coinciden |
 | **Stack** | C# / .NET 10 · **WinUI 3** (Windows App SDK 1.8, unpackaged, `net10.0-windows10.0.22621.0`, min. 10.0.19041.0) · **xUnit** + **FlaUI** · Inno Setup 6 |
-| **Última actualización** | 2026-11-20 |
+| **Última actualización** | 2026-11-21 |
 
 ---
 
@@ -88,10 +88,10 @@ release.ps1                  Corte de versión en un paso (tests + instalador + 
 | | |
 |---|---|
 | **Build** | 0 advertencias / 0 errores (`dotnet build WingetUSoft.slnx`) |
-| **Tests unitarios** | **449/449** |
+| **Tests unitarios** | **466/466** |
 | **UI tests (FlaUI)** | **65/65** — los corre `verify.ps1 -Full`, y `release.ps1` a través de él: un release no sale si la app real no pasa |
 | **Tiers** | A, B, C, D, E y **F** completados. El plan de auditoría de [`History.md`](History.md) (Parte II, T0-T4): **70 de 70**; el Tier F: **27 de 27** |
-| **Publicado** | hasta la **v1.14.0**. `main` y el último tag coinciden |
+| **Publicado** | hasta la **v1.15.0**. `main` y el último tag coinciden |
 
 **Tiers, de un vistazo** (detalle en [`History.md`](History.md); el porqué, en el Registro de cambios):
 
@@ -290,6 +290,7 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 | Fecha | Versión | Qué |
 |---|---|---|
+| 2026-11-21 | **1.15.0** | **Desinstalar varios programas a la vez** — casillas, una sola limpieza y un único resumen de fallos; `--exact` para que un Id no alcance a otro programa y `--version` para poder quitar una de dos versiones instaladas |
 | 2026-11-20 | **1.14.0** | **Crítica de diseño** — botón de peligro en contorno (ya no se confunde con un acento rojo), Novedades con párrafos completos, acciones de cada fila a la vista con «⋯», Historial vacío con un solo mensaje; CI con el SDK fijado en `global.json` |
 | 2026-09-20 | **1.13.0** | **Apoyar el proyecto** — un enlace de donación voluntaria en *Ayuda → Acerca de*, y el README reducido a la mitad |
 | 2026-09-20 | **1.12.1** | **Tier F completo (F-27)** — exportar e importar volvían a fallar en silencio si la aplicación se abría como administrador: los selectores de archivo pasan a los de Windows App SDK |
@@ -316,9 +317,9 @@ Lo comparten el hook de pre-push y `release.ps1`.
 
 ---
 
-### 2026-11-21 — Desinstalar varios programas, y `--exact` (sin publicar)
+### 2026-11-21 — Desinstalar varios programas, y que el Id señale solo a uno (release v1.15.0)
 
-Build 0/0, **459/459 unitarios**, **65/65 UI tests** con la pantalla al 125 %.
+Build 0/0, **466/466 unitarios**, **65/65 UI tests** con la pantalla al 125 %.
 
 - **Selección múltiple en Desinstalar.** Casillas por fila y tri-estado en la cabecera; las marcas sobreviven a
   la búsqueda y la confirmación nombra también las que estén ocultas. `UninstallBatch` sigue tras un fallo, se
@@ -328,9 +329,18 @@ Build 0/0, **459/459 unitarios**, **65/65 UI tests** con la pantalla al 125 %.
   también con `Microsoft.Edge.GameAssist` (comprobado con `winget list`).
 - **`DensityUiTests` mide en DIP**, y `capture-screenshots.ps1` avisa si la pantalla no está al 100 %.
 
-**Sin probar de extremo a extremo:** una desinstalación real en lote. Se probó con un doble y, en la app real,
-hasta el diálogo de confirmación, sin confirmarlo. Tampoco se ha comprobado qué hace winget con dos versiones
-instaladas bajo el mismo Id (p. ej. CrystalDiskMark 8 y 9): si no puede elegir, debería contar como fallo.
+- **Dos versiones bajo el mismo Id.** winget se niega con `0x8A150016` y la app no podía quitar ninguna (p. ej.
+  CrystalDiskMark 8 y 9). Si el Id está repetido se pasa `--version`; si el valor no es una versión real
+  (`Unknown`, `< 14.1.0`), no se pasa y winget sigue negándose, que es mejor que quitar otra versión.
+
+**Probado de extremo a extremo en la app real**, con paquetes desechables y sin tocar los del usuario:
+- `jq`, `hyperfine` y `fd` en un lote, con `fd` retirado por fuera para forzar un fallo: dos desinstalados, un
+  fallo con su motivo, el lote no se corta y sale **una** ventana de limpieza, solo con los dos correctos.
+- Cancelar un lote de dos: `Sin terminar: 2`, ninguno desinstalado y ninguna ventana de limpieza.
+- Dos entradas falsas de «Agregar o quitar programas» bajo el mismo Id: se quita la 8.6.0 y la 8.7.0 sigue.
+
+`winget list` quedó idéntica. Efecto residual: instalar y quitar portables dejó un `;` final en el `PATH` de
+usuario, con las mismas entradas en el mismo orden.
 
 ---
 

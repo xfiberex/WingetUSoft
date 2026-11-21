@@ -282,6 +282,7 @@ public sealed partial class UninstallWindow : Window
         SetUIBusy(true);
         ClearLog();
         var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var installed = _allPackages;   // la lista se reemplaza al recargar: el lote decide con la que vio el usuario
         UninstallBatchResult? result = null;
         TaskbarProgress.SetIndeterminate(_hWnd);
 
@@ -289,7 +290,8 @@ public sealed partial class UninstallWindow : Window
         {
             result = await UninstallBatch.RunAsync(
                 targets,
-                (pkg, ct) => WingetService.UninstallPackageAsync(pkg.Id, _settings.SilentMode, ct),
+                (pkg, ct) => WingetService.UninstallPackageAsync(
+                    pkg.Id, _settings.SilentMode, ct, UninstallBatch.VersionToDisambiguate(pkg, installed)),
                 onStarting: (pkg, position) =>
                 {
                     txtEstado.Text = targets.Count == 1

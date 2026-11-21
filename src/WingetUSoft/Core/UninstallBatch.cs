@@ -24,6 +24,22 @@ public sealed record UninstallBatchResult(
 public static class UninstallBatch
 {
     /// <summary>
+    /// Versión que hay que pasar a winget para señalar este programa, o <c>null</c> si el Id ya basta.
+    /// </summary>
+    /// <remarks>
+    /// Con dos versiones instaladas bajo el mismo Id, <c>winget uninstall --id X --exact</c> se niega con
+    /// <c>0x8A150016</c> y no se podía quitar ninguna. Solo se pasa cuando el Id está repetido, y solo si es una
+    /// versión de verdad: winget también lista valores como <c>Unknown</c> o <c>&lt; 14.1.0</c>, que no sirven como
+    /// argumento. En ese caso winget seguirá negándose, que es preferible a desinstalar otra versión.
+    /// </remarks>
+    public static string? VersionToDisambiguate(WingetPackage package, IEnumerable<WingetPackage> installed)
+    {
+        bool repeated = installed.Count(p => string.Equals(p.Id, package.Id, StringComparison.OrdinalIgnoreCase)) > 1;
+        string version = package.Version.Trim();
+        return repeated && version.Length > 0 && char.IsAsciiDigit(version[0]) ? version : null;
+    }
+
+    /// <summary>
     /// Desinstala los programas en orden. Un fallo no corta el lote; cancelar sí, y lo pendiente no se intenta.
     /// </summary>
     /// <param name="packages">Programas a desinstalar.</param>

@@ -225,7 +225,13 @@ public static class WingetService
     /// <c>Microsoft.Edge</c> coincide también con <c>Microsoft.Edge.GameAssist</c> (comprobado con
     /// <c>winget list</c>). Al desinstalar, el Id tiene que señalar ese programa y ningún otro.
     /// </summary>
-    internal static List<string> BuildUninstallArguments(string packageId, bool silent)
+    /// <param name="packageId">Id exacto del paquete.</param>
+    /// <param name="silent">Sin ventanas del desinstalador.</param>
+    /// <param name="version">
+    /// Versión concreta, solo si hay varias instaladas bajo el mismo Id (ver
+    /// <see cref="UninstallBatch.VersionToDisambiguate"/>): sin ella, winget se niega con <c>0x8A150016</c>.
+    /// </param>
+    internal static List<string> BuildUninstallArguments(string packageId, bool silent, string? version = null)
     {
         var arguments = new List<string>
         {
@@ -235,6 +241,11 @@ public static class WingetService
             "--exact",
             "--accept-source-agreements"
         };
+        if (!string.IsNullOrEmpty(version))
+        {
+            arguments.Add("--version");
+            arguments.Add(version);
+        }
         if (silent) arguments.Add("--silent");
         return arguments;
     }
@@ -242,9 +253,10 @@ public static class WingetService
     public static async Task<UpgradeResult> UninstallPackageAsync(
         string packageId,
         bool silent,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? version = null)
     {
-        var arguments = BuildUninstallArguments(packageId, silent);
+        var arguments = BuildUninstallArguments(packageId, silent, version);
 
         var result = await RunWingetAsync(arguments, cancellationToken).ConfigureAwait(false);
         return new UpgradeResult

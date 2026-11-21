@@ -144,6 +144,32 @@ public sealed class UninstallBatchTests
         Assert.Equal(silent, arguments.Contains("--silent"));
     }
 
+    /// <summary>Con el Id repetido, la versión va en los argumentos; sin ella, winget se niega (0x8A150016).</summary>
+    [Fact]
+    public void UninstallArguments_IncludeTheVersion_WhenGiven()
+    {
+        var arguments = WingetService.BuildUninstallArguments("Notepad++.Notepad++", silent: true, version: "8.6.0");
+
+        Assert.Equal("8.6.0", arguments[arguments.IndexOf("--version") + 1]);
+        Assert.DoesNotContain("--version", WingetService.BuildUninstallArguments("Notepad++.Notepad++", silent: true));
+    }
+
+    [Theory]
+    [InlineData("A.B", "1.0", "A.B", "2.0", "1.0")]    // repetido: hace falta la versión
+    [InlineData("A.B", "1.0", "a.b", "2.0", "1.0")]    // winget no distingue mayúsculas en el Id
+    [InlineData("A.B", "1.0", "C.D", "1.0", null)]     // Id único: no se pasa
+    [InlineData("A.B", "Unknown", "A.B", "2.0", null)] // no es una versión utilizable
+    [InlineData("A.B", "< 14.1.0", "A.B", "2.0", null)]
+    [InlineData("A.B", "", "A.B", "2.0", null)]
+    public void VersionToDisambiguate_OnlyForARepeatedIdWithARealVersion(
+        string id, string version, string otherId, string otherVersion, string? expected)
+    {
+        var package = new WingetPackage { Id = id, Version = version };
+        var other = new WingetPackage { Id = otherId, Version = otherVersion };
+
+        Assert.Equal(expected, UninstallBatch.VersionToDisambiguate(package, new[] { package, other }));
+    }
+
     /// <summary>Cabecera y filas siguen teniendo las mismas columnas, y cada casilla se anuncia con su programa.</summary>
     [Fact]
     public void UninstallTable_HasANamedCheckBoxColumn_AlignedWithItsHeader()
